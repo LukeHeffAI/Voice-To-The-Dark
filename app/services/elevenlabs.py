@@ -3,7 +3,7 @@ import uuid
 import requests
 from typing import List
 from app.config import settings
-from app.services.audio_utils import stitch_audio_files
+from app.services.audio_utils import stitch_audio_files, create_tmp_folder, cleanup_temp_files
 
 # ElevenLabs can handle a certain character limit at once (e.g., 5k-10k).
 # We'll define a chunk size. Adjust as needed or do advanced chunking by sentences.
@@ -22,28 +22,29 @@ def generate_audio(
     if not output_path:
         output_path = f"./stories/{uuid.uuid4()}.mp3"
 
-    # Split text if needed
+    tmp_folder = create_tmp_folder()  # ensure tmp/ exists
     chunks = chunk_text(text, MAX_TEXT_LENGTH)
 
-    # For each chunk, call ElevenLabs
     audio_chunks = []
     for idx, chunk in enumerate(chunks):
-        chunk_output = f"./stories/tmp_{uuid.uuid4()}.mp3"
+        tmp_file_name = f"chunk_{uuid.uuid4()}.mp3"
+        chunk_output = os.path.join(tmp_folder, tmp_file_name)
         tts_request(chunk, voice_id, chunk_output)
         audio_chunks.append(chunk_output)
 
-    # If more than one chunk, stitch them; otherwise just rename the single file.
     if len(audio_chunks) > 1:
         stitch_audio_files(audio_chunks, output_path)
-        # Cleanup temporary chunk files
+        # cleanup chunk files
         for f in audio_chunks:
             try:
                 os.remove(f)
             except:
                 pass
     else:
-        # Single chunk scenario
         os.rename(audio_chunks[0], output_path)
+
+    # Possibly call cleanup_temp_files to clean up any older leftover files
+    cleanup_temp_files(tmp_folder, days=3)
 
     return output_path
 
