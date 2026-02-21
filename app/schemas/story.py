@@ -1,0 +1,52 @@
+from pydantic import BaseModel, HttpUrl
+from typing import Optional
+from datetime import datetime
+
+
+class StorySubmitRequest(BaseModel):
+    reddit_url: str
+
+
+class StoryResponse(BaseModel):
+    id: int
+    title: str
+    reddit_url: str
+    content_hash: str
+    audio_file_path: Optional[str] = None
+    part_count: int = 1
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class StoryListResponse(BaseModel):
+    id: int
+    title: str
+    reddit_url: str
+    has_audio: bool
+    part_count: int = 1
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class PlaybackStateRequest(BaseModel):
+    story_id: int
+    position_seconds: float
+
+
+class PlaybackStateResponse(BaseModel):
+    story_id: int
+    position_seconds: float
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class DuplicateCheckResponse(BaseModel):
+    is_duplicate: bool
+    existing_story_id: Optional[int] = None
+    message: str

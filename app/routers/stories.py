@@ -1,0 +1,158 @@
+import logging
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.models.story import Story, PlaybackState
+from app.schemas.story import (
+    StorySubmitRequest,
+    StoryResponse,
+    StoryListResponse,
+    PlaybackStateRequest,
+    PlaybackStateResponse,
+    DuplicateCheckResponse,
+)
+from app.services.reddit import fetch_multi_part_story, fetch_story_text, init_reddit
+from app.services.hashing import hash_content
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter()
+
+
+@router.post("/submit", response_model=StoryResponse)
+def submit_story(req: StorySubmitRequest, db: Session = Depends(get_db)):
+    """Fetch a story from a NoSleep URL and store it. Detects duplicates by URL and content hash."""
+
+    # Check if this URL was already submitted
+    existing = db.query(Story).filter(Story.reddit_url == req.reddit_url).first()
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail=f"This URL has already been submitted as story #{existing.id}: '{existing.title}'"
+        )
+
+    # Fetch story from Reddit
+    reddit = init_reddit()
+    try:
+        submission = reddit.submission(url=req.reddit_url)
+        title = submission.title
+    except Exception as e:
+        logger.error(f"Failed to fetch Reddit submission: {e}")
+        raise HTTPException(status_code=400, detail=f"Could not fetch Reddit post: {e}")
+
+    # Fetch full text (multi-part aware)
+    try:
+        text = fetch_multi_part_story(req.reddit_url)
+    except Exception as e:
+        logger.error(f"Failed to fetch story text: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to extract story text: {e}")
+
+    if not text or not text.strip():
+        raise HTTPException(status_code=400, detail="Story has no text content")
+
+    # Count parts by separator
+    parts = text.split("\n\n---\n\n")
+    part_count = len(parts)
+
+    # Check for duplicate content (same story posted to a different URL)
+    content_digest = hash_content(text)
+    duplicate = db.query(Story).filter(Story.content_hash == content_digest).first()
+    if duplicate:
+        raise HTTPException(
+            status_code=409,
+            detail=f"This story's content matches an existing entry (story #{duplicate.id}: '{duplicate.title}'). "
+                   "Skipping to avoid redundant API costs."
+        )
+
+    story = Story(
+        title=title,
+        reddit_url=req.reddit_url,
+        text_content=text,
+        content_hash=content_digest,
+        part_count=part_count,
+    )
+    db.add(story)
+    db.commit()
+    db.refresh(story)
+
+    return story
+
+
+@router.get("/", response_model=list[StoryListResponse])
+def list_stories(skip: int = 0, limit: int = 25, db: Session = Depends(get_db)):
+    """List all stored stories with pagination."""
+    stories = db.query(Story).order_by(Story.created_at.desc()).offset(skip).limit(limit).all()
+    return [
+        StoryListResponse(
+            id=s.id,
+            title=s.title,
+            reddit_url=s.reddit_url,
+            has_audio=s.audio_file_path is not None,
+            part_count=s.part_count,
+            created_at=s.created_at,
+        )
+        for s in stories
+    ]
+
+
+@router.get("/{story_id}", response_model=StoryResponse)
+def get_story(story_id: int, db: Session = Depends(get_db)):
+    """Get a single story by ID."""
+    story = db.query(Story).filter(Story.id == story_id).first()
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    return story
+
+
+@router.get("/check-duplicate/", response_model=DuplicateCheckResponse)
+def check_duplicate(reddit_url: str, db: Session = Depends(get_db)):
+    """Pre-check if a URL or its content already exists before full submission."""
+    existing = db.query(Story).filter(Story.reddit_url == reddit_url).first()
+    if existing:
+        return DuplicateCheckResponse(
+            is_duplicate=True,
+            existing_story_id=existing.id,
+            message=f"URL already submitted as story #{existing.id}: '{existing.title}'"
+        )
+    return DuplicateCheckResponse(
+        is_duplicate=False,
+        existing_story_id=None,
+        message="No duplicate found"
+    )
+
+
+@router.post("/playback", response_model=PlaybackStateResponse)
+def save_playback_position(req: PlaybackStateRequest, db: Session = Depends(get_db)):
+    """Save the current playback position for a story so it can be resumed later."""
+    story = db.query(Story).filter(Story.id == req.story_id).first()
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    state = db.query(PlaybackState).filter(PlaybackState.story_id == req.story_id).first()
+    if state:
+        state.position_seconds = req.position_seconds
+    else:
+        state = PlaybackState(story_id=req.story_id, position_seconds=req.position_seconds)
+        db.add(state)
+
+    db.commit()
+    db.refresh(state)
+
+    return PlaybackStateResponse(
+        story_id=state.story_id,
+        position_seconds=state.position_seconds,
+        updated_at=state.updated_at,
+    )
+
+
+@router.get("/playback/{story_id}", response_model=PlaybackStateResponse)
+def get_playback_position(story_id: int, db: Session = Depends(get_db)):
+    """Get the saved playback position for a story to resume listening."""
+    state = db.query(PlaybackState).filter(PlaybackState.story_id == story_id).first()
+    if not state:
+        return PlaybackStateResponse(story_id=story_id, position_seconds=0.0)
+    return PlaybackStateResponse(
+        story_id=state.story_id,
+        position_seconds=state.position_seconds,
+        updated_at=state.updated_at,
+    )
