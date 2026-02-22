@@ -13,6 +13,7 @@ from app.schemas.story import (
 )
 from app.services.reddit import fetch_multi_part_story, fetch_story_text, init_reddit
 from app.services.hashing import hash_content
+from app.services.text_cleaner import clean_for_narration
 
 logger = logging.getLogger(__name__)
 
@@ -64,10 +65,13 @@ def submit_story(req: StorySubmitRequest, db: Session = Depends(get_db)):
                    "Skipping to avoid redundant API costs."
         )
 
+    narration = clean_for_narration(text)
+
     story = Story(
         title=title,
         reddit_url=req.reddit_url,
         text_content=text,
+        narration_text=narration,
         content_hash=content_digest,
         part_count=part_count,
     )

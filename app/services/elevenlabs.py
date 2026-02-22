@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 import requests
 from typing import List
@@ -51,16 +52,47 @@ def generate_audio(
 
 
 def chunk_text(text: str, max_len: int) -> List[str]:
+    """Split text into chunks that respect sentence boundaries.
+
+    Splits on sentence-ending punctuation (.!?) followed by whitespace so that
+    ElevenLabs never receives a fragment that starts or ends mid-sentence.
+    Falls back to paragraph breaks, then to the hard character limit if a
+    single sentence exceeds max_len.
     """
-    Splits text into smaller pieces, each <= max_len chars.
-    You might want more sophisticated splits by sentence boundaries, etc.
-    """
+    if len(text) <= max_len:
+        return [text]
+
+    # Split into sentences (keep the delimiter attached to the preceding text)
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+
     chunks = []
-    start = 0
-    while start < len(text):
-        end = min(start + max_len, len(text))
-        chunks.append(text[start:end])
-        start = end
+    current = ""
+    for sentence in sentences:
+        candidate = f"{current} {sentence}".strip() if current else sentence
+
+        if len(candidate) <= max_len:
+            current = candidate
+        else:
+            # Current buffer is full — flush it
+            if current:
+                chunks.append(current)
+            # If a single sentence exceeds max_len, split on paragraph breaks
+            if len(sentence) > max_len:
+                paragraphs = sentence.split("\n\n")
+                for para in paragraphs:
+                    if len(para) <= max_len:
+                        chunks.append(para)
+                    else:
+                        # Last resort: hard split at max_len
+                        for i in range(0, len(para), max_len):
+                            chunks.append(para[i:i + max_len])
+                current = ""
+            else:
+                current = sentence
+
+    if current:
+        chunks.append(current)
+
     return chunks
 
 

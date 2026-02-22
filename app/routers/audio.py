@@ -23,7 +23,8 @@ def generate_audio_route(req: GenerateAudioRequest, db: Session = Depends(get_db
     if story.audio_file_path and not req.force_regenerate:
         return {"message": "Already generated", "audio_file": story.audio_file_path}
 
-    new_audio_path = generate_audio(story.text_content, req.voice_id)
+    tts_text = story.narration_text or story.text_content
+    new_audio_path = generate_audio(tts_text, req.voice_id)
     story.audio_file_path = new_audio_path
     db.commit()
     db.refresh(story)

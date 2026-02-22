@@ -11,6 +11,7 @@ class StoryResponse(BaseModel):
     id: int
     title: str
     reddit_url: str
+    narration_text: Optional[str] = None
     content_hash: str
     audio_file_path: Optional[str] = None
     part_count: int = 1
