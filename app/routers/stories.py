@@ -92,6 +92,7 @@ def list_stories(skip: int = 0, limit: int = 25, db: Session = Depends(get_db)):
             title=s.title,
             reddit_url=s.reddit_url,
             has_audio=s.audio_file_path is not None,
+            has_script=s.script_json is not None,
             part_count=s.part_count,
             created_at=s.created_at,
         )

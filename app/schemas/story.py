@@ -26,11 +26,23 @@ class StoryListResponse(BaseModel):
     title: str
     reddit_url: str
     has_audio: bool
+    has_script: bool
     part_count: int = 1
     created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
+
+class GenerateScriptRequest(BaseModel):
+    story_id: int
+    force_regenerate: bool = False
+
+
+class GenerateNarrationRequest(BaseModel):
+    story_id: int
+    voice_map: dict[str, str]  # character key -> ElevenLabs voice ID
+    force_regenerate: bool = False
 
 
 class PlaybackStateRequest(BaseModel):

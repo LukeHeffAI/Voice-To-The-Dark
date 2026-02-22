@@ -11,6 +11,7 @@ class Story(Base):
     reddit_url = Column(String, nullable=False, unique=True, index=True)
     text_content = Column(Text, nullable=False)
     narration_text = Column(Text, nullable=True)
+    script_json = Column(Text, nullable=True)
     content_hash = Column(String(64), nullable=False, index=True)
     audio_file_path = Column(String, nullable=True)
     part_count = Column(Integer, default=1)

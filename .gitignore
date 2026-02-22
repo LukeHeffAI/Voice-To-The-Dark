@@ -1,6 +1,11 @@
 # SQLite databases
 *.db
 
+# Generated audio and SFX cache
+stories/
+sfx_cache/
+tmp/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
