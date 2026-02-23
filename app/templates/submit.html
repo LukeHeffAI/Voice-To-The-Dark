@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a0a0a">
+    <title>Submit Story — Voice To The Dark</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+
+        .back-link {
+            color: #888;
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 0.5rem 0;
+            display: inline-block;
+        }
+        .back-link:hover { color: #ccc; }
+
+        .page-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            padding: 1.5rem 0;
+            border-bottom: 1px solid #1a1a1a;
+            margin-bottom: 1.5rem;
+        }
+        .header h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #c0392b;
+        }
+        .header p {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 0.3rem;
+        }
+
+        /* ── URL submission form ─────────────────────────── */
+        .submit-section {
+            margin-bottom: 2rem;
+        }
+        .submit-section h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #ccc;
+            margin-bottom: 0.75rem;
+        }
+        .url-form {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .url-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: #111;
+            color: #e0e0e0;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .url-input:focus { border-color: #c0392b; }
+        .url-input::placeholder { color: #555; }
+
+        .submit-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            background: #c0392b;
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.15s;
+        }
+        .submit-btn:hover { background: #a93226; }
+        .submit-btn:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .form-message {
+            margin-top: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: none;
+        }
+        .form-message.error {
+            display: block;
+            background: #2e1a1a;
+            border: 1px solid #4e2a2a;
+            color: #e07070;
+        }
+        .form-message.success {
+            display: block;
+            background: #1a2e1a;
+            border: 1px solid #2e4a2e;
+            color: #70e070;
+        }
+
+        /* ── Best of All Time section ─────────────────────── */
+        .browse-section {
+            margin-top: 1rem;
+        }
+        .browse-section h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #ccc;
+            margin-bottom: 0.5rem;
+        }
+        .browse-section .subtitle {
+            font-size: 0.8rem;
+            color: #555;
+            margin-bottom: 1rem;
+        }
+
+        .top-stories-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .top-story-item {
+            background: #111;
+            border: 1px solid #1a1a1a;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: border-color 0.15s;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+        .top-story-item:hover { border-color: #333; }
+        .top-story-item.selected { border-color: #c0392b; background: #1a0f0f; }
+
+        .top-story-title {
+            font-size: 0.9rem;
+            color: #ddd;
+            line-height: 1.3;
+            flex: 1;
+        }
+        .top-story-score {
+            font-size: 0.75rem;
+            color: #666;
+            white-space: nowrap;
+            padding-top: 0.1rem;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 2rem;
+            color: #555;
+            font-size: 0.9rem;
+        }
+        .loading-spinner::before {
+            content: "";
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #333;
+            border-top-color: #c0392b;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 0.5rem;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .filter-bar {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .filter-btn {
+            padding: 0.4rem 0.8rem;
+            border: 1px solid #333;
+            border-radius: 16px;
+            background: transparent;
+            color: #888;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .filter-btn:hover { border-color: #666; color: #ccc; }
+        .filter-btn.active {
+            border-color: #c0392b;
+            color: #c0392b;
+            background: #1a0f0f;
+        }
+
+        .auth-nav {
+            text-align: right;
+            padding: 0.5rem 0;
+            font-size: 0.8rem;
+        }
+        .auth-nav a {
+            color: #666;
+            text-decoration: none;
+            margin-left: 1rem;
+        }
+        .auth-nav a:hover { color: #ccc; }
+        .auth-nav .username { color: #888; }
+
+        .login-prompt {
+            text-align: center;
+            padding: 1.5rem;
+            background: #111;
+            border: 1px solid #1a1a1a;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+        }
+        .login-prompt p {
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+        }
+        .login-prompt a {
+            display: inline-block;
+            padding: 0.6rem 1.5rem;
+            background: #c0392b;
+            color: #fff;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .login-prompt a:hover { background: #a93226; }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <div class="auth-nav">
+            {% if user %}
+            <span class="username">{{ user.username }}</span>
+            <a href="#" onclick="fetch('/auth/logout',{method:'POST'}).then(()=>location.reload())">Sign out</a>
+            {% else %}
+            <a href="/login?next=/submit">Sign in</a>
+            {% endif %}
+        </div>
+
+        <a href="/" class="back-link">&larr; All stories</a>
+
+        <div class="header">
+            <h1>Submit a Story</h1>
+            <p>Paste a NoSleep URL or pick from the best</p>
+        </div>
+
+        {% if user %}
+        <div class="submit-section">
+            <h2>Reddit URL</h2>
+            <div class="url-form">
+                <input type="text" class="url-input" id="urlInput"
+                       placeholder="https://reddit.com/r/nosleep/comments/..."
+                       autocomplete="off" autocapitalize="off" spellcheck="false">
+                <button class="submit-btn" id="submitBtn" onclick="submitStory()">Submit</button>
+            </div>
+            <div class="form-message" id="formMessage"></div>
+        </div>
+        {% else %}
+        <div class="login-prompt">
+            <p>Sign in to submit stories and generate narrations</p>
+            <a href="/login?next=/submit">Sign In</a>
+        </div>
+        {% endif %}
+
+        <div class="browse-section">
+            <h2>Best of r/nosleep</h2>
+            <p class="subtitle">Tap a story to fill in its URL, then hit Submit</p>
+
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="alltime" onclick="setFilter(this)">All Time</button>
+                <button class="filter-btn" data-filter="year" onclick="setFilter(this)">This Year</button>
+                <button class="filter-btn" data-filter="month" onclick="setFilter(this)">This Month</button>
+                <button class="filter-btn" data-filter="week" onclick="setFilter(this)">This Week</button>
+            </div>
+
+            <div id="topStoriesContainer">
+                <div class="loading-spinner" id="loadingSpinner">Loading top stories...</div>
+                <ul class="top-stories-list" id="topStoriesList" style="display:none;"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const urlInput = document.getElementById('urlInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const formMessage = document.getElementById('formMessage');
+    const topStoriesList = document.getElementById('topStoriesList');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+
+    let currentFilter = 'alltime';
+    let storyCache = {};
+
+    // ── Submit a story URL ──────────────────────────────
+
+    async function submitStory() {
+        const url = urlInput.value.trim();
+        if (!url) {
+            showMessage('Please enter a Reddit URL.', 'error');
+            return;
+        }
+
+        // Basic URL validation
+        if (!url.match(/reddit\.com\/r\/nosleep\/comments\//i)) {
+            showMessage('Please enter a valid r/nosleep URL.', 'error');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+        hideMessage();
+
+        try {
+            const resp = await fetch('/stories/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reddit_url: url }),
+            });
+
+            const data = await resp.json();
+
+            if (resp.ok) {
+                showMessage('Loading story...', 'success');
+                window.location.href = '/story/' + data.id;
+            } else if (resp.status === 401) {
+                window.location.href = '/login?next=/submit';
+            } else {
+                showMessage(data.detail || 'Submission failed.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit';
+            }
+        } catch (err) {
+            showMessage('Network error. Please try again.', 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit';
+        }
+    }
+
+    // Submit on Enter
+    urlInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') submitStory();
+    });
+
+    // ── Top stories ─────────────────────────────────────
+
+    async function loadTopStories(timeframe) {
+        // Check cache
+        if (storyCache[timeframe]) {
+            renderTopStories(storyCache[timeframe]);
+            return;
+        }
+
+        loadingSpinner.style.display = 'block';
+        topStoriesList.style.display = 'none';
+
+        try {
+            const resp = await fetch('/stories/top-nosleep?timeframe=' + timeframe);
+            if (!resp.ok) throw new Error('Failed to fetch');
+            const stories = await resp.json();
+            storyCache[timeframe] = stories;
+            renderTopStories(stories);
+        } catch (err) {
+            loadingSpinner.textContent = 'Could not load stories. Check Reddit API keys.';
+        }
+    }
+
+    function renderTopStories(stories) {
+        loadingSpinner.style.display = 'none';
+        topStoriesList.style.display = 'flex';
+        topStoriesList.innerHTML = '';
+
+        if (!stories.length) {
+            topStoriesList.innerHTML = '<li style="color:#555;padding:1rem;text-align:center;">No stories found for this timeframe.</li>';
+            return;
+        }
+
+        for (const story of stories) {
+            const li = document.createElement('li');
+            const scoreText = story.score >= 1000
+                ? (story.score / 1000).toFixed(1) + 'k'
+                : story.score.toString();
+
+            li.className = 'top-story-item';
+            li.innerHTML =
+                '<div class="top-story-title">' + escapeHtml(story.title) + '</div>' +
+                '<div class="top-story-score">' + scoreText + ' pts</div>';
+            li.onclick = () => selectTopStory(story.url, li);
+            topStoriesList.appendChild(li);
+        }
+    }
+
+    function selectTopStory(url, element) {
+        urlInput.value = url;
+        // Highlight selected
+        document.querySelectorAll('.top-story-item').forEach(el => el.classList.remove('selected'));
+        element.classList.add('selected');
+        hideMessage();
+    }
+
+    function setFilter(btn) {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        loadTopStories(currentFilter);
+    }
+
+    function showMessage(html, type) {
+        formMessage.innerHTML = html;
+        formMessage.className = 'form-message ' + type;
+    }
+
+    function hideMessage() {
+        formMessage.className = 'form-message';
+        formMessage.style.display = 'none';
+        formMessage.innerHTML = '';
+    }
+
+    function escapeHtml(text) {
+        const d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
+    }
+
+    // Load on page ready
+    loadTopStories('alltime');
+    </script>
+</body>
+</html>
