@@ -8,5 +8,8 @@ class Settings:
     REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID")
     REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET")
     ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change_me_to_a_random_secret")
+    JWT_ALGORITHM = "HS256"
+    JWT_EXPIRE_HOURS = 72
 
 settings = Settings()

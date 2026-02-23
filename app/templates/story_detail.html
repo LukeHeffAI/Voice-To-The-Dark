@@ -245,10 +245,48 @@
             50%  { width: 40%; margin-left: 30%; }
             100% { width: 0%; margin-left: 100%; }
         }
+
+        .auth-nav {
+            text-align: right;
+            padding: 0.5rem 0;
+            font-size: 0.8rem;
+        }
+        .auth-nav a {
+            color: #666;
+            text-decoration: none;
+            margin-left: 1rem;
+        }
+        .auth-nav a:hover { color: #ccc; }
+        .auth-nav .username { color: #888; }
+
+        .login-prompt {
+            text-align: center;
+            padding: 1rem;
+            background: #111;
+            border: 1px solid #1a1a1a;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #888;
+        }
+        .login-prompt a {
+            color: #c0392b;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .login-prompt a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
     <div class="page-container">
+        <div class="auth-nav">
+            {% if user %}
+            <span class="username">{{ user.username }}</span>
+            <a href="#" onclick="fetch('/auth/logout',{method:'POST'}).then(()=>location.reload())">Sign out</a>
+            {% else %}
+            <a href="/login?next=/story/{{ story.id }}">Sign in</a>
+            {% endif %}
+        </div>
+
         <a href="/" class="back-link">&larr; All stories</a>
 
         <div class="story-header">
@@ -314,10 +352,14 @@
                         </a>
                     </div>
                     {% else %}
-                    <button class="step-action btn-primary" id="genScriptBtn" onclick="generateScript()">
-                        Generate Script
-                    </button>
-                    <div class="step-status" id="scriptStatus"></div>
+                        {% if user %}
+                        <button class="step-action btn-primary" id="genScriptBtn" onclick="generateScript()">
+                            Generate Script
+                        </button>
+                        <div class="step-status" id="scriptStatus"></div>
+                        {% else %}
+                        <div class="login-prompt"><a href="/login?next=/story/{{ story.id }}">Sign in</a> to generate scripts</div>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>
@@ -334,15 +376,19 @@
                     {% if story.audio_file_path %}
                     <div class="step-info step-status success">Audio ready</div>
                     {% else %}
-                    <button class="step-action btn-primary" id="genAudioBtn"
-                            onclick="generateAudio()"
-                            {{ 'disabled' if not story.script_json }}>
-                        Generate Audio
-                    </button>
-                    <div class="step-info" id="audioNote" style="{{ '' if not story.script_json else 'display:none' }}">
-                        Generate a script first
-                    </div>
-                    <div class="step-status" id="audioStatus"></div>
+                        {% if user %}
+                        <button class="step-action btn-primary" id="genAudioBtn"
+                                onclick="generateAudio()"
+                                {{ 'disabled' if not story.script_json }}>
+                            Generate Audio
+                        </button>
+                        <div class="step-info" id="audioNote" style="{{ '' if not story.script_json else 'display:none' }}">
+                            Generate a script first
+                        </div>
+                        <div class="step-status" id="audioStatus"></div>
+                        {% else %}
+                        <div class="login-prompt"><a href="/login?next=/story/{{ story.id }}">Sign in</a> to generate audio</div>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>
@@ -384,6 +430,8 @@
                 status.textContent = 'Script generated! Reloading...';
                 status.className = 'step-status success';
                 setTimeout(() => location.reload(), 800);
+            } else if (resp.status === 401) {
+                window.location.href = '/login?next=/story/' + storyId;
             } else {
                 throw new Error(data.detail || 'Script generation failed');
             }
@@ -423,6 +471,8 @@
                 status.textContent = 'Audio generated! Reloading...';
                 status.className = 'step-status success';
                 setTimeout(() => location.reload(), 800);
+            } else if (resp.status === 401) {
+                window.location.href = '/login?next=/story/' + storyId;
             } else {
                 throw new Error(data.detail || 'Audio generation failed');
             }

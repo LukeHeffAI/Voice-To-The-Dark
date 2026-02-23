@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from .database import engine
 from .models import story  # load all models to register them with Base
-from .routers import audio, stories, player
+from .routers import audio, stories, player, auth
 
 story.Base.metadata.create_all(bind=engine)
 
@@ -14,6 +14,7 @@ static_dir = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # API routers
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(audio.router, prefix="/audio", tags=["audio"])
 app.include_router(stories.router, prefix="/stories", tags=["stories"])
 

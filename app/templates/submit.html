@@ -207,10 +207,57 @@
             color: #c0392b;
             background: #1a0f0f;
         }
+
+        .auth-nav {
+            text-align: right;
+            padding: 0.5rem 0;
+            font-size: 0.8rem;
+        }
+        .auth-nav a {
+            color: #666;
+            text-decoration: none;
+            margin-left: 1rem;
+        }
+        .auth-nav a:hover { color: #ccc; }
+        .auth-nav .username { color: #888; }
+
+        .login-prompt {
+            text-align: center;
+            padding: 1.5rem;
+            background: #111;
+            border: 1px solid #1a1a1a;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+        }
+        .login-prompt p {
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+        }
+        .login-prompt a {
+            display: inline-block;
+            padding: 0.6rem 1.5rem;
+            background: #c0392b;
+            color: #fff;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .login-prompt a:hover { background: #a93226; }
     </style>
 </head>
 <body>
     <div class="page-container">
+        <div class="auth-nav">
+            {% if user %}
+            <span class="username">{{ user.username }}</span>
+            <a href="#" onclick="fetch('/auth/logout',{method:'POST'}).then(()=>location.reload())">Sign out</a>
+            {% else %}
+            <a href="/login?next=/submit">Sign in</a>
+            {% endif %}
+        </div>
+
         <a href="/" class="back-link">&larr; All stories</a>
 
         <div class="header">
@@ -218,6 +265,7 @@
             <p>Paste a NoSleep URL or pick from the best</p>
         </div>
 
+        {% if user %}
         <div class="submit-section">
             <h2>Reddit URL</h2>
             <div class="url-form">
@@ -228,6 +276,12 @@
             </div>
             <div class="form-message" id="formMessage"></div>
         </div>
+        {% else %}
+        <div class="login-prompt">
+            <p>Sign in to submit stories and generate narrations</p>
+            <a href="/login?next=/submit">Sign In</a>
+        </div>
+        {% endif %}
 
         <div class="browse-section">
             <h2>Best of r/nosleep</h2>
@@ -288,6 +342,8 @@
             if (resp.ok) {
                 showMessage('Loading story...', 'success');
                 window.location.href = '/story/' + data.id;
+            } else if (resp.status === 401) {
+                window.location.href = '/login?next=/submit';
             } else {
                 showMessage(data.detail || 'Submission failed.', 'error');
                 submitBtn.disabled = false;

@@ -14,6 +14,8 @@ from app.schemas.story import (
 from app.services.reddit import fetch_multi_part_story, fetch_story_text, init_reddit
 from app.services.hashing import hash_content
 from app.services.text_cleaner import clean_for_narration
+from app.models.story import User
+from app.deps import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +23,7 @@ router = APIRouter()
 
 
 @router.post("/submit", response_model=StoryResponse)
-def submit_story(req: StorySubmitRequest, db: Session = Depends(get_db)):
+def submit_story(req: StorySubmitRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Fetch a story from a NoSleep URL and store it.
 
     If the story already exists (by URL or content hash), returns the existing

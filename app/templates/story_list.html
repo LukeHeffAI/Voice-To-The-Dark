@@ -122,9 +122,33 @@
             text-decoration: none;
         }
         .empty-state a:hover { text-decoration: underline; }
+
+        .auth-nav {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: right;
+            padding: 0.5rem 0;
+            font-size: 0.8rem;
+        }
+        .auth-nav a {
+            color: #666;
+            text-decoration: none;
+            margin-left: 1rem;
+        }
+        .auth-nav a:hover { color: #ccc; }
+        .auth-nav .username { color: #888; }
     </style>
 </head>
 <body>
+    <div class="auth-nav">
+        {% if user %}
+        <span class="username">{{ user.username }}</span>
+        <a href="#" onclick="fetch('/auth/logout',{method:'POST'}).then(()=>location.reload())">Sign out</a>
+        {% else %}
+        <a href="/login">Sign in</a>
+        {% endif %}
+    </div>
+
     <div class="header">
         <h1>Voice To The Dark</h1>
         <p>NoSleep horror narrations</p>

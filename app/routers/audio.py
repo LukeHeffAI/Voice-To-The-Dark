@@ -11,6 +11,9 @@ from app.models.story import Story
 from app.schemas.story import GenerateScriptRequest, GenerateNarrationRequest
 from app.schemas.narration import NarrationScript
 from app.services.voice_pool import auto_assign_voices
+from app.models.story import User
+from app.deps import get_current_user
+from app.rate_limit import rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +27,7 @@ class GenerateAudioRequest(BaseModel):
 
 
 @router.post("/generate-audio")
-def generate_audio_route(req: GenerateAudioRequest, db: Session = Depends(get_db)):
+def generate_audio_route(req: GenerateAudioRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Generate basic TTS audio from the cleaned narration text (flat, single voice)."""
     story = db.query(Story).filter(Story.id == req.story_id).first()
     if not story:
@@ -46,7 +49,7 @@ def generate_audio_route(req: GenerateAudioRequest, db: Session = Depends(get_db
 
 
 @router.post("/generate-script")
-def generate_script_route(req: GenerateScriptRequest, db: Session = Depends(get_db)):
+def generate_script_route(req: GenerateScriptRequest, _rl=Depends(rate_limit(10, 3600)), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Use Claude to transform a story into a dramatic narration script.
 
     The script identifies characters, adds SFX/ambient cues, emotional tone
@@ -103,7 +106,7 @@ def get_script(story_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/script/{story_id}")
-def update_script(story_id: int, script_data: dict, db: Session = Depends(get_db)):
+def update_script(story_id: int, script_data: dict, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Update/edit the narration script before generating audio.
 
     Accepts the full script JSON so the user can tweak character assignments,
@@ -123,7 +126,7 @@ def update_script(story_id: int, script_data: dict, db: Session = Depends(get_db
 
 
 @router.post("/generate-narration")
-def generate_narration_route(req: GenerateNarrationRequest, db: Session = Depends(get_db)):
+def generate_narration_route(req: GenerateNarrationRequest, _rl=Depends(rate_limit(5, 3600)), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Generate the full dramatic narration: multi-voice TTS + SFX + ambient + mixing.
 
     Requires a script to have been generated first (via /generate-script).

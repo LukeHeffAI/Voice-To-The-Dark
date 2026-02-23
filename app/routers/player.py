@@ -6,8 +6,9 @@ from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.story import Story, PlaybackState
+from app.models.story import Story, PlaybackState, User
 from app.schemas.narration import NarrationScript
+from app.deps import get_optional_user
 
 logger = logging.getLogger(__name__)
 
@@ -19,23 +20,30 @@ templates = Jinja2Templates(
 
 
 @router.get("/", response_class=HTMLResponse)
-def story_list_page(request: Request, db: Session = Depends(get_db)):
+def story_list_page(request: Request, db: Session = Depends(get_db), user: User | None = Depends(get_optional_user)):
     """Serve the story browser page."""
     stories = db.query(Story).order_by(Story.created_at.desc()).all()
     return templates.TemplateResponse("story_list.html", {
         "request": request,
         "stories": stories,
+        "user": user,
     })
 
 
+@router.get("/login", response_class=HTMLResponse)
+def login_page(request: Request):
+    """Serve the login/register page."""
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
 @router.get("/submit", response_class=HTMLResponse)
-def submit_page(request: Request):
+def submit_page(request: Request, user: User | None = Depends(get_optional_user)):
     """Serve the story submission page with URL input and Best of All Time browser."""
-    return templates.TemplateResponse("submit.html", {"request": request})
+    return templates.TemplateResponse("submit.html", {"request": request, "user": user})
 
 
 @router.get("/story/{story_id}", response_class=HTMLResponse)
-def story_detail_page(request: Request, story_id: int, db: Session = Depends(get_db)):
+def story_detail_page(request: Request, story_id: int, db: Session = Depends(get_db), user: User | None = Depends(get_optional_user)):
     """Serve the story detail page with teaser, pipeline controls, and playback info."""
     story = db.query(Story).filter(Story.id == story_id).first()
     if not story:
@@ -83,6 +91,7 @@ def story_detail_page(request: Request, story_id: int, db: Session = Depends(get
         "voice_count": voice_count,
         "sfx_count": sfx_count,
         "resume_seconds": resume_seconds,
+        "user": user,
     })
 
 
