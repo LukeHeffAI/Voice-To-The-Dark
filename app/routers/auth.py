@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.story import User
 from app.auth import hash_password, verify_password, create_access_token
-from app.deps import get_current_user
+from app.deps import get_current_user, require_admin
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +37,9 @@ class TokenResponse(BaseModel):
     user: UserResponse
 
 
-@router.post("/register", response_model=TokenResponse)
-def register(req: RegisterRequest, response: Response, db: Session = Depends(get_db)):
-    """Create a new account and return an auth token."""
+@router.post("/register", response_model=UserResponse)
+def register(req: RegisterRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Create a new user account. Admin only."""
     if len(req.username) < 3:
         raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
     if len(req.password) < 6:
@@ -49,34 +49,17 @@ def register(req: RegisterRequest, response: Response, db: Session = Depends(get
     if existing:
         raise HTTPException(status_code=409, detail="Username already taken")
 
-    # First registered user becomes admin
-    is_first = db.query(User).count() == 0
-
     user = User(
         username=req.username,
         password_hash=hash_password(req.password),
-        is_admin=is_first,
+        is_admin=False,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
 
-    token = create_access_token(user.id, user.username)
-
-    # Set cookie for browser sessions
-    response.set_cookie(
-        key="auth_token",
-        value=token,
-        httponly=True,
-        samesite="lax",
-        max_age=72 * 3600,
-    )
-
-    logger.info(f"User registered: {user.username} (admin={user.is_admin})")
-    return TokenResponse(
-        access_token=token,
-        user=UserResponse.model_validate(user),
-    )
+    logger.info(f"User created by {admin.username}: {user.username}")
+    return user
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -93,7 +76,7 @@ def login(req: LoginRequest, response: Response, db: Session = Depends(get_db)):
         value=token,
         httponly=True,
         samesite="lax",
-        max_age=72 * 3600,
+        max_age=28 * 24 * 3600,
     )
 
     return TokenResponse(

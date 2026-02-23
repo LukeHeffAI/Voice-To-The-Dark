@@ -39,35 +39,6 @@
             margin-top: 0.3rem;
         }
 
-        .tab-bar {
-            display: flex;
-            margin-bottom: 1.5rem;
-            border-bottom: 1px solid #1a1a1a;
-        }
-        .tab {
-            flex: 1;
-            padding: 0.75rem;
-            text-align: center;
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: #666;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            transition: all 0.15s;
-            background: none;
-            border-top: none;
-            border-left: none;
-            border-right: none;
-        }
-        .tab:hover { color: #ccc; }
-        .tab.active {
-            color: #c0392b;
-            border-bottom-color: #c0392b;
-        }
-
-        .form-panel { display: none; }
-        .form-panel.active { display: block; }
-
         .form-group {
             margin-bottom: 1rem;
         }
@@ -145,45 +116,19 @@
     <div class="auth-container">
         <div class="auth-header">
             <h1>Voice To The Dark</h1>
-            <p>Sign in to submit stories and generate narrations</p>
+            <p>Sign in to continue</p>
         </div>
 
-        <div class="tab-bar">
-            <button class="tab active" onclick="switchTab('login')">Sign In</button>
-            <button class="tab" onclick="switchTab('register')">Create Account</button>
+        <div class="form-group">
+            <label class="form-label" for="username">Username</label>
+            <input class="form-input" id="username" type="text" autocomplete="username" autocapitalize="off">
         </div>
-
-        <!-- Login form -->
-        <div class="form-panel active" id="loginPanel">
-            <div class="form-group">
-                <label class="form-label" for="loginUser">Username</label>
-                <input class="form-input" id="loginUser" type="text" autocomplete="username" autocapitalize="off">
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="loginPass">Password</label>
-                <input class="form-input" id="loginPass" type="password" autocomplete="current-password">
-            </div>
-            <button class="form-submit" id="loginBtn" onclick="doLogin()">Sign In</button>
-            <div class="form-message" id="loginMsg"></div>
+        <div class="form-group">
+            <label class="form-label" for="password">Password</label>
+            <input class="form-input" id="password" type="password" autocomplete="current-password">
         </div>
-
-        <!-- Register form -->
-        <div class="form-panel" id="registerPanel">
-            <div class="form-group">
-                <label class="form-label" for="regUser">Username</label>
-                <input class="form-input" id="regUser" type="text" autocomplete="username" autocapitalize="off">
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="regPass">Password</label>
-                <input class="form-input" id="regPass" type="password" autocomplete="new-password">
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="regPass2">Confirm Password</label>
-                <input class="form-input" id="regPass2" type="password" autocomplete="new-password">
-            </div>
-            <button class="form-submit" id="regBtn" onclick="doRegister()">Create Account</button>
-            <div class="form-message" id="regMsg"></div>
-        </div>
+        <button class="form-submit" id="loginBtn" onclick="doLogin()">Sign In</button>
+        <div class="form-message" id="msg"></div>
 
         <a href="/" class="back-link">&larr; Back to stories</a>
     </div>
@@ -191,27 +136,14 @@
     <script>
     const nextUrl = new URLSearchParams(window.location.search).get('next') || '/';
 
-    function switchTab(tab) {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.form-panel').forEach(p => p.classList.remove('active'));
-
-        if (tab === 'login') {
-            document.querySelectorAll('.tab')[0].classList.add('active');
-            document.getElementById('loginPanel').classList.add('active');
-        } else {
-            document.querySelectorAll('.tab')[1].classList.add('active');
-            document.getElementById('registerPanel').classList.add('active');
-        }
-    }
-
     async function doLogin() {
-        const username = document.getElementById('loginUser').value.trim();
-        const password = document.getElementById('loginPass').value;
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
         const btn = document.getElementById('loginBtn');
-        const msg = document.getElementById('loginMsg');
+        const msg = document.getElementById('msg');
 
         if (!username || !password) {
-            showMsg(msg, 'Please fill in all fields.', 'error');
+            showMsg('Please fill in both fields.', 'error');
             return;
         }
 
@@ -228,73 +160,28 @@
             const data = await resp.json();
 
             if (resp.ok) {
-                showMsg(msg, 'Signed in!', 'success');
+                showMsg('Signed in!', 'success');
                 window.location.href = nextUrl;
             } else {
-                showMsg(msg, data.detail || 'Login failed.', 'error');
+                showMsg(data.detail || 'Login failed.', 'error');
             }
         } catch (err) {
-            showMsg(msg, 'Network error.', 'error');
+            showMsg('Network error.', 'error');
         } finally {
             btn.disabled = false;
             btn.textContent = 'Sign In';
         }
     }
 
-    async function doRegister() {
-        const username = document.getElementById('regUser').value.trim();
-        const password = document.getElementById('regPass').value;
-        const password2 = document.getElementById('regPass2').value;
-        const btn = document.getElementById('regBtn');
-        const msg = document.getElementById('regMsg');
-
-        if (!username || !password || !password2) {
-            showMsg(msg, 'Please fill in all fields.', 'error');
-            return;
-        }
-        if (password !== password2) {
-            showMsg(msg, 'Passwords do not match.', 'error');
-            return;
-        }
-
-        btn.disabled = true;
-        btn.textContent = 'Creating...';
-        msg.className = 'form-message';
-
-        try {
-            const resp = await fetch('/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password }),
-            });
-            const data = await resp.json();
-
-            if (resp.ok) {
-                showMsg(msg, 'Account created!', 'success');
-                window.location.href = nextUrl;
-            } else {
-                showMsg(msg, data.detail || 'Registration failed.', 'error');
-            }
-        } catch (err) {
-            showMsg(msg, 'Network error.', 'error');
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Create Account';
-        }
+    function showMsg(text, type) {
+        const msg = document.getElementById('msg');
+        msg.textContent = text;
+        msg.className = 'form-message ' + type;
     }
 
-    function showMsg(el, text, type) {
-        el.textContent = text;
-        el.className = 'form-message ' + type;
-    }
-
-    // Submit on Enter
     document.querySelectorAll('.form-input').forEach(input => {
         input.addEventListener('keydown', (e) => {
-            if (e.key !== 'Enter') return;
-            const panel = input.closest('.form-panel');
-            if (panel.id === 'loginPanel') doLogin();
-            else doRegister();
+            if (e.key === 'Enter') doLogin();
         });
     });
     </script>
