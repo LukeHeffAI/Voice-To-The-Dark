@@ -1,18 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0a0a0a">
-    <title>Edit Script — {{ story.title }}</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+{% extends "base.html" %}
 
+{% block title %}Edit Script — {{ story.title }}{% endblock %}
+
+{% block styles %}
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-            background: #0a0a0a;
-            color: #e0e0e0;
-            min-height: 100vh;
             padding: 1rem;
         }
 
@@ -258,9 +249,9 @@
             text-align: center;
             margin-bottom: 1rem;
         }
-    </style>
-</head>
-<body>
+{% endblock %}
+
+{% block body %}
     <div class="page-container">
         <a href="/story/{{ story.id }}" class="back-link">&larr; Back to story</a>
 
@@ -289,7 +280,9 @@
         <p class="click-hint">Tap a segment to edit it</p>
         <div class="segment-list" id="segmentList"></div>
     </div>
+{% endblock %}
 
+{% block scripts %}
     <script>
     const storyId = {{ story.id }};
     let script = {{ script_json | safe }};
@@ -472,5 +465,4 @@
 
     render();
     </script>
-</body>
-</html>
+{% endblock %}

@@ -1,18 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0a0a0a">
-    <title>Voice To The Dark</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+{% extends "base.html" %}
 
+{% block styles %}
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-            background: #0a0a0a;
-            color: #e0e0e0;
-            min-height: 100vh;
             padding: 1rem;
         }
 
@@ -137,9 +126,9 @@
         }
         .auth-nav a:hover { color: #ccc; }
         .auth-nav .username { color: #888; }
-    </style>
-</head>
-<body>
+{% endblock %}
+
+{% block body %}
     <div class="auth-nav">
         {% if user %}
         <span class="username">{{ user.username }}</span>
@@ -182,5 +171,4 @@
         <p><a href="/submit">Submit a NoSleep story</a> to get started.</p>
     </div>
     {% endif %}
-</body>
-</html>
+{% endblock %}
