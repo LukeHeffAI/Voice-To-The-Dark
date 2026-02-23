@@ -186,6 +186,28 @@
             color: #555;
             min-height: 1.2rem;
         }
+
+        .browser-tip {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.8rem;
+            color: #777;
+            width: 100%;
+            line-height: 1.4;
+        }
+        .browser-tip strong { color: #aaa; }
+        .browser-tip-dismiss {
+            background: none;
+            border: none;
+            color: #555;
+            float: right;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0;
+            margin: -0.25rem 0 0 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -224,6 +246,14 @@
         </div>
 
         <div class="status" id="status"></div>
+
+        <div class="browser-tip" id="browserTip" style="display:none;">
+            <button class="browser-tip-dismiss" onclick="dismissTip()">&times;</button>
+            <strong>Listening with screen locked?</strong> In Samsung Internet, enable
+            <em>Settings &rarr; Useful Features &rarr; Background Play</em>.
+            On any Android browser, set the browser to <em>Unrestricted</em> battery mode
+            in your phone's app settings.
+        </div>
     </div>
 
     <audio id="audio" preload="metadata" src="/stream/{{ story.id }}"></audio>
@@ -278,11 +308,13 @@
 
     audio.addEventListener('play', () => {
         playBtn.innerHTML = '&#10074;&#10074;';
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
         setupMediaSession();
     });
 
     audio.addEventListener('pause', () => {
         playBtn.innerHTML = '&#9654;';
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
         savePosition();
     });
 
@@ -360,35 +392,43 @@
             ]
         });
 
-        navigator.mediaSession.setActionHandler('play', () => {
-            audio.play();
-        });
-        navigator.mediaSession.setActionHandler('pause', () => {
-            audio.pause();
-        });
-        navigator.mediaSession.setActionHandler('seekbackward', (details) => {
-            skip(-(details.seekOffset || 15));
-        });
-        navigator.mediaSession.setActionHandler('seekforward', (details) => {
-            skip(details.seekOffset || 15);
-        });
-        navigator.mediaSession.setActionHandler('seekto', (details) => {
-            if (details.fastSeek && 'fastSeek' in audio) {
-                audio.fastSeek(details.seekTime);
-            } else {
-                audio.currentTime = details.seekTime;
-            }
-            updatePositionState();
-        });
-        navigator.mediaSession.setActionHandler('stop', () => {
-            audio.pause();
-            audio.currentTime = 0;
-            savePosition();
-        });
+        const handlers = [
+            ['play', () => audio.play()],
+            ['pause', () => audio.pause()],
+            ['seekbackward', (d) => skip(-(d.seekOffset || 15))],
+            ['seekforward', (d) => skip(d.seekOffset || 15)],
+            ['seekto', (d) => {
+                if (d.fastSeek && 'fastSeek' in audio) audio.fastSeek(d.seekTime);
+                else audio.currentTime = d.seekTime;
+                updatePositionState();
+            }],
+            ['stop', () => { audio.pause(); audio.currentTime = 0; savePosition(); }],
+        ];
+        for (const [action, handler] of handlers) {
+            try { navigator.mediaSession.setActionHandler(action, handler); }
+            catch (e) { /* action not supported in this browser */ }
+        }
+    }
+
+    // --- Samsung Internet / Android background play tip ---
+
+    (function() {
+        if (localStorage.getItem('vttd_tip_dismissed')) return;
+        const ua = navigator.userAgent || '';
+        if (/Android/i.test(ua)) {
+            const tip = document.getElementById('browserTip');
+            if (tip) tip.style.display = 'block';
+        }
+    })();
+
+    function dismissTip() {
+        localStorage.setItem('vttd_tip_dismissed', '1');
+        const tip = document.getElementById('browserTip');
+        if (tip) tip.style.display = 'none';
     }
 
     function updatePositionState() {
-        if (!('mediaSession' in navigator) || !audio.duration) return;
+        if (!('mediaSession' in navigator) || !isFinite(audio.duration) || audio.duration <= 0) return;
         try {
             navigator.mediaSession.setPositionState({
                 duration: audio.duration,
