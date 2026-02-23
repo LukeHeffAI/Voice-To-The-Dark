@@ -111,10 +111,10 @@ def _gather_story_parts(submission, reddit, visited_ids: Set[str]) -> str:
 def _extract_reddit_links(text: str) -> List[str]:
     """
     Find potential Reddit links in text that match standard reddit.com pattern.
-    E.g., (https://reddit.com/r/nosleep/comments/...) or 
+    E.g., (https://reddit.com/r/nosleep/comments/...) or
            (https://www.reddit.com/r/nosleep/comments/...)
     """
-    pattern = r"(https?://(www\.)?reddit\.com/r/nosleep/comments/[a-zA-Z0-9_]+/[^ )\r\n]*)"
+    pattern = r"https?://(?:www\.)?reddit\.com/r/nosleep/comments/[a-zA-Z0-9_]+/[^ )\r\n]*"
     return re.findall(pattern, text)
 
 def _likely_continuation(current_sub, next_sub) -> bool:

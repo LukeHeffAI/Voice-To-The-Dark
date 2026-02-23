@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a0a0a">
+    <title>Voice To The Dark</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+
+        .header {
+            text-align: center;
+            padding: 1.5rem 0;
+            border-bottom: 1px solid #1a1a1a;
+            margin-bottom: 1.5rem;
+        }
+        .header h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #c0392b;
+        }
+        .header p {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 0.3rem;
+        }
+
+        .submit-link {
+            display: block;
+            max-width: 600px;
+            margin: 0 auto 1.5rem;
+            text-align: center;
+            padding: 0.75rem 1.5rem;
+            border: 1px dashed #333;
+            border-radius: 10px;
+            color: #888;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.15s;
+        }
+        .submit-link:hover {
+            border-color: #c0392b;
+            color: #c0392b;
+            background: #1a0f0f;
+        }
+
+        .story-list {
+            list-style: none;
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .story-card {
+            background: #111;
+            border: 1px solid #1a1a1a;
+            border-radius: 10px;
+            padding: 1rem 1.2rem;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            transition: border-color 0.15s;
+        }
+        .story-card:hover { border-color: #333; }
+
+        .story-card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #f0f0f0;
+            line-height: 1.3;
+        }
+
+        .story-card-meta {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.4rem;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .badge-audio {
+            background: #1a2e1a;
+            color: #4caf50;
+            border: 1px solid #2e4a2e;
+        }
+        .badge-script {
+            background: #1a1a2e;
+            color: #8888cc;
+            border: 1px solid #2a2a4e;
+        }
+        .badge-pending {
+            background: #1a1a1a;
+            color: #888;
+            border: 1px solid #2a2a2a;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #555;
+        }
+        .empty-state p { margin-top: 0.5rem; font-size: 0.9rem; }
+        .empty-state a {
+            color: #c0392b;
+            text-decoration: none;
+        }
+        .empty-state a:hover { text-decoration: underline; }
+
+        .auth-nav {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: right;
+            padding: 0.5rem 0;
+            font-size: 0.8rem;
+        }
+        .auth-nav a {
+            color: #666;
+            text-decoration: none;
+            margin-left: 1rem;
+        }
+        .auth-nav a:hover { color: #ccc; }
+        .auth-nav .username { color: #888; }
+    </style>
+</head>
+<body>
+    <div class="auth-nav">
+        {% if user %}
+        <span class="username">{{ user.username }}</span>
+        <a href="#" onclick="fetch('/auth/logout',{method:'POST'}).then(()=>location.reload())">Sign out</a>
+        {% else %}
+        <a href="/login">Sign in</a>
+        {% endif %}
+    </div>
+
+    <div class="header">
+        <h1>Voice To The Dark</h1>
+        <p>NoSleep horror narrations</p>
+    </div>
+
+    <a href="/submit" class="submit-link">+ Submit a new story</a>
+
+    {% if stories %}
+    <ul class="story-list">
+        {% for story in stories %}
+        <li>
+            <a href="{{ '/listen/' ~ story.id if story.audio_file_path else '/story/' ~ story.id }}" class="story-card">
+                <div class="story-card-title">{{ story.title }}</div>
+                <div class="story-card-meta">
+                    <span>{{ story.part_count }} part{{ 's' if story.part_count != 1 else '' }}</span>
+                    {% if story.audio_file_path %}
+                    <span class="badge badge-audio">Ready to listen</span>
+                    {% elif story.script_json %}
+                    <span class="badge badge-script">Script ready</span>
+                    {% else %}
+                    <span class="badge badge-pending">Fetched</span>
+                    {% endif %}
+                </div>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty-state">
+        <p>No stories yet.</p>
+        <p><a href="/submit">Submit a NoSleep story</a> to get started.</p>
+    </div>
+    {% endif %}
+</body>
+</html>
