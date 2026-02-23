@@ -75,6 +75,13 @@ def _convert_markdown_to_prose(text: str) -> str:
     # Remove heading markers but keep the text
     text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
 
+    # Code blocks must be removed before inline code (``` before `)
+    text = re.sub(r"```[\s\S]*?```", "", text)
+
+    # Escaped markdown characters must be resolved before bold/italic
+    # stripping, otherwise \*word\* gets treated as italic first
+    text = re.sub(r"\\([*_~`#\[\]()>])", r"\1", text)
+
     # Convert bold/italic markers to plain text
     # Bold+italic: ***text*** or ___text___
     text = re.sub(r"\*{3}(.+?)\*{3}", r"\1", text)
@@ -91,9 +98,6 @@ def _convert_markdown_to_prose(text: str) -> str:
 
     # Inline code: `text`
     text = re.sub(r"`(.+?)`", r"\1", text)
-
-    # Code blocks: ```...```
-    text = re.sub(r"```[\s\S]*?```", "", text)
 
     # Block quotes: lines starting with >
     text = re.sub(r"^>\s?", "", text, flags=re.MULTILINE)
@@ -114,9 +118,6 @@ def _convert_markdown_to_prose(text: str) -> str:
     text = text.replace("&gt;", ">")
     text = text.replace("&nbsp;", " ")
     text = text.replace("&#x200B;", "")  # zero-width space
-
-    # Escaped markdown characters
-    text = re.sub(r"\\([*_~`#\[\]()>])", r"\1", text)
 
     return text
 
