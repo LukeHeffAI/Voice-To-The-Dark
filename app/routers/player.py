@@ -1,0 +1,137 @@
+import os
+import logging
+from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
+from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.models.story import Story, PlaybackState
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter()
+
+templates = Jinja2Templates(
+    directory=os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates")
+)
+
+
+@router.get("/", response_class=HTMLResponse)
+def story_list_page(request: Request, db: Session = Depends(get_db)):
+    """Serve the story browser page."""
+    stories = db.query(Story).order_by(Story.created_at.desc()).all()
+    return templates.TemplateResponse("story_list.html", {
+        "request": request,
+        "stories": stories,
+    })
+
+
+@router.get("/listen/{story_id}", response_class=HTMLResponse)
+def player_page(request: Request, story_id: int, db: Session = Depends(get_db)):
+    """Serve the audio player page for a specific story."""
+    story = db.query(Story).filter(Story.id == story_id).first()
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    if not story.audio_file_path:
+        raise HTTPException(status_code=404, detail="No audio generated for this story yet")
+
+    # Get saved playback position
+    state = db.query(PlaybackState).filter(PlaybackState.story_id == story_id).first()
+    resume_position = state.position_seconds if state else 0.0
+
+    return templates.TemplateResponse("player.html", {
+        "request": request,
+        "story": story,
+        "resume_position": resume_position,
+    })
+
+
+@router.get("/stream/{story_id}")
+def stream_audio(request: Request, story_id: int, db: Session = Depends(get_db)):
+    """Stream the audio file for a story with HTTP Range request support.
+
+    Range requests are essential for:
+    - Mobile browsers seeking within audio
+    - Lock-screen playback on Android (Samsung Internet, Chrome)
+    - Resuming from a saved position without downloading the whole file
+    """
+    story = db.query(Story).filter(Story.id == story_id).first()
+    if not story or not story.audio_file_path:
+        raise HTTPException(status_code=404, detail="Audio not found")
+
+    file_path = story.audio_file_path
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="Audio file missing from disk")
+
+    file_size = os.path.getsize(file_path)
+    range_header = request.headers.get("range")
+
+    if range_header:
+        # Parse Range: bytes=start-end
+        range_spec = range_header.replace("bytes=", "").strip()
+        parts = range_spec.split("-")
+        start = int(parts[0]) if parts[0] else 0
+        end = int(parts[1]) if len(parts) > 1 and parts[1] else file_size - 1
+
+        # Clamp to file bounds
+        start = max(0, min(start, file_size - 1))
+        end = max(start, min(end, file_size - 1))
+        content_length = end - start + 1
+
+        def iter_range():
+            with open(file_path, "rb") as f:
+                f.seek(start)
+                remaining = content_length
+                while remaining > 0:
+                    chunk_size = min(8192, remaining)
+                    data = f.read(chunk_size)
+                    if not data:
+                        break
+                    remaining -= len(data)
+                    yield data
+
+        return StreamingResponse(
+            iter_range(),
+            status_code=206,
+            media_type="audio/mpeg",
+            headers={
+                "Content-Range": f"bytes {start}-{end}/{file_size}",
+                "Accept-Ranges": "bytes",
+                "Content-Length": str(content_length),
+                "Content-Type": "audio/mpeg",
+                "Cache-Control": "public, max-age=86400",
+            },
+        )
+
+    # No range header — serve the full file
+    return FileResponse(
+        file_path,
+        media_type="audio/mpeg",
+        headers={
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(file_size),
+            "Cache-Control": "public, max-age=86400",
+        },
+    )
+
+
+@router.get("/download/{story_id}")
+def download_audio(story_id: int, db: Session = Depends(get_db)):
+    """Download the audio file for a story."""
+    story = db.query(Story).filter(Story.id == story_id).first()
+    if not story or not story.audio_file_path:
+        raise HTTPException(status_code=404, detail="Audio not found")
+
+    file_path = story.audio_file_path
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="Audio file missing from disk")
+
+    safe_title = "".join(c for c in story.title if c.isalnum() or c in " -_").strip()
+    filename = f"{safe_title}.mp3"
+
+    return FileResponse(
+        file_path,
+        media_type="audio/mpeg",
+        filename=filename,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

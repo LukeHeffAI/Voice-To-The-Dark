@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>{{ story.title }} — Voice To The Dark</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .back-link {
+            align-self: flex-start;
+            color: #888;
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 0.5rem 0;
+        }
+        .back-link:hover { color: #ccc; }
+
+        .player-container {
+            width: 100%;
+            max-width: 480px;
+            margin-top: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .artwork {
+            width: 240px;
+            height: 240px;
+            background: linear-gradient(145deg, #1a0a0a, #0a0a1a);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+        }
+
+        .story-info {
+            text-align: center;
+            width: 100%;
+        }
+        .story-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #f0f0f0;
+            line-height: 1.3;
+        }
+        .story-meta {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 0.3rem;
+        }
+
+        .progress-container {
+            width: 100%;
+            padding: 0 0.5rem;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+            outline: none;
+        }
+        .progress-bar::-webkit-slider-runnable-track {
+            height: 6px;
+            border-radius: 3px;
+            background: #333;
+        }
+        .progress-bar::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #c0392b;
+            margin-top: -6px;
+            box-shadow: 0 0 6px rgba(192,57,43,0.5);
+        }
+        .progress-bar::-moz-range-track {
+            height: 6px;
+            border-radius: 3px;
+            background: #333;
+            border: none;
+        }
+        .progress-bar::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #c0392b;
+            border: none;
+        }
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 0.3rem;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+        }
+        .control-btn {
+            background: none;
+            border: none;
+            color: #e0e0e0;
+            cursor: pointer;
+            padding: 0.5rem;
+            font-size: 1.4rem;
+            opacity: 0.8;
+            transition: opacity 0.15s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .control-btn:hover, .control-btn:active { opacity: 1; }
+        .play-btn {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: #c0392b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            opacity: 1;
+            box-shadow: 0 4px 16px rgba(192,57,43,0.4);
+        }
+        .play-btn:active { transform: scale(0.95); }
+
+        .secondary-actions {
+            display: flex;
+            gap: 2rem;
+            margin-top: 0.5rem;
+        }
+        .secondary-btn {
+            background: none;
+            border: 1px solid #333;
+            color: #888;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: border-color 0.15s;
+        }
+        .secondary-btn:hover { border-color: #666; color: #ccc; }
+
+        .resume-banner {
+            background: #1a1a2e;
+            border: 1px solid #2a2a4e;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            color: #8888cc;
+            width: 100%;
+            text-align: center;
+            cursor: pointer;
+        }
+        .resume-banner:hover { background: #222244; }
+
+        .status {
+            font-size: 0.8rem;
+            color: #555;
+            min-height: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-link">&larr; All stories</a>
+
+    <div class="player-container">
+        <div class="artwork">&#127911;</div>
+
+        <div class="story-info">
+            <div class="story-title">{{ story.title }}</div>
+            <div class="story-meta">{{ story.part_count }} part{{ 's' if story.part_count != 1 else '' }}</div>
+        </div>
+
+        {% if resume_position > 0 %}
+        <div class="resume-banner" id="resumeBanner" onclick="resumePlayback()">
+            Resume from {{ '%d:%02d' % (resume_position // 60, resume_position % 60) }}
+        </div>
+        {% endif %}
+
+        <div class="progress-container">
+            <input type="range" class="progress-bar" id="progressBar" value="0" min="0" max="100" step="0.1">
+            <div class="time-display">
+                <span id="currentTime">0:00</span>
+                <span id="duration">0:00</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="skip(-30)" title="Back 30s">&#9664;&#9664; 30</button>
+            <button class="control-btn play-btn" id="playBtn" onclick="togglePlay()">&#9654;</button>
+            <button class="control-btn" onclick="skip(30)" title="Forward 30s">30 &#9654;&#9654;</button>
+        </div>
+
+        <div class="secondary-actions">
+            <a href="/download/{{ story.id }}" class="secondary-btn">Download MP3</a>
+        </div>
+
+        <div class="status" id="status"></div>
+    </div>
+
+    <audio id="audio" preload="metadata" src="/stream/{{ story.id }}"></audio>
+
+    <script>
+    const audio = document.getElementById('audio');
+    const playBtn = document.getElementById('playBtn');
+    const progressBar = document.getElementById('progressBar');
+    const currentTimeEl = document.getElementById('currentTime');
+    const durationEl = document.getElementById('duration');
+    const statusEl = document.getElementById('status');
+    const storyId = {{ story.id }};
+    const resumePosition = {{ resume_position }};
+
+    let isSeeking = false;
+    let saveTimer = null;
+
+    // --- Playback controls ---
+
+    function togglePlay() {
+        if (audio.paused) {
+            audio.play().catch(err => {
+                statusEl.textContent = 'Tap to play';
+            });
+        } else {
+            audio.pause();
+        }
+    }
+
+    function skip(seconds) {
+        audio.currentTime = Math.max(0, Math.min(audio.currentTime + seconds, audio.duration || 0));
+        updatePositionState();
+    }
+
+    function resumePlayback() {
+        audio.currentTime = resumePosition;
+        audio.play().catch(() => {});
+        const banner = document.getElementById('resumeBanner');
+        if (banner) banner.style.display = 'none';
+    }
+
+    // --- Time formatting ---
+
+    function formatTime(seconds) {
+        if (!seconds || !isFinite(seconds)) return '0:00';
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return m + ':' + (s < 10 ? '0' : '') + s;
+    }
+
+    // --- Audio event listeners ---
+
+    audio.addEventListener('play', () => {
+        playBtn.innerHTML = '&#10074;&#10074;';
+        setupMediaSession();
+    });
+
+    audio.addEventListener('pause', () => {
+        playBtn.innerHTML = '&#9654;';
+        savePosition();
+    });
+
+    audio.addEventListener('timeupdate', () => {
+        if (isSeeking) return;
+        const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+        progressBar.value = pct;
+        currentTimeEl.textContent = formatTime(audio.currentTime);
+        updatePositionState();
+    });
+
+    audio.addEventListener('loadedmetadata', () => {
+        durationEl.textContent = formatTime(audio.duration);
+        progressBar.max = 100;
+        updatePositionState();
+    });
+
+    audio.addEventListener('ended', () => {
+        playBtn.innerHTML = '&#9654;';
+        savePosition();
+    });
+
+    // --- Progress bar seeking ---
+
+    progressBar.addEventListener('input', () => {
+        isSeeking = true;
+        const time = (progressBar.value / 100) * (audio.duration || 0);
+        currentTimeEl.textContent = formatTime(time);
+    });
+
+    progressBar.addEventListener('change', () => {
+        const time = (progressBar.value / 100) * (audio.duration || 0);
+        audio.currentTime = time;
+        isSeeking = false;
+        updatePositionState();
+    });
+
+    // --- Playback position persistence ---
+
+    function savePosition() {
+        if (!audio.currentTime || audio.currentTime < 1) return;
+        const body = JSON.stringify({
+            story_id: storyId,
+            position_seconds: Math.floor(audio.currentTime)
+        });
+        navigator.sendBeacon('/stories/playback', new Blob([body], { type: 'application/json' }));
+    }
+
+    // Auto-save every 15 seconds during playback
+    audio.addEventListener('playing', () => {
+        clearInterval(saveTimer);
+        saveTimer = setInterval(savePosition, 15000);
+    });
+    audio.addEventListener('pause', () => clearInterval(saveTimer));
+    audio.addEventListener('ended', () => clearInterval(saveTimer));
+
+    // Save on page hide (phone lock, tab switch, app switch)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') savePosition();
+    });
+    window.addEventListener('beforeunload', savePosition);
+
+    // --- Media Session API (lock-screen controls) ---
+
+    function setupMediaSession() {
+        if (!('mediaSession' in navigator)) return;
+
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: {{ story.title | tojson }},
+            artist: 'Voice To The Dark',
+            album: 'NoSleep Narrations',
+            artwork: [
+                { src: '/static/icon-192.png', sizes: '192x192', type: 'image/png' },
+                { src: '/static/icon-512.png', sizes: '512x512', type: 'image/png' },
+            ]
+        });
+
+        navigator.mediaSession.setActionHandler('play', () => {
+            audio.play();
+        });
+        navigator.mediaSession.setActionHandler('pause', () => {
+            audio.pause();
+        });
+        navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+            skip(-(details.seekOffset || 15));
+        });
+        navigator.mediaSession.setActionHandler('seekforward', (details) => {
+            skip(details.seekOffset || 15);
+        });
+        navigator.mediaSession.setActionHandler('seekto', (details) => {
+            if (details.fastSeek && 'fastSeek' in audio) {
+                audio.fastSeek(details.seekTime);
+            } else {
+                audio.currentTime = details.seekTime;
+            }
+            updatePositionState();
+        });
+        navigator.mediaSession.setActionHandler('stop', () => {
+            audio.pause();
+            audio.currentTime = 0;
+            savePosition();
+        });
+    }
+
+    function updatePositionState() {
+        if (!('mediaSession' in navigator) || !audio.duration) return;
+        try {
+            navigator.mediaSession.setPositionState({
+                duration: audio.duration,
+                playbackRate: audio.playbackRate,
+                position: audio.currentTime,
+            });
+        } catch(e) {}
+    }
+    </script>
+</body>
+</html>
