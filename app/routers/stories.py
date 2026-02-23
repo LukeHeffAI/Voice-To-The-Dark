@@ -22,15 +22,16 @@ router = APIRouter()
 
 @router.post("/submit", response_model=StoryResponse)
 def submit_story(req: StorySubmitRequest, db: Session = Depends(get_db)):
-    """Fetch a story from a NoSleep URL and store it. Detects duplicates by URL and content hash."""
+    """Fetch a story from a NoSleep URL and store it.
 
-    # Check if this URL was already submitted
+    If the story already exists (by URL or content hash), returns the existing
+    record so the user is seamlessly directed to the story detail page.
+    """
+
+    # Return existing story if this URL was already submitted
     existing = db.query(Story).filter(Story.reddit_url == req.reddit_url).first()
     if existing:
-        raise HTTPException(
-            status_code=409,
-            detail=f"This URL has already been submitted as story #{existing.id}: '{existing.title}'"
-        )
+        return existing
 
     # Fetch story from Reddit
     reddit = init_reddit()
@@ -55,15 +56,11 @@ def submit_story(req: StorySubmitRequest, db: Session = Depends(get_db)):
     parts = text.split("\n\n---\n\n")
     part_count = len(parts)
 
-    # Check for duplicate content (same story posted to a different URL)
+    # Return existing story if content matches (same story, different URL)
     content_digest = hash_content(text)
     duplicate = db.query(Story).filter(Story.content_hash == content_digest).first()
     if duplicate:
-        raise HTTPException(
-            status_code=409,
-            detail=f"This story's content matches an existing entry (story #{duplicate.id}: '{duplicate.title}'). "
-                   "Skipping to avoid redundant API costs."
-        )
+        return duplicate
 
     narration = clean_for_narration(text)
 

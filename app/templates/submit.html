@@ -286,27 +286,15 @@
             const data = await resp.json();
 
             if (resp.ok) {
-                showMessage('Story submitted! Redirecting...', 'success');
-                setTimeout(() => {
-                    window.location.href = '/story/' + data.id;
-                }, 800);
+                showMessage('Loading story...', 'success');
+                window.location.href = '/story/' + data.id;
             } else {
-                const detail = data.detail || 'Submission failed.';
-                // If it's a duplicate, offer a link to the existing story
-                if (resp.status === 409 && detail.includes('story #')) {
-                    const idMatch = detail.match(/story #(\d+)/);
-                    if (idMatch) {
-                        showMessage(detail + ' <a href="/story/' + idMatch[1] + '" style="color:#8888cc;">View it &rarr;</a>', 'error');
-                    } else {
-                        showMessage(detail, 'error');
-                    }
-                } else {
-                    showMessage(detail, 'error');
-                }
+                showMessage(data.detail || 'Submission failed.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit';
             }
         } catch (err) {
             showMessage('Network error. Please try again.', 'error');
-        } finally {
             submitBtn.disabled = false;
             submitBtn.textContent = 'Submit';
         }

@@ -36,10 +36,25 @@ def submit_page(request: Request):
 
 @router.get("/story/{story_id}", response_class=HTMLResponse)
 def story_detail_page(request: Request, story_id: int, db: Session = Depends(get_db)):
-    """Serve the story detail page with pipeline controls."""
+    """Serve the story detail page with teaser, pipeline controls, and playback info."""
     story = db.query(Story).filter(Story.id == story_id).first()
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
+
+    # Build a 2-4 sentence teaser from the narration text
+    teaser = ""
+    source_text = story.narration_text or story.text_content or ""
+    if source_text:
+        import re
+        sentences = re.split(r'(?<=[.!?])\s+', source_text.strip())
+        teaser = " ".join(sentences[:3])
+        if len(teaser) > 400:
+            teaser = teaser[:397] + "..."
+
+    # Estimate word count and listening duration
+    word_count = len(source_text.split()) if source_text else 0
+    # ~150 words per minute for dramatic narration
+    est_minutes = round(word_count / 150) if word_count else 0
 
     # Parse script stats if available
     segment_count = 0
@@ -54,12 +69,20 @@ def story_detail_page(request: Request, story_id: int, db: Session = Depends(get
         except Exception:
             pass
 
+    # Get playback position if the user has started listening
+    playback = db.query(PlaybackState).filter(PlaybackState.story_id == story_id).first()
+    resume_seconds = playback.position_seconds if playback else 0.0
+
     return templates.TemplateResponse("story_detail.html", {
         "request": request,
         "story": story,
+        "teaser": teaser,
+        "word_count": word_count,
+        "est_minutes": est_minutes,
         "segment_count": segment_count,
         "voice_count": voice_count,
         "sfx_count": sfx_count,
+        "resume_seconds": resume_seconds,
     })
 
 

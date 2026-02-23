@@ -52,6 +52,42 @@
         .story-meta a { color: #888; text-decoration: none; }
         .story-meta a:hover { color: #ccc; }
 
+        .story-teaser {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #999;
+            line-height: 1.5;
+            font-style: italic;
+            border-left: 2px solid #2a2a2a;
+            padding-left: 1rem;
+        }
+
+        .story-stats {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .stat {
+            font-size: 0.8rem;
+            color: #555;
+        }
+        .stat-value {
+            color: #999;
+            font-weight: 600;
+        }
+
+        .resume-info {
+            margin-top: 0.6rem;
+            font-size: 0.8rem;
+            color: #8888cc;
+            background: #1a1a2e;
+            border: 1px solid #2a2a4e;
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            display: inline-block;
+        }
+
         /* ── Pipeline steps ──────────────────────────────── */
         .pipeline {
             display: flex;
@@ -219,8 +255,30 @@
             <div class="story-title">{{ story.title }}</div>
             <div class="story-meta">
                 <span>{{ story.part_count }} part{{ 's' if story.part_count != 1 else '' }}</span>
+                {% if story.created_at %}
+                <span>Added {{ story.created_at.strftime('%b %d, %Y') }}</span>
+                {% endif %}
                 <a href="{{ story.reddit_url }}" target="_blank" rel="noopener">View on Reddit</a>
             </div>
+
+            {% if teaser %}
+            <div class="story-teaser">{{ teaser }}</div>
+            {% endif %}
+
+            <div class="story-stats">
+                {% if word_count %}
+                <div class="stat"><span class="stat-value">{{ '{:,}'.format(word_count) }}</span> words</div>
+                {% endif %}
+                {% if est_minutes %}
+                <div class="stat">~<span class="stat-value">{{ est_minutes }}</span> min listen</div>
+                {% endif %}
+            </div>
+
+            {% if resume_seconds > 0 and story.audio_file_path %}
+            <div class="resume-info">
+                Previously listened to {{ '%d:%02d' | format(resume_seconds // 60, resume_seconds % 60) }}
+            </div>
+            {% endif %}
         </div>
 
         <div class="pipeline">
