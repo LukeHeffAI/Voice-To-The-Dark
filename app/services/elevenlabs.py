@@ -42,7 +42,7 @@ MODEL_ELEVEN_V2 = "eleven_multilingual_v2"
 MODEL_ELEVEN_V3 = "eleven_v3"
 
 # SFX cache directory
-SFX_CACHE_DIR = "./sfx_cache"
+SFX_CACHE_DIR = "./data/sfx_cache"
 
 
 def generate_audio(
@@ -58,7 +58,7 @@ def generate_audio(
     size, generates each chunk, then stitches them together.
     """
     if not output_path:
-        output_path = f"./stories/{uuid.uuid4()}.mp3"
+        output_path = f"./data/stories/{uuid.uuid4()}.mp3"
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     tmp_folder = create_tmp_folder()

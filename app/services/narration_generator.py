@@ -35,7 +35,7 @@ def generate_narration(
         Path to the final audio file.
     """
     if not output_path:
-        output_path = f"./stories/{uuid.uuid4()}.mp3"
+        output_path = f"./data/stories/{uuid.uuid4()}.mp3"
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     tmp_folder = create_tmp_folder()

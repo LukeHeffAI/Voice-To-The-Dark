@@ -1,0 +1,13 @@
+services:
+  voice-to-the-dark:
+    build: .
+    container_name: voice-to-the-dark
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./data/db:/app/data/db
+      - ./data/stories:/app/data/stories
+      - ./data/sfx_cache:/app/data/sfx_cache
