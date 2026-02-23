@@ -100,13 +100,26 @@ def list_stories(skip: int = 0, limit: int = 25, db: Session = Depends(get_db)):
     ]
 
 
-@router.get("/{story_id}", response_model=StoryResponse)
-def get_story(story_id: int, db: Session = Depends(get_db)):
-    """Get a single story by ID."""
-    story = db.query(Story).filter(Story.id == story_id).first()
-    if not story:
-        raise HTTPException(status_code=404, detail="Story not found")
-    return story
+@router.get("/top-nosleep")
+def top_nosleep_posts(timeframe: str = "alltime", limit: int = 50, db: Session = Depends(get_db)):
+    """Fetch top posts from r/nosleep for the story browser.
+
+    Returns a list of posts with title, URL, and score. Already-submitted
+    stories are flagged so the frontend can indicate them.
+    """
+    from app.services.reddit import fetch_top_posts
+
+    posts = fetch_top_posts(timeframe=timeframe, limit=limit)
+
+    # Check which URLs are already in the database
+    existing_urls = {
+        row[0] for row in db.query(Story.reddit_url).all()
+    }
+
+    for post in posts:
+        post["already_submitted"] = post["url"] in existing_urls
+
+    return posts
 
 
 @router.get("/check-duplicate/", response_model=DuplicateCheckResponse)
@@ -124,6 +137,15 @@ def check_duplicate(reddit_url: str, db: Session = Depends(get_db)):
         existing_story_id=None,
         message="No duplicate found"
     )
+
+
+@router.get("/{story_id}", response_model=StoryResponse)
+def get_story(story_id: int, db: Session = Depends(get_db)):
+    """Get a single story by ID."""
+    story = db.query(Story).filter(Story.id == story_id).first()
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    return story
 
 
 @router.post("/playback", response_model=PlaybackStateResponse)

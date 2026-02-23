@@ -10,6 +10,7 @@ from app.services.narration_generator import generate_narration
 from app.models.story import Story
 from app.schemas.story import GenerateScriptRequest, GenerateNarrationRequest
 from app.schemas.narration import NarrationScript
+from app.services.voice_pool import auto_assign_voices
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +127,8 @@ def generate_narration_route(req: GenerateNarrationRequest, db: Session = Depend
     """Generate the full dramatic narration: multi-voice TTS + SFX + ambient + mixing.
 
     Requires a script to have been generated first (via /generate-script).
-    The voice_map assigns ElevenLabs voice IDs to each character in the script.
+    If voice_map is omitted, voices are auto-assigned from a diverse pool
+    based on each character's voice_profile description.
     """
     story = db.query(Story).filter(Story.id == req.story_id).first()
     if not story:
@@ -143,16 +145,22 @@ def generate_narration_route(req: GenerateNarrationRequest, db: Session = Depend
 
     script = NarrationScript(**json.loads(story.script_json))
 
-    # Validate that all characters in the script have a voice assignment
-    missing = [c for c in script.character_names() if c not in req.voice_map]
-    if missing:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Missing voice assignments for characters: {missing}. "
-                   f"Required characters: {script.character_names()}",
-        )
+    # Auto-assign voices if no voice_map provided
+    voice_map = req.voice_map
+    if not voice_map:
+        voice_map = auto_assign_voices(script.characters)
+        logger.info(f"Auto-assigned voices: {voice_map}")
+    else:
+        # Validate that all characters have a voice assignment
+        missing = [c for c in script.character_names() if c not in voice_map]
+        if missing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Missing voice assignments for characters: {missing}. "
+                       f"Required characters: {script.character_names()}",
+            )
 
-    audio_path = generate_narration(script, req.voice_map)
+    audio_path = generate_narration(script, voice_map)
 
     story.audio_file_path = audio_path
     db.commit()
@@ -162,4 +170,5 @@ def generate_narration_route(req: GenerateNarrationRequest, db: Session = Depend
         "message": "Narration generated successfully!",
         "audio_file": story.audio_file_path,
         "segments_processed": len(script.segments),
+        "voice_assignments": voice_map,
     }

@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a0a0a">
+    <title>{{ story.title }} — Voice To The Dark</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+
+        .back-link {
+            color: #888;
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 0.5rem 0;
+            display: inline-block;
+        }
+        .back-link:hover { color: #ccc; }
+
+        .page-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .story-header {
+            padding: 1.5rem 0;
+            border-bottom: 1px solid #1a1a1a;
+            margin-bottom: 1.5rem;
+        }
+        .story-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #f0f0f0;
+            line-height: 1.3;
+        }
+        .story-meta {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 0.4rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .story-meta a { color: #888; text-decoration: none; }
+        .story-meta a:hover { color: #ccc; }
+
+        /* ── Pipeline steps ──────────────────────────────── */
+        .pipeline {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .step {
+            background: #111;
+            border: 1px solid #1a1a1a;
+            border-radius: 10px;
+            padding: 1rem 1.2rem;
+            transition: border-color 0.15s;
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .step-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .step-number.done {
+            background: #1a2e1a;
+            color: #4caf50;
+            border: 1px solid #2e4a2e;
+        }
+        .step-number.pending {
+            background: #1a1a2e;
+            color: #666;
+            border: 1px solid #2a2a4e;
+        }
+        .step-number.active {
+            background: #2e1a1a;
+            color: #c0392b;
+            border: 1px solid #4e2a2a;
+        }
+
+        .step-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #ddd;
+            flex: 1;
+        }
+
+        .step-body {
+            margin-top: 0.75rem;
+            padding-left: 2.75rem;
+        }
+
+        .step-action {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn-primary {
+            background: #c0392b;
+            color: #fff;
+        }
+        .btn-primary:hover { background: #a93226; }
+        .btn-primary:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background: transparent;
+            color: #888;
+            border: 1px solid #333;
+            margin-left: 0.5rem;
+        }
+        .btn-secondary:hover { border-color: #666; color: #ccc; }
+
+        .step-status {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.5rem;
+        }
+        .step-status.error { color: #e07070; }
+        .step-status.success { color: #4caf50; }
+
+        .step-info {
+            font-size: 0.8rem;
+            color: #555;
+            margin-top: 0.4rem;
+        }
+
+        /* ── Listen button ───────────────────────────────── */
+        .listen-section {
+            margin-top: 1.5rem;
+            text-align: center;
+        }
+        .listen-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 12px;
+            background: #c0392b;
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: 0 4px 16px rgba(192,57,43,0.4);
+            transition: background 0.15s;
+        }
+        .listen-btn:hover { background: #a93226; }
+
+        /* ── Loading indicator ───────────────────────────── */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #444;
+            border-top-color: #c0392b;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .progress-bar-track {
+            width: 100%;
+            height: 4px;
+            background: #222;
+            border-radius: 2px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: #c0392b;
+            border-radius: 2px;
+            width: 0%;
+            animation: indeterminate 1.5s ease-in-out infinite;
+        }
+        @keyframes indeterminate {
+            0%   { width: 0%; margin-left: 0; }
+            50%  { width: 40%; margin-left: 30%; }
+            100% { width: 0%; margin-left: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <a href="/" class="back-link">&larr; All stories</a>
+
+        <div class="story-header">
+            <div class="story-title">{{ story.title }}</div>
+            <div class="story-meta">
+                <span>{{ story.part_count }} part{{ 's' if story.part_count != 1 else '' }}</span>
+                <a href="{{ story.reddit_url }}" target="_blank" rel="noopener">View on Reddit</a>
+            </div>
+        </div>
+
+        <div class="pipeline">
+            <!-- Step 1: Story Fetched (always done) -->
+            <div class="step">
+                <div class="step-header">
+                    <div class="step-number done">&#10003;</div>
+                    <div class="step-title">Story Fetched</div>
+                </div>
+                <div class="step-body">
+                    <div class="step-info">
+                        {{ story.narration_text | length | default(0) }} characters of narration text
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Script Generation -->
+            <div class="step" id="scriptStep">
+                <div class="step-header">
+                    <div class="step-number {{ 'done' if story.script_json else 'pending' }}" id="scriptStepNum">
+                        {{ '&#10003;' if story.script_json else '2' }}
+                    </div>
+                    <div class="step-title">Narration Script</div>
+                </div>
+                <div class="step-body">
+                    {% if story.script_json %}
+                    <div class="step-info">
+                        Script generated with {{ segment_count }} segments ({{ voice_count }} voice, {{ sfx_count }} SFX)
+                    </div>
+                    <div style="margin-top: 0.5rem;">
+                        <a href="/story/{{ story.id }}/edit-script" class="step-action btn-secondary">
+                            Edit Script
+                        </a>
+                    </div>
+                    {% else %}
+                    <button class="step-action btn-primary" id="genScriptBtn" onclick="generateScript()">
+                        Generate Script
+                    </button>
+                    <div class="step-status" id="scriptStatus"></div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Step 3: Audio Generation -->
+            <div class="step" id="audioStep">
+                <div class="step-header">
+                    <div class="step-number {{ 'done' if story.audio_file_path else 'pending' }}" id="audioStepNum">
+                        {{ '&#10003;' if story.audio_file_path else '3' }}
+                    </div>
+                    <div class="step-title">Audio Narration</div>
+                </div>
+                <div class="step-body">
+                    {% if story.audio_file_path %}
+                    <div class="step-info step-status success">Audio ready</div>
+                    {% else %}
+                    <button class="step-action btn-primary" id="genAudioBtn"
+                            onclick="generateAudio()"
+                            {{ 'disabled' if not story.script_json }}>
+                        Generate Audio
+                    </button>
+                    <div class="step-info" id="audioNote" style="{{ '' if not story.script_json else 'display:none' }}">
+                        Generate a script first
+                    </div>
+                    <div class="step-status" id="audioStatus"></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if story.audio_file_path %}
+        <div class="listen-section">
+            <a href="/listen/{{ story.id }}" class="listen-btn">
+                &#9654; Listen Now
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+    const storyId = {{ story.id }};
+
+    async function generateScript() {
+        const btn = document.getElementById('genScriptBtn');
+        const status = document.getElementById('scriptStatus');
+        const stepNum = document.getElementById('scriptStepNum');
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Generating...';
+        status.textContent = 'Claude is analyzing the story and building a narration script. This may take a minute for long stories...';
+        status.className = 'step-status';
+        stepNum.className = 'step-number active';
+
+        try {
+            const resp = await fetch('/audio/generate-script', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ story_id: storyId }),
+            });
+
+            const data = await resp.json();
+
+            if (resp.ok) {
+                status.textContent = 'Script generated! Reloading...';
+                status.className = 'step-status success';
+                setTimeout(() => location.reload(), 800);
+            } else {
+                throw new Error(data.detail || 'Script generation failed');
+            }
+        } catch (err) {
+            status.textContent = err.message;
+            status.className = 'step-status error';
+            btn.disabled = false;
+            btn.textContent = 'Retry';
+            stepNum.className = 'step-number pending';
+        }
+    }
+
+    async function generateAudio() {
+        const btn = document.getElementById('genAudioBtn');
+        const status = document.getElementById('audioStatus');
+        const stepNum = document.getElementById('audioStepNum');
+        const note = document.getElementById('audioNote');
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Generating...';
+        if (note) note.style.display = 'none';
+        status.innerHTML = 'Generating multi-voice audio with SFX and ambient sound. This will take several minutes...' +
+            '<div class="progress-bar-track"><div class="progress-bar-fill"></div></div>';
+        status.className = 'step-status';
+        stepNum.className = 'step-number active';
+
+        try {
+            const resp = await fetch('/audio/generate-narration', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ story_id: storyId }),
+            });
+
+            const data = await resp.json();
+
+            if (resp.ok) {
+                status.textContent = 'Audio generated! Reloading...';
+                status.className = 'step-status success';
+                setTimeout(() => location.reload(), 800);
+            } else {
+                throw new Error(data.detail || 'Audio generation failed');
+            }
+        } catch (err) {
+            status.textContent = err.message;
+            status.className = 'step-status error';
+            btn.disabled = false;
+            btn.textContent = 'Retry';
+            stepNum.className = 'step-number pending';
+        }
+    }
+    </script>
+</body>
+</html>

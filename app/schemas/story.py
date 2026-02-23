@@ -41,7 +41,7 @@ class GenerateScriptRequest(BaseModel):
 
 class GenerateNarrationRequest(BaseModel):
     story_id: int
-    voice_map: dict[str, str]  # character key -> ElevenLabs voice ID
+    voice_map: Optional[dict[str, str]] = None  # auto-assigned if omitted
     force_regenerate: bool = False
 
 

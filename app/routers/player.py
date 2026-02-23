@@ -1,3 +1,4 @@
+import json
 import os
 import logging
 from fastapi import APIRouter, HTTPException, Depends, Request
@@ -6,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.story import Story, PlaybackState
+from app.schemas.narration import NarrationScript
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +25,57 @@ def story_list_page(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse("story_list.html", {
         "request": request,
         "stories": stories,
+    })
+
+
+@router.get("/submit", response_class=HTMLResponse)
+def submit_page(request: Request):
+    """Serve the story submission page with URL input and Best of All Time browser."""
+    return templates.TemplateResponse("submit.html", {"request": request})
+
+
+@router.get("/story/{story_id}", response_class=HTMLResponse)
+def story_detail_page(request: Request, story_id: int, db: Session = Depends(get_db)):
+    """Serve the story detail page with pipeline controls."""
+    story = db.query(Story).filter(Story.id == story_id).first()
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    # Parse script stats if available
+    segment_count = 0
+    voice_count = 0
+    sfx_count = 0
+    if story.script_json:
+        try:
+            script = NarrationScript(**json.loads(story.script_json))
+            segment_count = len(script.segments)
+            voice_count = len(script.voice_segments())
+            sfx_count = len(script.sfx_segments())
+        except Exception:
+            pass
+
+    return templates.TemplateResponse("story_detail.html", {
+        "request": request,
+        "story": story,
+        "segment_count": segment_count,
+        "voice_count": voice_count,
+        "sfx_count": sfx_count,
+    })
+
+
+@router.get("/story/{story_id}/edit-script", response_class=HTMLResponse)
+def script_editor_page(request: Request, story_id: int, db: Session = Depends(get_db)):
+    """Serve the script editor page for a story."""
+    story = db.query(Story).filter(Story.id == story_id).first()
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    if not story.script_json:
+        raise HTTPException(status_code=404, detail="No script generated for this story yet")
+
+    return templates.TemplateResponse("script_editor.html", {
+        "request": request,
+        "story": story,
+        "script_json": story.script_json,
     })
 
 
