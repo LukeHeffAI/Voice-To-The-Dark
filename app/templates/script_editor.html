@@ -82,30 +82,74 @@
         }
         .character-list {
             display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
+            flex-direction: column;
+            gap: 0.75rem;
         }
-        .character-tag {
+        .character-card {
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+        }
+        .char-card-header {
             display: flex;
             align-items: center;
-            gap: 0.4rem;
-            padding: 0.35rem 0.75rem;
-            border-radius: 16px;
+            gap: 0.5rem;
+            margin-bottom: 0.6rem;
+        }
+        .char-card-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .char-card-name.narrator { color: #4caf50; }
+        .char-card-name.dialogue { color: #8888cc; }
+        .char-card-badge {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            letter-spacing: 0.03em;
+        }
+        .char-card-badge.narrator { background: #1a2e1a; color: #4caf50; }
+        .char-card-badge.dialogue { background: #1a1a2e; color: #8888cc; }
+        .char-field {
+            margin-bottom: 0.5rem;
+        }
+        .char-field:last-child { margin-bottom: 0; }
+        .char-field-label {
+            font-size: 0.7rem;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 0.25rem;
+        }
+        .char-field-input {
+            width: 100%;
+            padding: 0.4rem 0.6rem;
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #111;
+            color: #e0e0e0;
             font-size: 0.8rem;
-            font-weight: 500;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.15s;
         }
-        .character-tag.narrator {
-            background: #1a2e1a;
-            color: #4caf50;
-            border: 1px solid #2e4a2e;
+        .char-field-input:focus { border-color: #c0392b; }
+        select.char-field-input {
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23666'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.6rem center;
+            padding-right: 1.8rem;
         }
-        .character-tag.dialogue {
-            background: #1a1a2e;
-            color: #8888cc;
-            border: 1px solid #2a2a4e;
-        }
-        .character-profile {
-            color: #666;
+        .char-voice-hint {
+            font-size: 0.7rem;
+            color: #555;
+            margin-top: 0.2rem;
             font-style: italic;
         }
 
@@ -266,9 +310,9 @@
             </div>
         </div>
 
-        <!-- Characters -->
+        <!-- Characters & Voices -->
         <div class="characters-panel">
-            <h2>Characters</h2>
+            <h2>Characters &amp; Voices</h2>
             <div class="character-list" id="characterList"></div>
         </div>
 
@@ -287,22 +331,87 @@
     const storyId = {{ story.id }};
     let script = {{ script_json | safe }};
     let hasChanges = false;
+    const voicePool = {{ voice_pool_json | safe }};
 
     function render() {
         renderCharacters();
         renderSegments();
     }
 
+    function buildVoiceSelect(charKey) {
+        const profile = script.characters[charKey];
+        const currentId = profile.voice_id || '';
+
+        let html = '<select class="char-field-input" data-char="' + escapeAttr(charKey) + '" onchange="onVoiceChange(this)">';
+        html += '<option value=""' + (currentId === '' ? ' selected' : '') + '>Auto (best match)</option>';
+
+        const males = voicePool.filter(v => v.gender === 'male');
+        const females = voicePool.filter(v => v.gender === 'female');
+
+        html += '<optgroup label="Male">';
+        for (const v of males) {
+            const sel = v.voice_id === currentId ? ' selected' : '';
+            html += '<option value="' + v.voice_id + '"' + sel + '>' +
+                escapeHtml(v.name) + ' — ' + escapeHtml(v.archetypes.join(', ')) +
+                '</option>';
+        }
+        html += '</optgroup>';
+
+        html += '<optgroup label="Female">';
+        for (const v of females) {
+            const sel = v.voice_id === currentId ? ' selected' : '';
+            html += '<option value="' + v.voice_id + '"' + sel + '>' +
+                escapeHtml(v.name) + ' — ' + escapeHtml(v.archetypes.join(', ')) +
+                '</option>';
+        }
+        html += '</optgroup>';
+
+        html += '</select>';
+        return html;
+    }
+
+    function onVoiceChange(el) {
+        const charKey = el.dataset.char;
+        script.characters[charKey].voice_id = el.value || null;
+        hasChanges = true;
+    }
+
+    function onProfileChange(el) {
+        const charKey = el.dataset.char;
+        script.characters[charKey].voice_profile = el.value;
+        hasChanges = true;
+    }
+
     function renderCharacters() {
         const container = document.getElementById('characterList');
         container.innerHTML = '';
         for (const [key, profile] of Object.entries(script.characters)) {
-            const tag = document.createElement('div');
-            tag.className = 'character-tag ' + (key === 'narrator' ? 'narrator' : 'dialogue');
-            tag.innerHTML =
-                '<span>' + escapeHtml(key) + '</span>' +
-                '<span class="character-profile">' + escapeHtml(profile.voice_profile) + '</span>';
-            container.appendChild(tag);
+            const isNarrator = key === 'narrator';
+            const roleClass = isNarrator ? 'narrator' : 'dialogue';
+            const roleLabel = isNarrator ? 'narrator' : 'dialogue';
+
+            const card = document.createElement('div');
+            card.className = 'character-card';
+            card.innerHTML =
+                '<div class="char-card-header">' +
+                    '<span class="char-card-name ' + roleClass + '">' + escapeHtml(key) + '</span>' +
+                    '<span class="char-card-badge ' + roleClass + '">' + roleLabel + '</span>' +
+                '</div>' +
+                '<div class="char-field">' +
+                    '<div class="char-field-label">Voice profile</div>' +
+                    '<input class="char-field-input" data-char="' + escapeAttr(key) + '" ' +
+                        'value="' + escapeAttr(profile.voice_profile) + '" ' +
+                        'placeholder="e.g. deep, steady, ominous" ' +
+                        'onchange="onProfileChange(this)">' +
+                '</div>' +
+                '<div class="char-field">' +
+                    '<div class="char-field-label">Voice</div>' +
+                    buildVoiceSelect(key) +
+                    '<div class="char-voice-hint">' +
+                        (profile.voice_id ? '' : 'Matched automatically from voice profile when generating audio') +
+                    '</div>' +
+                '</div>';
+            container.appendChild(card);
         }
     }
 

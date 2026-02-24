@@ -160,6 +160,17 @@ def auto_assign_voices(
 
     for char_key in char_keys:
         char = characters[char_key]
+
+        # If the character already has a voice_id manually assigned, use it
+        if char.voice_id:
+            voice_map[char_key] = char.voice_id
+            used_ids.add(char.voice_id)
+            logger.info(
+                f"Voice pre-assigned: {char_key} -> {char.voice_id[:8]}... "
+                f"[profile: {char.voice_profile[:50]}]"
+            )
+            continue
+
         profile = _parse_profile(char.voice_profile)
 
         # Score all voices, preferring unused ones

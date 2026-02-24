@@ -9,6 +9,7 @@ from app.database import get_db
 from app.models.story import Story, PlaybackState, User
 from app.schemas.narration import NarrationScript
 from app.deps import get_optional_user
+from app.services.voice_pool import VOICE_POOL
 
 logger = logging.getLogger(__name__)
 
@@ -104,10 +105,17 @@ def script_editor_page(request: Request, story_id: int, db: Session = Depends(ge
     if not story.script_json:
         raise HTTPException(status_code=404, detail="No script generated for this story yet")
 
+    voice_pool_json = json.dumps([
+        {"voice_id": v.voice_id, "name": v.name, "gender": v.gender,
+         "age": v.age, "archetypes": v.archetypes}
+        for v in VOICE_POOL
+    ])
+
     return templates.TemplateResponse("script_editor.html", {
         "request": request,
         "story": story,
         "script_json": story.script_json,
+        "voice_pool_json": voice_pool_json,
     })
 
 
