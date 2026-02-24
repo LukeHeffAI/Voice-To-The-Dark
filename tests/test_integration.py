@@ -155,25 +155,25 @@ class TestPlaybackFlow:
         story_id = resp.json()["id"]
 
         # Initially no playback position
-        resp = client.get(f"/stories/playback/{story_id}")
+        resp = client.get(f"/stories/playback/{story_id}", headers=auth_headers)
         assert resp.json()["position_seconds"] == 0.0
 
         # Save position at 30 seconds
         client.post("/stories/playback", json={
             "story_id": story_id,
             "position_seconds": 30.0,
-        })
+        }, headers=auth_headers)
 
         # Resume from saved position
-        resp = client.get(f"/stories/playback/{story_id}")
+        resp = client.get(f"/stories/playback/{story_id}", headers=auth_headers)
         assert resp.json()["position_seconds"] == 30.0
 
         # Update position to 120 seconds
         client.post("/stories/playback", json={
             "story_id": story_id,
             "position_seconds": 120.0,
-        })
-        resp = client.get(f"/stories/playback/{story_id}")
+        }, headers=auth_headers)
+        resp = client.get(f"/stories/playback/{story_id}", headers=auth_headers)
         assert resp.json()["position_seconds"] == 120.0
 
 

@@ -78,7 +78,12 @@ def story_detail_page(request: Request, story_id: int, db: Session = Depends(get
             pass
 
     # Get playback position if the user has started listening
-    playback = db.query(PlaybackState).filter(PlaybackState.story_id == story_id).first()
+    playback = None
+    if user:
+        playback = db.query(PlaybackState).filter(
+            PlaybackState.user_id == user.id,
+            PlaybackState.story_id == story_id,
+        ).first()
     resume_seconds = playback.position_seconds if playback else 0.0
 
     return templates.TemplateResponse("story_detail.html", {
@@ -112,7 +117,7 @@ def script_editor_page(request: Request, story_id: int, db: Session = Depends(ge
 
 
 @router.get("/listen/{story_id}", response_class=HTMLResponse)
-def player_page(request: Request, story_id: int, db: Session = Depends(get_db)):
+def player_page(request: Request, story_id: int, db: Session = Depends(get_db), user: User | None = Depends(get_optional_user)):
     """Serve the audio player page for a specific story."""
     story = db.query(Story).filter(Story.id == story_id).first()
     if not story:
@@ -120,8 +125,13 @@ def player_page(request: Request, story_id: int, db: Session = Depends(get_db)):
     if not story.audio_file_path:
         raise HTTPException(status_code=404, detail="No audio generated for this story yet")
 
-    # Get saved playback position
-    state = db.query(PlaybackState).filter(PlaybackState.story_id == story_id).first()
+    # Get saved playback position for the current user
+    state = None
+    if user:
+        state = db.query(PlaybackState).filter(
+            PlaybackState.user_id == user.id,
+            PlaybackState.story_id == story_id,
+        ).first()
     resume_position = state.position_seconds if state else 0.0
 
     return templates.TemplateResponse("player.html", {
