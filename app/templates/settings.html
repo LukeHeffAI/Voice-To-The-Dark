@@ -7,67 +7,56 @@
             padding: 1rem;
         }
 
-        .back-link {
-            color: #888;
-            text-decoration: none;
-            font-size: 0.9rem;
-            padding: 0.5rem 0;
-            display: inline-block;
-        }
-        .back-link:hover { color: #ccc; }
-
         .page-container {
             max-width: 600px;
             margin: 0 auto;
+            animation: fadeIn 0.4s ease both;
         }
 
         .header {
             text-align: center;
-            padding: 1.5rem 0;
-            border-bottom: 1px solid #1a1a1a;
-            margin-bottom: 1.5rem;
+            padding: 1.5rem 0 1rem;
+            margin-bottom: 0.5rem;
         }
         .header h1 {
-            font-size: 1.4rem;
+            font-family: var(--font-display);
+            font-size: 1.5rem;
             font-weight: 700;
-            color: #c0392b;
+            color: var(--text-heading);
         }
         .header p {
             font-size: 0.85rem;
-            color: #666;
+            color: var(--text-muted);
             margin-top: 0.3rem;
+            letter-spacing: 0.04em;
         }
 
-        .auth-nav {
-            text-align: right;
-            padding: 0.5rem 0;
-            font-size: 0.8rem;
+        .header-separator {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
+            border: none;
+            margin-bottom: 1.5rem;
         }
-        .auth-nav a {
-            color: #666;
-            text-decoration: none;
-            margin-left: 1rem;
-        }
-        .auth-nav a:hover { color: #ccc; }
-        .auth-nav .username { color: #888; }
 
         .settings-section {
             margin-bottom: 2rem;
-            background: #111;
-            border: 1px solid #1a1a1a;
-            border-radius: 10px;
+            background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated));
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
             padding: 1.25rem;
         }
         .settings-section h2 {
-            font-size: 1rem;
-            font-weight: 600;
-            color: #ccc;
+            font-family: var(--font-display);
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-heading);
             margin-bottom: 0.75rem;
         }
         .settings-section p {
             font-size: 0.85rem;
-            color: #666;
+            color: var(--text-muted);
             margin-bottom: 1rem;
+            line-height: 1.4;
         }
 
         .setting-row {
@@ -78,57 +67,42 @@
         }
         .setting-row label {
             font-size: 0.9rem;
-            color: #aaa;
+            color: var(--text-secondary);
             min-width: 120px;
         }
 
         select, input[type="file"] {
             padding: 0.5rem 0.75rem;
-            border: 1px solid #333;
-            border-radius: 8px;
-            background: #0a0a0a;
-            color: #e0e0e0;
+            border: 1px solid var(--border-hover);
+            border-radius: var(--radius-md);
+            background: var(--bg-base);
+            color: var(--text-primary);
             font-size: 0.9rem;
             outline: none;
+            transition: border-color var(--transition-fast);
         }
-        select:focus { border-color: #c0392b; }
+        select:focus { border-color: var(--accent); }
 
         .save-btn, .upload-btn {
             padding: 0.6rem 1.2rem;
             border: none;
-            border-radius: 8px;
-            background: #c0392b;
+            border-radius: var(--radius-md);
+            background: var(--accent);
             color: #fff;
             font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.15s;
+            transition: background var(--transition-fast), box-shadow var(--transition-fast);
         }
-        .save-btn:hover, .upload-btn:hover { background: #a93226; }
+        .save-btn:hover, .upload-btn:hover {
+            background: var(--accent-bright);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
         .save-btn:disabled, .upload-btn:disabled {
-            background: #333;
-            color: #666;
+            background: #222;
+            color: var(--text-muted);
             cursor: not-allowed;
-        }
-
-        .form-message {
-            margin-top: 0.75rem;
-            padding: 0.6rem 0.9rem;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            display: none;
-        }
-        .form-message.error {
-            display: block;
-            background: #2e1a1a;
-            border: 1px solid #4e2a2a;
-            color: #e07070;
-        }
-        .form-message.success {
-            display: block;
-            background: #1a2e1a;
-            border: 1px solid #2e4a2e;
-            color: #70e070;
+            box-shadow: none;
         }
 
         .cache-status {
@@ -138,15 +112,15 @@
             display: flex;
             justify-content: space-between;
             padding: 0.4rem 0;
-            border-bottom: 1px solid #1a1a1a;
+            border-bottom: 1px solid var(--border-subtle);
             font-size: 0.85rem;
         }
         .cache-status-item:last-child { border-bottom: none; }
-        .cache-status-label { color: #aaa; }
-        .cache-status-value { color: #666; }
-        .cache-status-value.fresh { color: #70e070; }
-        .cache-status-value.stale { color: #e0a030; }
-        .cache-status-value.missing { color: #555; }
+        .cache-status-label { color: var(--text-secondary); }
+        .cache-status-value { color: var(--text-muted); }
+        .cache-status-value.fresh { color: var(--success); }
+        .cache-status-value.stale { color: var(--warning); }
+        .cache-status-value.missing { color: var(--text-faint); }
 
         .upload-area {
             margin-top: 1rem;
@@ -165,6 +139,14 @@
         .file-input-wrapper input[type="file"] {
             font-size: 0.85rem;
         }
+
+        .settings-section code {
+            background: var(--bg-base);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
 {% endblock %}
 
 {% block body %}
@@ -182,6 +164,7 @@
             <h1>Settings</h1>
             <p>Configure Reddit caching and other options</p>
         </div>
+        <hr class="header-separator">
 
         <!-- Reddit Cache TTL Setting -->
         <div class="settings-section">
