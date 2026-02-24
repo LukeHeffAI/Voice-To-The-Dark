@@ -274,6 +274,44 @@
             width: 100%;
             line-height: 1.4;
         }
+        .series-section {
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+        .series-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #888;
+            margin-bottom: 0.5rem;
+        }
+        .series-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .series-part {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: #111;
+            border: 1px solid #1a1a1a;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #ccc;
+            font-size: 0.8rem;
+            transition: border-color 0.15s;
+        }
+        .series-part:hover { border-color: #333; }
+        .series-part.current { border-color: #c0392b; background: #1a0f0f; }
+        .series-part-num {
+            font-weight: 700;
+            color: #666;
+            min-width: 1.5rem;
+            text-align: center;
+        }
+
         .browser-tip strong { color: #aaa; }
         .browser-tip-dismiss {
             background: none;
@@ -295,7 +333,9 @@
 
         <div class="story-info">
             <div class="story-title">{{ story.title }}</div>
-            <div class="story-meta">{{ story.part_count }} part{{ 's' if story.part_count != 1 else '' }}</div>
+            <div class="story-meta">
+                {% if story.author %}by u/{{ story.author }} &middot; {% endif %}{{ story.part_count }} part{{ 's' if story.part_count != 1 else '' }}
+            </div>
         </div>
 
         {% if resume_position > 0 %}
@@ -329,6 +369,11 @@
 
         <div class="secondary-actions">
             <a href="/download/{{ story.id }}" class="secondary-btn">Download MP3</a>
+        </div>
+
+        <div class="series-section" id="seriesSection" style="display:none;">
+            <div class="series-title">Series Parts</div>
+            <ul class="series-list" id="seriesList"></ul>
         </div>
 
         <div class="status" id="status"></div>
@@ -577,6 +622,54 @@
                 position: audio.currentTime,
             });
         } catch(e) {}
+    }
+
+    // --- Series parts ---
+
+    (async function loadSeriesParts() {
+        try {
+            const resp = await fetch('/stories/' + storyId + '/series-parts');
+            if (!resp.ok) return;
+            const parts = await resp.json();
+            if (!parts || parts.length < 2) return;  // only show if there are multiple parts
+
+            const section = document.getElementById('seriesSection');
+            const list = document.getElementById('seriesList');
+            section.style.display = 'block';
+
+            const currentUrl = {{ story.reddit_url | tojson }};
+            for (const part of parts) {
+                const li = document.createElement('li');
+                const isCurrent = currentUrl && part.url && (
+                    currentUrl.replace(/\/$/, '') === part.url.replace(/\/$/, '')
+                );
+                const partNum = part.part_number || '?';
+                const partTitle = part.title || 'Part ' + partNum;
+
+                if (isCurrent) {
+                    li.innerHTML =
+                        '<div class="series-part current">' +
+                            '<span class="series-part-num">' + partNum + '</span>' +
+                            '<span>' + escapeHtml(partTitle) + ' (current)</span>' +
+                        '</div>';
+                } else {
+                    // Link to submit page with URL pre-filled
+                    const href = '/submit#url=' + encodeURIComponent(part.url);
+                    li.innerHTML =
+                        '<a class="series-part" href="' + href + '">' +
+                            '<span class="series-part-num">' + partNum + '</span>' +
+                            '<span>' + escapeHtml(partTitle) + '</span>' +
+                        '</a>';
+                }
+                list.appendChild(li);
+            }
+        } catch(e) {}
+    })();
+
+    function escapeHtml(text) {
+        const d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
     }
     </script>
 {% endblock %}

@@ -194,12 +194,35 @@
         .top-story-item:hover { border-color: #333; }
         .top-story-item.selected { border-color: #c0392b; background: #1a0f0f; }
 
+        .top-story-info {
+            flex: 1;
+            min-width: 0;
+        }
         .top-story-title {
             font-size: 0.9rem;
             color: #ddd;
             line-height: 1.3;
-            flex: 1;
         }
+        .top-story-meta {
+            font-size: 0.75rem;
+            color: #555;
+            margin-top: 0.2rem;
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .top-story-author { color: #666; }
+        .top-story-badge {
+            display: inline-block;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .badge-series { background: #1a1a2e; color: #6666cc; border: 1px solid #2a2a4e; }
+        .badge-gilded { background: #2e2a1a; color: #ccaa44; border: 1px solid #4e4a2a; }
         .top-story-score {
             font-size: 0.75rem;
             color: #666;
@@ -552,9 +575,22 @@
                 ? (story.score / 1000).toFixed(1) + 'k'
                 : story.score.toString();
 
+            // Build meta badges
+            let metaHtml = '';
+            if (story.author) metaHtml += '<span class="top-story-author">u/' + escapeHtml(story.author) + '</span>';
+            if (story.series_flair && story.series_flair.toLowerCase().includes('series')) {
+                metaHtml += '<span class="top-story-badge badge-series">Series</span>';
+            }
+            if (story.gilded > 0) {
+                metaHtml += '<span class="top-story-badge badge-gilded">&#9733; ' + story.gilded + '</span>';
+            }
+
             li.className = 'top-story-item';
             li.innerHTML =
-                '<div class="top-story-title">' + escapeHtml(story.title) + '</div>' +
+                '<div class="top-story-info">' +
+                    '<div class="top-story-title">' + escapeHtml(story.title) + '</div>' +
+                    (metaHtml ? '<div class="top-story-meta">' + metaHtml + '</div>' : '') +
+                '</div>' +
                 '<div class="top-story-score">' + scoreText + ' pts</div>';
             li.onclick = () => selectTopStory(story.url, li);
             topStoriesList.appendChild(li);

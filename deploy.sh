@@ -34,8 +34,7 @@ if [ ! -f .env ]; then
     cp .env.example .env
     echo
     echo "*** IMPORTANT: Edit .env and add your API keys before continuing! ***"
-    echo "  Required keys: ELEVENLABS_API_KEY, ANTHROPIC_API_KEY,"
-    echo "                 REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET"
+    echo "  Required keys: ELEVENLABS_API_KEY, ANTHROPIC_API_KEY"
     echo
     read -p "Press Enter after you've edited .env (or Ctrl+C to abort)..."
 fi

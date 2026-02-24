@@ -6,7 +6,7 @@ the full flow through multiple router calls and database state transitions.
 
 import json
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from app.schemas.narration import NarrationScript, ScriptSegment, CharacterProfile, SegmentType
 
 
@@ -29,15 +29,11 @@ MOCK_SCRIPT = NarrationScript(
 class TestFullPipeline:
     """Test the submit → script → narration pipeline end to end."""
 
-    @patch("app.routers.stories.init_reddit")
+    @patch("app.routers.stories.fetch_post_metadata")
     @patch("app.routers.stories.fetch_multi_part_story")
-    def test_submit_then_check_duplicate(self, mock_fetch, mock_init, client, auth_headers, db_session):
+    def test_submit_then_check_duplicate(self, mock_fetch, mock_metadata, client, auth_headers, db_session):
         """Submit a story, then verify duplicate check finds it."""
-        mock_reddit = MagicMock()
-        mock_sub = MagicMock()
-        mock_sub.title = "The Haunted Basement"
-        mock_reddit.submission.return_value = mock_sub
-        mock_init.return_value = mock_reddit
+        mock_metadata.return_value = {"title": "The Haunted Basement", "author": "test_author"}
         mock_fetch.return_value = "It was a dark November evening. The old house creaked."
 
         url = "https://www.reddit.com/r/nosleep/comments/test123/the_haunted_basement/"
@@ -53,16 +49,12 @@ class TestFullPipeline:
         assert resp.json()["is_duplicate"] is True
         assert resp.json()["existing_story_id"] == story_id
 
-    @patch("app.routers.stories.init_reddit")
+    @patch("app.routers.stories.fetch_post_metadata")
     @patch("app.routers.stories.fetch_multi_part_story")
     @patch("app.routers.audio.generate_script")
-    def test_submit_then_generate_script(self, mock_script, mock_fetch, mock_init, client, auth_headers, db_session):
+    def test_submit_then_generate_script(self, mock_script, mock_fetch, mock_metadata, client, auth_headers, db_session):
         """Submit a story, then generate its script."""
-        mock_reddit = MagicMock()
-        mock_sub = MagicMock()
-        mock_sub.title = "The Haunted Basement"
-        mock_reddit.submission.return_value = mock_sub
-        mock_init.return_value = mock_reddit
+        mock_metadata.return_value = {"title": "The Haunted Basement", "author": "test_author"}
         mock_fetch.return_value = "It was a dark November evening."
         mock_script.return_value = MOCK_SCRIPT
 
@@ -83,21 +75,17 @@ class TestFullPipeline:
         assert resp.status_code == 200
         assert resp.json()["segment_count"] == 5
 
-    @patch("app.routers.stories.init_reddit")
+    @patch("app.routers.stories.fetch_post_metadata")
     @patch("app.routers.stories.fetch_multi_part_story")
     @patch("app.routers.audio.generate_script")
     @patch("app.routers.audio.generate_narration")
     @patch("app.routers.audio.auto_assign_voices")
     def test_full_pipeline_submit_script_narrate(
-        self, mock_voices, mock_narrate, mock_script, mock_fetch, mock_init,
+        self, mock_voices, mock_narrate, mock_script, mock_fetch, mock_metadata,
         client, auth_headers, db_session,
     ):
         """Submit → script → narration → verify audio path is stored."""
-        mock_reddit = MagicMock()
-        mock_sub = MagicMock()
-        mock_sub.title = "Full Pipeline Test"
-        mock_reddit.submission.return_value = mock_sub
-        mock_init.return_value = mock_reddit
+        mock_metadata.return_value = {"title": "Full Pipeline Test", "author": "test_author"}
         mock_fetch.return_value = "A terrifying encounter in the woods."
         mock_script.return_value = MOCK_SCRIPT
         mock_voices.return_value = {"narrator": "voice_1", "emma": "voice_2"}
@@ -125,15 +113,11 @@ class TestFullPipeline:
         resp = client.get(f"/stories/{story_id}")
         assert resp.json()["audio_file_path"] == "/tmp/audio/full_test.mp3"
 
-    @patch("app.routers.stories.init_reddit")
+    @patch("app.routers.stories.fetch_post_metadata")
     @patch("app.routers.stories.fetch_multi_part_story")
-    def test_resubmit_returns_existing(self, mock_fetch, mock_init, client, auth_headers, db_session):
+    def test_resubmit_returns_existing(self, mock_fetch, mock_metadata, client, auth_headers, db_session):
         """Submitting the same URL twice returns the same story without re-fetching."""
-        mock_reddit = MagicMock()
-        mock_sub = MagicMock()
-        mock_sub.title = "Duplicate Test"
-        mock_reddit.submission.return_value = mock_sub
-        mock_init.return_value = mock_reddit
+        mock_metadata.return_value = {"title": "Duplicate Test", "author": "test_author"}
         mock_fetch.return_value = "Story content here."
 
         url = "https://www.reddit.com/r/nosleep/comments/dup/test/"
@@ -144,7 +128,7 @@ class TestFullPipeline:
         id1 = resp1.json()["id"]
 
         # Reset mock call count
-        mock_init.reset_mock()
+        mock_metadata.reset_mock()
         mock_fetch.reset_mock()
 
         # Second submit - should return existing
@@ -153,21 +137,17 @@ class TestFullPipeline:
         assert resp2.json()["id"] == id1
 
         # Should NOT have fetched from Reddit again
-        mock_init.assert_not_called()
+        mock_metadata.assert_not_called()
         mock_fetch.assert_not_called()
 
 
 class TestPlaybackFlow:
     """Test the playback state save/resume flow."""
 
-    @patch("app.routers.stories.init_reddit")
+    @patch("app.routers.stories.fetch_post_metadata")
     @patch("app.routers.stories.fetch_multi_part_story")
-    def test_save_and_resume_position(self, mock_fetch, mock_init, client, auth_headers, db_session):
-        mock_reddit = MagicMock()
-        mock_sub = MagicMock()
-        mock_sub.title = "Playback Test"
-        mock_reddit.submission.return_value = mock_sub
-        mock_init.return_value = mock_reddit
+    def test_save_and_resume_position(self, mock_fetch, mock_metadata, client, auth_headers, db_session):
+        mock_metadata.return_value = {"title": "Playback Test", "author": "test_author"}
         mock_fetch.return_value = "Story for playback testing."
 
         url = "https://www.reddit.com/r/nosleep/comments/play/test/"
