@@ -165,10 +165,21 @@ def top_nosleep_posts(timeframe: str = "alltime", limit: int = 50, db: Session =
 
     Returns a list of posts with title, URL, score, author, gilding, and flair.
     Already-submitted stories are flagged so the frontend can indicate them.
+    Uses a configurable cache TTL (default 1 week) from app settings.
     """
     from app.services.reddit import fetch_top_posts
+    from app.models.app_setting import get_setting
 
-    posts = fetch_top_posts(timeframe=timeframe, limit=limit)
+    cache_ttl = int(get_setting(db, "reddit_cache_ttl", "604800"))
+
+    try:
+        posts = fetch_top_posts(timeframe=timeframe, limit=limit, cache_ttl=cache_ttl)
+    except Exception as e:
+        logger.warning("Failed to fetch top NoSleep posts: %s", e)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Reddit is currently unreachable: {e}"
+        )
 
     # Check which URLs are already in the database
     existing_urls = {

@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 # ── Cache configuration ──────────────────────────────────────────
 CACHE_DIR = Path("data/reddit_cache")
-CACHE_TTL_LISTING = 3600       # 1 hour for top-posts / author-page listings
+CACHE_TTL_LISTING = 604800     # 1 week for top-posts / author-page listings (configurable via settings)
 CACHE_TTL_POST = 86400         # 24 hours for individual posts (text rarely changes)
 
 # ── HTTP session ─────────────────────────────────────────────────
@@ -83,6 +83,11 @@ def _reddit_get(url: str, params: Optional[dict] = None, cache_ttl: int = CACHE_
                 logger.warning("Reddit request failed (%s) — retrying in %ds", exc, wait)
                 time.sleep(wait)
 
+    # ── Stale cache fallback ──
+    if cache_file.exists():
+        logger.warning("Reddit unreachable — returning stale cache for %s", url)
+        return json.loads(cache_file.read_text(encoding="utf-8"))
+
     raise RuntimeError(f"Failed to fetch {url} after 4 attempts: {last_exc}")
 
 
@@ -125,12 +130,14 @@ def fetch_post_title(post_url: str) -> str:
 
 # ── Top posts listing ────────────────────────────────────────────
 
-def fetch_top_posts(timeframe: str = "today", limit: int = 25) -> List[Dict]:
+def fetch_top_posts(timeframe: str = "today", limit: int = 25, cache_ttl: Optional[int] = None) -> List[Dict]:
     """Fetch the top NoSleep posts for a given timeframe.
 
     Returns a list of dicts with enriched metadata per post.
     The listing .json already contains selftext, author, gilding, flair — so
     no per-post requests are needed.
+
+    cache_ttl: override the listing cache TTL (seconds). Defaults to CACHE_TTL_LISTING.
     """
     time_filter_map = {
         "today": "day",
@@ -141,9 +148,10 @@ def fetch_top_posts(timeframe: str = "today", limit: int = 25) -> List[Dict]:
     }
     time_filter = time_filter_map.get(timeframe, "day")
 
+    ttl = cache_ttl if cache_ttl is not None else CACHE_TTL_LISTING
     url = f"{REDDIT_BASE}/r/nosleep/top.json"
     params = {"t": time_filter, "limit": str(limit)}
-    data = _reddit_get(url, params=params, cache_ttl=CACHE_TTL_LISTING)
+    data = _reddit_get(url, params=params, cache_ttl=ttl)
 
     results = []
     for child in data.get("data", {}).get("children", []):
@@ -315,3 +323,42 @@ def _titles_match(base_a: str, base_b: str) -> bool:
     if longer.startswith(shorter) and len(shorter) >= 10:
         return True
     return False
+
+
+# ── Cache management helpers ─────────────────────────────────────
+
+_TIME_FILTER_MAP = {
+    "today": "day",
+    "week": "week",
+    "month": "month",
+    "year": "year",
+    "alltime": "all",
+}
+
+
+def get_cache_path_for_timeframe(timeframe: str, limit: int = 50) -> Path:
+    """Return the disk cache file path for a given top-posts timeframe.
+
+    This allows external code (e.g. the upload endpoint) to write directly
+    to the correct cache location.
+    """
+    time_filter = _TIME_FILTER_MAP.get(timeframe, "day")
+    url = f"{REDDIT_BASE}/r/nosleep/top.json"
+    full_url = url + "?" + urlencode({"t": time_filter, "limit": str(limit)})
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    return CACHE_DIR / f"{_cache_key(full_url)}.json"
+
+
+def get_cache_info() -> Dict[str, Optional[float]]:
+    """Return the last-modified timestamp for each timeframe's cache file.
+
+    Returns a dict like {"alltime": 1700000000.0, "week": None, ...}.
+    """
+    info = {}
+    for tf in _TIME_FILTER_MAP:
+        path = get_cache_path_for_timeframe(tf)
+        if path.exists():
+            info[tf] = path.stat().st_mtime
+        else:
+            info[tf] = None
+    return info
