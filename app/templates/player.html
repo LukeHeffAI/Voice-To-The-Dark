@@ -288,7 +288,7 @@
 {% endblock %}
 
 {% block body %}
-    <a href="/" class="back-link">&larr; All stories</a>
+    <a href="/story/{{ story.id }}" class="back-link">&larr; Story details</a>
 
     <div class="player-container">
         <div class="artwork">&#127911;</div>
@@ -328,6 +328,7 @@
         </div>
 
         <div class="secondary-actions">
+            <a href="/story/{{ story.id }}" class="secondary-btn">Script &amp; Settings</a>
             <a href="/download/{{ story.id }}" class="secondary-btn">Download MP3</a>
         </div>
 
