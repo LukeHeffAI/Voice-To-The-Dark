@@ -57,7 +57,7 @@ SFX_CACHE_DIR = "./data/sfx_cache"
 def generate_audio(
     text: str,
     voice_id: str,
-    output_path: str = None,
+    output_path: Optional[str] = None,
     preset: str = "horror_narrator",
     model_id: str = MODEL_ELEVEN_V3,
 ) -> str:
