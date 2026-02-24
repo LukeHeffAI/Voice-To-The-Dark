@@ -1,25 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#0a0a0a">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <title>{{ story.title }} — Voice To The Dark</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+{% extends "base.html" %}
 
+{% block title %}{{ story.title }} — Voice To The Dark{% endblock %}
+
+{% block viewport_extra %}, user-scalable=no{% endblock %}
+
+{% block styles %}
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-            background: #0a0a0a;
-            color: #e0e0e0;
-            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             padding: 1rem;
-            -webkit-tap-highlight-color: transparent;
         }
 
         .back-link {
@@ -208,9 +198,9 @@
             padding: 0;
             margin: -0.25rem 0 0 0.5rem;
         }
-    </style>
-</head>
-<body>
+{% endblock %}
+
+{% block body %}
     <a href="/" class="back-link">&larr; All stories</a>
 
     <div class="player-container">
@@ -247,17 +237,26 @@
 
         <div class="status" id="status"></div>
 
-        <div class="browser-tip" id="browserTip" style="display:none;">
-            <button class="browser-tip-dismiss" onclick="dismissTip()">&times;</button>
+        <!-- Platform-specific background playback tips -->
+        <div class="browser-tip" id="androidTip" style="display:none;">
+            <button class="browser-tip-dismiss" onclick="dismissTip('android')">&times;</button>
             <strong>Listening with screen locked?</strong> In Samsung Internet, enable
             <em>Settings &rarr; Useful Features &rarr; Background Play</em>.
             On any Android browser, set the browser to <em>Unrestricted</em> battery mode
             in your phone's app settings.
         </div>
+        <div class="browser-tip" id="iosTip" style="display:none;">
+            <button class="browser-tip-dismiss" onclick="dismissTip('ios')">&times;</button>
+            <strong>For the best experience on iPhone:</strong> Tap the share button
+            and choose <em>Add to Home Screen</em>. This gives you lock-screen controls
+            and background playback without Safari's toolbar.
+        </div>
     </div>
 
-    <audio id="audio" preload="metadata" src="/stream/{{ story.id }}"></audio>
+    <audio id="audio" preload="metadata" playsinline src="/stream/{{ story.id }}"></audio>
+{% endblock %}
 
+{% block scripts %}
     <script>
     const audio = document.getElementById('audio');
     const playBtn = document.getElementById('playBtn');
@@ -410,20 +409,28 @@
         }
     }
 
-    // --- Samsung Internet / Android background play tip ---
+    // --- Platform-specific background playback tips ---
 
     (function() {
-        if (localStorage.getItem('vttd_tip_dismissed')) return;
-        const ua = navigator.userAgent || '';
-        if (/Android/i.test(ua)) {
-            const tip = document.getElementById('browserTip');
+        var ua = navigator.userAgent || '';
+        var isIOS = /iPhone|iPad|iPod/.test(ua);
+        var isAndroid = /Android/i.test(ua);
+        // Detect if running as installed PWA (added to home screen)
+        var isStandalone = window.navigator.standalone === true
+            || window.matchMedia('(display-mode: standalone)').matches;
+
+        if (isIOS && !isStandalone && !localStorage.getItem('vttd_tip_ios_dismissed')) {
+            var tip = document.getElementById('iosTip');
+            if (tip) tip.style.display = 'block';
+        } else if (isAndroid && !localStorage.getItem('vttd_tip_android_dismissed')) {
+            var tip = document.getElementById('androidTip');
             if (tip) tip.style.display = 'block';
         }
     })();
 
-    function dismissTip() {
-        localStorage.setItem('vttd_tip_dismissed', '1');
-        const tip = document.getElementById('browserTip');
+    function dismissTip(platform) {
+        localStorage.setItem('vttd_tip_' + platform + '_dismissed', '1');
+        var tip = document.getElementById(platform + 'Tip');
         if (tip) tip.style.display = 'none';
     }
 
@@ -438,5 +445,4 @@
         } catch(e) {}
     }
     </script>
-</body>
-</html>
+{% endblock %}
