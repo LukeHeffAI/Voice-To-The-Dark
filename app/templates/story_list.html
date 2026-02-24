@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block styles %}
+        body {
+            padding: 1rem;
+        }
+
+        .header {
+            text-align: center;
+            padding: 2.5rem 0 1.75rem;
+            margin-bottom: 0.5rem;
+        }
+        .header h1 {
+            font-family: var(--font-display);
+            font-size: 1.75rem;
+            font-weight: 700;
+            line-height: 1.25;
+            color: var(--text-heading);
+            letter-spacing: 0.01em;
+            text-shadow: 0 0 30px rgba(196, 58, 63, 0.25);
+        }
+        .header p {
+            font-size: 0.75rem;
+            color: var(--text-faint);
+            margin-top: 0.5rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+        }
+
+        .header-separator {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
+            border: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .submit-link {
+            display: block;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+            text-align: center;
+            padding: 1rem 1.5rem;
+            border: 1px dashed var(--border-default);
+            border-radius: var(--radius-md);
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9375rem;
+            transition: all var(--transition-med);
+            background: transparent;
+        }
+        .submit-link:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-bg);
+        }
+
+        .story-list {
+            list-style: none;
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .story-list li {
+            animation: fadeIn 0.4s ease both;
+        }
+        .story-list li:nth-child(1) { animation-delay: 0.05s; }
+        .story-list li:nth-child(2) { animation-delay: 0.1s; }
+        .story-list li:nth-child(3) { animation-delay: 0.15s; }
+        .story-list li:nth-child(4) { animation-delay: 0.2s; }
+        .story-list li:nth-child(5) { animation-delay: 0.25s; }
+        .story-list li:nth-child(6) { animation-delay: 0.3s; }
+        .story-list li:nth-child(7) { animation-delay: 0.35s; }
+        .story-list li:nth-child(8) { animation-delay: 0.4s; }
+        .story-list li:nth-child(n+9) { animation-delay: 0.45s; }
+
+        .story-card {
+            background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated));
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 1.125rem 1.375rem;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+        }
+        .story-card:hover {
+            border-color: var(--border-hover);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .story-card-title {
+            font-family: var(--font-display);
+            font-size: 1.0625rem;
+            font-weight: 600;
+            color: var(--text-heading);
+            line-height: 1.4;
+        }
+
+        .story-card-meta {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.625rem;
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            align-items: center;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 5rem 1.5rem;
+            color: var(--text-faint);
+            animation: fadeIn 0.6s ease both;
+        }
+        .empty-state .empty-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            opacity: 0.4;
+        }
+        .empty-state p { margin-top: 0.5rem; font-size: 0.9rem; }
+        .empty-state a {
+            color: var(--accent-bright);
+            text-decoration: none;
+        }
+        .empty-state a:hover { text-decoration: underline; }
+{% endblock %}
+
+{% block body %}
+    <div class="auth-nav">
+        {% if user %}
+        <span class="username">{{ user.username }}</span>
+        <a href="/settings">Settings</a>
+        <a href="#" onclick="fetch('/auth/logout',{method:'POST'}).then(()=>location.reload())">Sign out</a>
+        {% else %}
+        <a href="/login">Sign in</a>
+        {% endif %}
+    </div>
+
+    <div class="header">
+        <h1>Voice To The Dark</h1>
+        <p>Horror narrations from the deep</p>
+    </div>
+    <hr class="header-separator">
+
+    <a href="/submit" class="submit-link">+ Submit a new story</a>
+
+    {% if stories %}
+    <ul class="story-list">
+        {% for story in stories %}
+        <li>
+            <a href="{{ '/listen/' ~ story.id if story.audio_file_path else '/story/' ~ story.id }}" class="story-card">
+                <div class="story-card-title">{{ story.title }}</div>
+                <div class="story-card-meta">
+                    <span>{{ story.part_count }} part{{ 's' if story.part_count != 1 else '' }}</span>
+                    {% if story.audio_file_path %}
+                    <span class="badge badge-audio">Ready to listen</span>
+                    {% elif story.script_json %}
+                    <span class="badge badge-script">Script ready</span>
+                    {% else %}
+                    <span class="badge badge-pending">Fetched</span>
+                    {% endif %}
+                </div>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">&#127911;</div>
+        <p>The darkness awaits its first story.</p>
+        <p><a href="/submit">Submit a NoSleep story</a> to begin.</p>
+    </div>
+    {% endif %}
+{% endblock %}

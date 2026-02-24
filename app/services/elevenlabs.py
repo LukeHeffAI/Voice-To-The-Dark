@@ -1,90 +1,265 @@
 import os
+import re
 import uuid
+import logging
+import hashlib
 import requests
-from typing import List
+from typing import List, Optional
 from app.config import settings
 from app.services.audio_utils import stitch_audio_files, create_tmp_folder, cleanup_temp_files
 
-# ElevenLabs can handle a certain character limit at once (e.g., 5k-10k).
-# We'll define a chunk size. Adjust as needed or do advanced chunking by sentences.
-MAX_TEXT_LENGTH = 4900  # safe margin
+logger = logging.getLogger(__name__)
+
+
+class ElevenLabsError(Exception):
+    """Raised when an ElevenLabs API call fails."""
+
+    def __init__(self, message: str, status_code: int | None = None, detail: str | None = None):
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(message)
+
+MAX_TEXT_LENGTH = 4900  # safe margin for ElevenLabs per-request char limit
+
+# Horror-tuned voice presets. Lower stability = more emotional range.
+# Higher style = more pronounced character.
+VOICE_PRESETS = {
+    "horror_narrator": {
+        "stability": 0.5,
+        "similarity_boost": 0.75,
+        "style": 0.45,
+    },
+    "horror_dialogue": {
+        "stability": 0.5,
+        "similarity_boost": 0.70,
+        "style": 0.50,
+    },
+    "whisper": {
+        "stability": 0.5,
+        "similarity_boost": 0.80,
+        "style": 0.55,
+    },
+    "calm": {
+        "stability": 0.5,
+        "similarity_boost": 0.75,
+        "style": 0.30,
+    },
+}
+
+# ElevenLabs model IDs
+MODEL_ELEVEN_V2 = "eleven_multilingual_v2"
+MODEL_ELEVEN_V3 = "eleven_v3"
+
+# SFX cache directory
+SFX_CACHE_DIR = "./data/sfx_cache"
+
 
 def generate_audio(
     text: str,
     voice_id: str,
-    output_path: str = None
+    output_path: Optional[str] = None,
+    preset: str = "horror_narrator",
+    model_id: str = MODEL_ELEVEN_V3,
 ) -> str:
-    """
-    Generates an audio file for the given text using ElevenLabs API.
-    Splits the text into chunks if it exceeds the max chunk size.
-    Stitches them together, returns the final file path.
+    """Generate an audio file for the given text using ElevenLabs TTS.
+
+    Splits the text into sentence-boundary chunks if it exceeds the max chunk
+    size, generates each chunk, then stitches them together.
     """
     if not output_path:
-        output_path = f"./stories/{uuid.uuid4()}.mp3"
+        output_path = f"./data/stories/{uuid.uuid4()}.mp3"
 
-    tmp_folder = create_tmp_folder()  # ensure tmp/ exists
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    tmp_folder = create_tmp_folder()
     chunks = chunk_text(text, MAX_TEXT_LENGTH)
 
     audio_chunks = []
     for idx, chunk in enumerate(chunks):
         tmp_file_name = f"chunk_{uuid.uuid4()}.mp3"
         chunk_output = os.path.join(tmp_folder, tmp_file_name)
-        tts_request(chunk, voice_id, chunk_output)
+        tts_request(chunk, voice_id, chunk_output, preset=preset, model_id=model_id)
         audio_chunks.append(chunk_output)
 
     if len(audio_chunks) > 1:
         stitch_audio_files(audio_chunks, output_path)
-        # cleanup chunk files
         for f in audio_chunks:
             try:
                 os.remove(f)
-            except:
+            except Exception:
                 pass
     else:
         os.rename(audio_chunks[0], output_path)
 
-    # Possibly call cleanup_temp_files to clean up any older leftover files
     cleanup_temp_files(tmp_folder, days=3)
+    return output_path
 
+
+def generate_sfx(
+    description: str,
+    output_path: Optional[str] = None,
+    duration_seconds: float = 5.0,
+    use_cache: bool = True,
+) -> str:
+    """Generate a sound effect from a text description using ElevenLabs SFX API.
+
+    Caches generated SFX by description hash so identical descriptions across
+    stories don't cost additional API calls.
+    """
+    os.makedirs(SFX_CACHE_DIR, exist_ok=True)
+
+    # Check cache first
+    cache_key = hashlib.sha256(description.lower().strip().encode()).hexdigest()[:16]
+    cached_path = os.path.join(SFX_CACHE_DIR, f"{cache_key}.mp3")
+
+    if use_cache and os.path.exists(cached_path):
+        logger.info(f"SFX cache hit: '{description[:40]}...'")
+        if output_path:
+            import shutil
+            shutil.copy2(cached_path, output_path)
+            return output_path
+        return cached_path
+
+    if not output_path:
+        output_path = os.path.join(SFX_CACHE_DIR, f"{cache_key}.mp3")
+
+    if not settings.ELEVENLABS_API_KEY:
+        raise ElevenLabsError("ELEVENLABS_API_KEY is not set in environment")
+
+    url = "https://api.elevenlabs.io/v1/sound-generation"
+    headers = {
+        "xi-api-key": settings.ELEVENLABS_API_KEY,
+        "Accept": "audio/mpeg",
+        "Content-Type": "application/json",
+    }
+    data = {
+        "text": description,
+        "duration_seconds": duration_seconds,
+    }
+
+    logger.info(f"SFX request: description='{description[:50]}...', duration={duration_seconds}s")
+
+    try:
+        response = requests.post(url, headers=headers, json=data, stream=True)
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as exc:
+        body = ""
+        try:
+            body = exc.response.text
+        except Exception:
+            pass
+        status = exc.response.status_code if exc.response is not None else None
+        logger.error(f"ElevenLabs SFX failed (HTTP {status}): {body}")
+        raise ElevenLabsError(
+            f"ElevenLabs SFX API error (HTTP {status}): {body}",
+            status_code=status,
+            detail=body,
+        ) from exc
+    except requests.exceptions.ConnectionError as exc:
+        logger.error(f"ElevenLabs SFX connection error: {exc}")
+        raise ElevenLabsError(f"Could not connect to ElevenLabs API: {exc}") from exc
+
+    with open(output_path, "wb") as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            if chunk:
+                f.write(chunk)
+
+    # Also save to cache if output_path differs
+    if output_path != cached_path and use_cache:
+        import shutil
+        shutil.copy2(output_path, cached_path)
+
+    logger.info(f"SFX generated: '{description[:40]}...' -> {output_path}")
     return output_path
 
 
 def chunk_text(text: str, max_len: int) -> List[str]:
+    """Split text into chunks that respect sentence boundaries.
+
+    Splits on sentence-ending punctuation (.!?) followed by whitespace so that
+    ElevenLabs never receives a fragment that starts or ends mid-sentence.
+    Falls back to paragraph breaks, then to the hard character limit if a
+    single sentence exceeds max_len.
     """
-    Splits text into smaller pieces, each <= max_len chars.
-    You might want more sophisticated splits by sentence boundaries, etc.
-    """
+    if len(text) <= max_len:
+        return [text]
+
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+
     chunks = []
-    start = 0
-    while start < len(text):
-        end = min(start + max_len, len(text))
-        chunks.append(text[start:end])
-        start = end
+    current = ""
+    for sentence in sentences:
+        candidate = f"{current} {sentence}".strip() if current else sentence
+
+        if len(candidate) <= max_len:
+            current = candidate
+        else:
+            if current:
+                chunks.append(current)
+            if len(sentence) > max_len:
+                paragraphs = sentence.split("\n\n")
+                for para in paragraphs:
+                    if len(para) <= max_len:
+                        chunks.append(para)
+                    else:
+                        for i in range(0, len(para), max_len):
+                            chunks.append(para[i:i + max_len])
+                current = ""
+            else:
+                current = sentence
+
+    if current:
+        chunks.append(current)
+
     return chunks
 
 
-def tts_request(text: str, voice_id: str, output_file: str):
-    """
-    Calls the ElevenLabs TTS API to generate audio for a single text chunk.
-    Saves it to `output_file`.
-    """
+def tts_request(
+    text: str,
+    voice_id: str,
+    output_file: str,
+    preset: str = "horror_narrator",
+    model_id: str = MODEL_ELEVEN_V3,
+):
+    """Call the ElevenLabs TTS API with horror-tuned voice settings."""
+    if not settings.ELEVENLABS_API_KEY:
+        raise ElevenLabsError("ELEVENLABS_API_KEY is not set in environment")
+
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream"
+
+    voice_settings = VOICE_PRESETS.get(preset, VOICE_PRESETS["horror_narrator"])
+
     headers = {
         "xi-api-key": settings.ELEVENLABS_API_KEY,
         "Accept": "audio/mpeg",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
     data = {
         "text": text,
-        "voice_settings": {
-            # Optional voice settings
-            # e.g. "stability": 0.5,
-            # "similarity_boost": 0.75
-        }
+        "model_id": model_id,
+        "voice_settings": voice_settings,
     }
 
-    response = requests.post(url, headers=headers, json=data, stream=True)
-    response.raise_for_status()  # will throw if error from API
+    logger.info(f"TTS request: voice={voice_id}, model={model_id}, preset={preset}, text_len={len(text)}")
+
+    try:
+        response = requests.post(url, headers=headers, json=data, stream=True)
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as exc:
+        body = ""
+        try:
+            body = exc.response.text
+        except Exception:
+            pass
+        status = exc.response.status_code if exc.response is not None else None
+        logger.error(f"ElevenLabs TTS failed (HTTP {status}): {body}")
+        raise ElevenLabsError(
+            f"ElevenLabs TTS API error (HTTP {status}): {body}",
+            status_code=status,
+            detail=body,
+        ) from exc
+    except requests.exceptions.ConnectionError as exc:
+        logger.error(f"ElevenLabs TTS connection error: {exc}")
+        raise ElevenLabsError(f"Could not connect to ElevenLabs API: {exc}") from exc
 
     with open(output_file, "wb") as f:
         for chunk in response.iter_content(chunk_size=8192):

@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+
+{% block title %}Settings — Voice To The Dark{% endblock %}
+
+{% block styles %}
+        body {
+            padding: 1rem;
+        }
+
+        .page-container {
+            max-width: 600px;
+            margin: 0 auto;
+            animation: fadeIn 0.4s ease both;
+        }
+
+        .header {
+            text-align: center;
+            padding: 1.5rem 0 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .header h1 {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-heading);
+        }
+        .header p {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-top: 0.375rem;
+            letter-spacing: 0.04em;
+        }
+
+        .header-separator {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
+            border: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .settings-section {
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated));
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+        }
+        .settings-section h2 {
+            font-family: var(--font-display);
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-heading);
+            margin-bottom: 0.75rem;
+        }
+        .settings-section p {
+            font-size: 0.9375rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .setting-row label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            min-width: 120px;
+        }
+
+        select, input[type="file"] {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-hover);
+            border-radius: var(--radius-md);
+            background: var(--bg-base);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color var(--transition-fast);
+        }
+        select:focus { border-color: var(--accent); }
+
+        .save-btn, .upload-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: var(--radius-md);
+            background: var(--accent);
+            color: #fff;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background var(--transition-fast), box-shadow var(--transition-fast);
+        }
+        .save-btn:hover, .upload-btn:hover {
+            background: var(--accent-bright);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+        .save-btn:disabled, .upload-btn:disabled {
+            background: #222;
+            color: var(--text-muted);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .cache-status {
+            margin-top: 0.75rem;
+        }
+        .cache-status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.625rem 0;
+            border-bottom: 1px solid var(--border-subtle);
+            font-size: 0.9375rem;
+        }
+        .cache-status-item:last-child { border-bottom: none; }
+        .cache-status-label { color: var(--text-secondary); }
+        .cache-status-value { color: var(--text-muted); }
+        .cache-status-value.fresh { color: var(--success); }
+        .cache-status-value.stale { color: var(--warning); }
+        .cache-status-value.missing { color: var(--text-faint); }
+
+        .upload-area {
+            margin-top: 1rem;
+        }
+        .upload-row {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        .file-input-wrapper input[type="file"] {
+            font-size: 0.85rem;
+        }
+
+        .settings-section code {
+            background: var(--bg-base);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+        }
+{% endblock %}
+
+{% block body %}
+    <div class="page-container">
+        <div class="auth-nav">
+            {% if user %}
+            <span class="username">{{ user.username }}</span>
+            <a href="#" onclick="fetch('/auth/logout',{method:'POST'}).then(()=>location.reload())">Sign out</a>
+            {% endif %}
+        </div>
+
+        <a href="/" class="back-link">&larr; All stories</a>
+
+        <div class="header">
+            <h1>Settings</h1>
+            <p>Configure Reddit caching and other options</p>
+        </div>
+        <hr class="header-separator">
+
+        <!-- Reddit Cache TTL Setting -->
+        <div class="settings-section">
+            <h2>Reddit Refresh Interval</h2>
+            <p>How often to re-fetch top stories from Reddit. Cached data is served between refreshes.</p>
+
+            <div class="setting-row">
+                <label for="ttlSelect">Refresh every</label>
+                <select id="ttlSelect">
+                    {% for value, label in ttl_options %}
+                    <option value="{{ value }}" {{ 'selected' if value == current_ttl else '' }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <button class="save-btn" id="saveTtlBtn" onclick="saveTtl()">Save</button>
+            </div>
+            <div class="form-message" id="ttlMessage"></div>
+        </div>
+
+        <!-- Cache Status -->
+        <div class="settings-section">
+            <h2>Cache Status</h2>
+            <p>Shows when each timeframe was last cached from Reddit.</p>
+
+            <div class="cache-status" id="cacheStatus">
+                {% for tf in timeframes %}
+                <div class="cache-status-item">
+                    <span class="cache-status-label">{{ tf | capitalize }}</span>
+                    <span class="cache-status-value {{ 'fresh' if cache_info[tf] else 'missing' }}" id="cacheAge_{{ tf }}">
+                        {% if cache_info[tf] %}
+                        cached
+                        {% else %}
+                        No cache
+                        {% endif %}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Manual Reddit JSON Upload -->
+        <div class="settings-section">
+            <h2>Manual Reddit Data Upload</h2>
+            <p>
+                If Reddit is unreachable, you can manually download the JSON and upload it here.
+                Visit <code>https://www.reddit.com/r/nosleep/top.json?t=all&limit=50</code> in your browser,
+                save the page as a .json file, then upload it below.
+            </p>
+
+            <div class="upload-area">
+                <div class="setting-row">
+                    <label for="uploadTimeframe">Timeframe</label>
+                    <select id="uploadTimeframe">
+                        <option value="alltime">All Time</option>
+                        <option value="year">This Year</option>
+                        <option value="month">This Month</option>
+                        <option value="week">This Week</option>
+                        <option value="today">Today</option>
+                    </select>
+                </div>
+                <div class="upload-row">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="jsonFileInput" accept=".json,application/json">
+                    </div>
+                    <button class="upload-btn" id="uploadBtn" onclick="uploadJson()">Upload</button>
+                </div>
+            </div>
+            <div class="form-message" id="uploadMessage"></div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+    // ── Cache age display ───────────────────────────────
+    const cacheInfo = {{ cache_info | tojson }};
+    const now = Date.now() / 1000;
+
+    for (const [tf, mtime] of Object.entries(cacheInfo)) {
+        const el = document.getElementById('cacheAge_' + tf);
+        if (!el || !mtime) continue;
+
+        const ageSec = now - mtime;
+        let ageText;
+        if (ageSec < 3600) ageText = Math.round(ageSec / 60) + ' min ago';
+        else if (ageSec < 86400) ageText = Math.round(ageSec / 3600) + ' hours ago';
+        else ageText = Math.round(ageSec / 86400) + ' days ago';
+
+        el.textContent = ageText;
+
+        const ttl = parseInt(document.getElementById('ttlSelect').value);
+        if (ageSec < ttl) {
+            el.className = 'cache-status-value fresh';
+        } else {
+            el.className = 'cache-status-value stale';
+        }
+    }
+
+    // ── Save TTL ────────────────────────────────────────
+    async function saveTtl() {
+        const btn = document.getElementById('saveTtlBtn');
+        const msg = document.getElementById('ttlMessage');
+        const ttl = document.getElementById('ttlSelect').value;
+
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+        msg.style.display = 'none';
+
+        try {
+            const resp = await fetch('/settings/api', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reddit_cache_ttl: ttl }),
+            });
+            const data = await resp.json();
+            if (resp.ok) {
+                showMsg(msg, 'Settings saved.', 'success');
+            } else {
+                showMsg(msg, data.detail || 'Failed to save.', 'error');
+            }
+        } catch (err) {
+            showMsg(msg, 'Network error.', 'error');
+        }
+        btn.disabled = false;
+        btn.textContent = 'Save';
+    }
+
+    // ── Upload JSON ─────────────────────────────────────
+    async function uploadJson() {
+        const btn = document.getElementById('uploadBtn');
+        const msg = document.getElementById('uploadMessage');
+        const fileInput = document.getElementById('jsonFileInput');
+        const timeframe = document.getElementById('uploadTimeframe').value;
+
+        if (!fileInput.files.length) {
+            showMsg(msg, 'Please select a .json file.', 'error');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Uploading...';
+        msg.style.display = 'none';
+
+        const formData = new FormData();
+        formData.append('timeframe', timeframe);
+        formData.append('file', fileInput.files[0]);
+
+        try {
+            const resp = await fetch('/settings/upload-reddit-cache', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await resp.json();
+            if (resp.ok) {
+                showMsg(msg, 'Uploaded ' + data.posts_count + ' posts for ' + timeframe + '.', 'success');
+                // Update cache status display
+                const statusEl = document.getElementById('cacheAge_' + timeframe);
+                if (statusEl) {
+                    statusEl.textContent = 'just now';
+                    statusEl.className = 'cache-status-value fresh';
+                }
+            } else {
+                showMsg(msg, data.detail || 'Upload failed.', 'error');
+            }
+        } catch (err) {
+            showMsg(msg, 'Network error.', 'error');
+        }
+        btn.disabled = false;
+        btn.textContent = 'Upload';
+    }
+
+    function showMsg(el, text, type) {
+        el.textContent = text;
+        el.className = 'form-message ' + type;
+    }
+    </script>
+{% endblock %}

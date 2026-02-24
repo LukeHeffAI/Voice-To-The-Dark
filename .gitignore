@@ -1,3 +1,14 @@
+# SQLite databases
+*.db
+
+# Runtime data (database, Reddit cache)
+data/
+
+# Generated audio and SFX cache
+stories/
+sfx_cache/
+tmp/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

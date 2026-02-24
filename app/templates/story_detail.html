@@ -1,0 +1,575 @@
+{% extends "base.html" %}
+{% block title %}{{ story.title }} — Voice To The Dark{% endblock %}
+{% block styles %}
+        body {
+            padding: 1rem;
+        }
+        .page-container {
+            max-width: 600px;
+            margin: 0 auto;
+            animation: fadeIn 0.4s ease both;
+        }
+
+        /* ── Story header ──────────────────────────────────── */
+
+        .story-header {
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        .story-header-separator {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
+            border: none;
+            margin-top: 1.5rem;
+        }
+        .story-title {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-heading);
+            line-height: 1.35;
+            letter-spacing: 0.01em;
+        }
+        .story-meta {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-top: 0.75rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .story-meta a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color var(--transition-fast);
+        }
+        .story-meta a:hover { color: var(--text-primary); }
+        .story-teaser {
+            margin-top: 1.5rem;
+            font-size: 0.9375rem;
+            color: var(--text-secondary);
+            line-height: 1.65;
+            font-style: italic;
+            border-left: 2px solid var(--accent-dim);
+            padding: 1rem 1.25rem;
+            background: linear-gradient(90deg, rgba(196, 58, 63, 0.04), transparent);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        }
+        .story-stats {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 0.85rem;
+            flex-wrap: wrap;
+        }
+        .stat {
+            font-size: 0.8rem;
+            color: var(--text-faint);
+        }
+        .stat-value {
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+        .resume-info {
+            margin-top: 0.6rem;
+            font-size: 0.8rem;
+            color: var(--info);
+            background: var(--info-bg);
+            border: 1px solid var(--info-border);
+            border-radius: var(--radius-md);
+            padding: 0.5rem 0.75rem;
+            display: inline-block;
+        }
+
+        /* ── Pipeline steps ────────────────────────────────── */
+
+        .pipeline {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            position: relative;
+        }
+
+        .step {
+            background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated));
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 1.125rem 1.375rem;
+            transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+            position: relative;
+        }
+        .step + .step {
+            margin-top: 0.75rem;
+        }
+
+        /* Connecting line between steps */
+        .step-connector {
+            width: 1px;
+            height: 0.75rem;
+            background: var(--border-default);
+            margin-left: 2rem;
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            transition: all var(--transition-fast);
+        }
+        .step-number.done {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid var(--success-border);
+            box-shadow: 0 0 8px rgba(61, 187, 97, 0.12);
+        }
+        .step-number.pending {
+            background: var(--info-bg);
+            color: var(--text-muted);
+            border: 1px solid var(--info-border);
+        }
+        .step-number.active {
+            background: var(--accent-bg);
+            color: var(--accent);
+            border: 1px solid rgba(196, 58, 63, 0.25);
+            animation: breathe 2.5s ease-in-out infinite;
+        }
+        .step-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            flex: 1;
+        }
+        .step-body {
+            margin-top: 1rem;
+            padding-left: 3rem;
+        }
+        .step-action {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        .step-status {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+        .step-status.error { color: var(--error); }
+        .step-status.success { color: var(--success); }
+        .step-info {
+            font-size: 0.8rem;
+            color: var(--text-faint);
+            margin-top: 0.4rem;
+        }
+
+        /* ── Listen button ─────────────────────────────────── */
+
+        .listen-section {
+            margin-top: 2.5rem;
+            text-align: center;
+        }
+        .listen-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 1.125rem 2.75rem;
+            border: none;
+            border-radius: var(--radius-lg);
+            background: var(--accent);
+            color: #fff;
+            font-family: var(--font-display);
+            font-size: 1.15rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: 0 4px 20px var(--accent-glow);
+            transition: all var(--transition-fast);
+            animation: breathe 3s ease-in-out infinite;
+        }
+        .listen-btn:hover {
+            background: var(--accent-bright);
+            box-shadow: 0 6px 28px var(--accent-glow), 0 0 40px rgba(196, 58, 63, 0.15);
+            transform: translateY(-1px);
+        }
+
+        /* ── Loading indicator ─────────────────────────────── */
+
+        .progress-bar-track {
+            width: 100%;
+            height: 4px;
+            background: var(--border-default);
+            border-radius: 2px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--accent-bright);
+            border-radius: 2px;
+            width: 0%;
+            animation: indeterminate 1.5s ease-in-out infinite;
+            box-shadow: 0 0 8px var(--accent-glow);
+        }
+
+        /* ── Series parts ──────────────────────────────────── */
+
+        .series-section {
+            margin-top: 1.5rem;
+        }
+        .series-title {
+            font-family: var(--font-display);
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        .series-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .series-part {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            transition: border-color var(--transition-fast);
+        }
+        .series-part:hover { border-color: var(--border-hover); }
+        .series-part.current { border-color: var(--accent); background: var(--accent-bg); }
+        .series-part-num {
+            font-weight: 700;
+            color: var(--text-muted);
+            min-width: 1.5rem;
+            text-align: center;
+        }
+{% endblock %}
+{% block body %}
+    <div class="page-container">
+        <div class="auth-nav">
+            {% if user %}
+            <span class="username">{{ user.username }}</span>
+            <a href="#" onclick="fetch('/auth/logout',{method:'POST'}).then(()=>location.reload())">Sign out</a>
+            {% else %}
+            <a href="/login?next=/story/{{ story.id }}">Sign in</a>
+            {% endif %}
+        </div>
+        <a href="/" class="back-link">&larr; All stories</a>
+        <div class="story-header">
+            <div class="story-title">{{ story.title }}</div>
+            <div class="story-meta">
+                {% if story.author %}
+                <span>by u/{{ story.author }}</span>
+                {% endif %}
+                <span>{{ story.part_count }} part{{ 's' if story.part_count != 1 else '' }}</span>
+                {% if story.created_at %}
+                <span>Added {{ story.created_at.strftime('%b %d, %Y') }}</span>
+                {% endif %}
+                {% if story.reddit_url %}
+                <a href="{{ story.reddit_url }}" target="_blank" rel="noopener">View on Reddit</a>
+                {% endif %}
+            </div>
+            {% if teaser %}
+            <div class="story-teaser">{{ teaser }}</div>
+            {% endif %}
+            <div class="story-stats">
+                {% if word_count %}
+                <div class="stat"><span class="stat-value">{{ '{:,}'.format(word_count) }}</span> words</div>
+                {% endif %}
+                {% if est_minutes %}
+                <div class="stat">~<span class="stat-value">{{ est_minutes }}</span> min listen</div>
+                {% endif %}
+            </div>
+            {% if resume_seconds > 0 and story.audio_file_path %}
+            <div class="resume-info">
+                Previously listened to {{ '%d:%02d' | format(resume_seconds // 60, resume_seconds % 60) }}
+            </div>
+            {% endif %}
+            <hr class="story-header-separator">
+        </div>
+        <div class="pipeline">
+            <!-- Step 1: Story Fetched (always done) -->
+            <div class="step">
+                <div class="step-header">
+                    <div class="step-number done">&#10003;</div>
+                    <div class="step-title">Story Fetched</div>
+                </div>
+                <div class="step-body">
+                    <div class="step-info">
+                        {{ (story.narration_text or '') | length }} characters of narration text
+                    </div>
+                </div>
+            </div>
+            <div class="step-connector"></div>
+            <!-- Step 2: Script Generation -->
+            <div class="step" id="scriptStep">
+                <div class="step-header">
+                    <div class="step-number {{ 'done' if story.script_json else 'pending' }}" id="scriptStepNum">
+                        {{ '&#10003;' | safe if story.script_json else '2' }}
+                    </div>
+                    <div class="step-title">Narration Script</div>
+                </div>
+                <div class="step-body">
+                    {% if story.script_json %}
+                    <div class="step-info">
+                        Script generated with {{ segment_count }} segments ({{ voice_count }} voice, {{ sfx_count }} SFX)
+                    </div>
+                    <div style="margin-top: 0.5rem;">
+                        <a href="/story/{{ story.id }}/edit-script" class="step-action btn-secondary">
+                            Edit Script
+                        </a>
+                    </div>
+                    {% else %}
+                        {% if user %}
+                        <button class="step-action btn-primary" id="genScriptBtn" onclick="generateScript()">
+                            Generate Script
+                        </button>
+                        <div class="step-status" id="scriptStatus"></div>
+                        {% else %}
+                        <div class="login-prompt"><a href="/login?next=/story/{{ story.id }}">Sign in</a> to generate scripts</div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="step-connector"></div>
+            <!-- Step 3: Audio Generation -->
+            <div class="step" id="audioStep">
+                <div class="step-header">
+                    <div class="step-number {{ 'done' if story.audio_file_path else 'pending' }}" id="audioStepNum">
+                        {{ '&#10003;' | safe if story.audio_file_path else '3' }}
+                    </div>
+                    <div class="step-title">Audio Narration</div>
+                </div>
+                <div class="step-body">
+                    {% if story.audio_file_path %}
+                    <div class="step-info step-status success">Audio ready</div>
+                    {% if user %}
+                    <div style="margin-top: 0.5rem;">
+                        <button class="step-action btn-secondary" id="regenAudioBtn" onclick="regenerateAudio()">
+                            Regenerate Audio
+                        </button>
+                    </div>
+                    <div class="step-status" id="regenAudioStatus"></div>
+                    {% endif %}
+                    {% else %}
+                        {% if user %}
+                        <button class="step-action btn-primary" id="genAudioBtn"
+                                onclick="generateAudio()"
+                                {{ 'disabled' if not story.script_json }}>
+                            Generate Audio
+                        </button>
+                        <div class="step-info" id="audioNote" {% if story.script_json %}style="display:none"{% endif %}>
+                            Generate a script first
+                        </div>
+                        <div class="step-status" id="audioStatus"></div>
+                        {% else %}
+                        <div class="login-prompt"><a href="/login?next=/story/{{ story.id }}">Sign in</a> to generate audio</div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% if story.audio_file_path %}
+        <div class="listen-section">
+            <a href="/listen/{{ story.id }}" class="listen-btn">
+                &#9654; Listen Now
+            </a>
+        </div>
+        {% endif %}
+        <div class="series-section" id="seriesSection" style="display:none;">
+            <div class="series-title">Series Parts</div>
+            <ul class="series-list" id="seriesList"></ul>
+        </div>
+    </div>
+{% endblock %}
+{% block scripts %}
+    <script>
+    const storyId = JSON.parse('{{ story.id | tojson }}');
+    async function generateScript() {
+        const btn = document.getElementById('genScriptBtn');
+        const status = document.getElementById('scriptStatus');
+        const stepNum = document.getElementById('scriptStepNum');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Generating...';
+        status.textContent = 'Claude is analyzing the story and building a narration script. This may take a minute for long stories...';
+        status.className = 'step-status';
+        stepNum.className = 'step-number active';
+        try {
+            const resp = await fetch('/audio/generate-script', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ story_id: storyId }),
+            });
+            if (resp.status === 401) {
+                window.location.href = '/login?next=/story/' + storyId;
+                return;
+            }
+            let data;
+            try {
+                data = await resp.json();
+            } catch {
+                throw new Error('Server returned an unexpected response (status ' + resp.status + ')');
+            }
+            if (resp.ok) {
+                status.textContent = 'Script generated! Reloading...';
+                status.className = 'step-status success';
+                setTimeout(() => location.reload(), 800);
+            } else {
+                throw new Error(data.detail || 'Script generation failed');
+            }
+        } catch (err) {
+            status.textContent = err.message;
+            status.className = 'step-status error';
+            btn.disabled = false;
+            btn.textContent = 'Retry';
+            stepNum.className = 'step-number pending';
+        }
+    }
+    async function generateAudio() {
+        const btn = document.getElementById('genAudioBtn');
+        const status = document.getElementById('audioStatus');
+        const stepNum = document.getElementById('audioStepNum');
+        const note = document.getElementById('audioNote');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Generating...';
+        if (note) note.style.display = 'none';
+        status.innerHTML = 'Generating multi-voice audio with SFX and ambient sound. This will take several minutes...' +
+            '<div class="progress-bar-track"><div class="progress-bar-fill"></div></div>';
+        status.className = 'step-status';
+        stepNum.className = 'step-number active';
+        try {
+            const resp = await fetch('/audio/generate-narration', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ story_id: storyId }),
+            });
+            if (resp.status === 401) {
+                window.location.href = '/login?next=/story/' + storyId;
+                return;
+            }
+            let data;
+            try {
+                data = await resp.json();
+            } catch {
+                throw new Error('Server returned an unexpected response (status ' + resp.status + ')');
+            }
+            if (resp.ok) {
+                status.textContent = 'Audio generated! Reloading...';
+                status.className = 'step-status success';
+                setTimeout(() => location.reload(), 800);
+            } else {
+                throw new Error(data.detail || 'Audio generation failed');
+            }
+        } catch (err) {
+            status.textContent = err.message;
+            status.className = 'step-status error';
+            btn.disabled = false;
+            btn.textContent = 'Retry';
+            stepNum.className = 'step-number pending';
+        }
+    }
+    async function regenerateAudio() {
+        if (!confirm('Regenerate audio? This will replace the current audio file.')) return;
+        const btn = document.getElementById('regenAudioBtn');
+        const status = document.getElementById('regenAudioStatus');
+        const stepNum = document.getElementById('audioStepNum');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Regenerating...';
+        status.innerHTML = 'Regenerating multi-voice audio with SFX and ambient sound. This will take several minutes...' +
+            '<div class="progress-bar-track"><div class="progress-bar-fill"></div></div>';
+        status.className = 'step-status';
+        stepNum.className = 'step-number active';
+        try {
+            const resp = await fetch('/audio/generate-narration', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ story_id: storyId, force_regenerate: true }),
+            });
+            if (resp.status === 401) {
+                window.location.href = '/login?next=/story/' + storyId;
+                return;
+            }
+            let data;
+            try {
+                data = await resp.json();
+            } catch {
+                throw new Error('Server returned an unexpected response (status ' + resp.status + ')');
+            }
+            if (resp.ok) {
+                status.textContent = 'Audio regenerated! Reloading...';
+                status.className = 'step-status success';
+                setTimeout(() => location.reload(), 800);
+            } else {
+                throw new Error(data.detail || 'Audio regeneration failed');
+            }
+        } catch (err) {
+            status.textContent = err.message;
+            status.className = 'step-status error';
+            btn.disabled = false;
+            btn.textContent = 'Regenerate Audio';
+            stepNum.className = 'step-number done';
+        }
+    }
+    // --- Series parts ---
+    (async function loadSeriesParts() {
+        try {
+            const resp = await fetch('/stories/' + storyId + '/series-parts');
+            if (!resp.ok) return;
+            const parts = await resp.json();
+            if (!parts || parts.length < 2) return;
+            const section = document.getElementById('seriesSection');
+            const list = document.getElementById('seriesList');
+            section.style.display = 'block';
+            const currentUrl = JSON.parse('{{ story.reddit_url | tojson if story.reddit_url else "null" }}');
+            for (const part of parts) {
+                const li = document.createElement('li');
+                const isCurrent = currentUrl && part.url && (
+                    currentUrl.replace(/\/$/, '') === part.url.replace(/\/$/, '')
+                );
+                const partNum = part.part_number || '?';
+                const partTitle = part.title || 'Part ' + partNum;
+                if (isCurrent) {
+                    li.innerHTML =
+                        '<div class="series-part current">' +
+                            '<span class="series-part-num">' + partNum + '</span>' +
+                            '<span>' + escapeHtml(partTitle) + ' (current)</span>' +
+                        '</div>';
+                } else {
+                    const href = '/submit#url=' + encodeURIComponent(part.url);
+                    li.innerHTML =
+                        '<a class="series-part" href="' + href + '">' +
+                            '<span class="series-part-num">' + partNum + '</span>' +
+                            '<span>' + escapeHtml(partTitle) + '</span>' +
+                        '</a>';
+                }
+                list.appendChild(li);
+            }
+        } catch(e) {}
+    })();
+    function escapeHtml(text) {
+        const d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
+    }
+    </script>
+{% endblock %}

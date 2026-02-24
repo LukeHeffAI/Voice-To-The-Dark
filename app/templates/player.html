@@ -1,0 +1,777 @@
+{% extends "base.html" %}
+
+{% block title %}{{ story.title }} — Voice To The Dark{% endblock %}
+
+{% block viewport_extra %}, user-scalable=no{% endblock %}
+
+{% block styles %}
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        /* ── Vignette overlay for immersion ────────────────── */
+        .vignette {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+            background: radial-gradient(ellipse at center, transparent 50%, rgba(5, 5, 5, 0.45) 100%);
+        }
+
+        .back-link {
+            align-self: flex-start;
+            position: relative;
+            z-index: 2;
+        }
+
+        .player-container {
+            width: 100%;
+            max-width: 500px;
+            margin-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.75rem;
+            position: relative;
+            z-index: 2;
+            animation: fadeIn 0.5s ease both;
+        }
+
+        /* ── Artwork ───────────────────────────────────────── */
+
+        .artwork {
+            width: 260px;
+            height: 260px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7), 0 0 40px rgba(196, 58, 63, 0.08);
+            background: linear-gradient(145deg, #140808, #0a0a14, #0f0508);
+            background-size: 200% 200%;
+            animation: artworkShift 12s ease-in-out infinite alternate;
+        }
+        @keyframes artworkShift {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 100% 100%; }
+        }
+
+        .artwork-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 6px;
+            height: 60px;
+        }
+        .artwork-bar {
+            width: 6px;
+            background: var(--accent);
+            border-radius: 3px;
+            opacity: 0.5;
+            transition: height 0.3s ease, opacity 0.3s ease;
+        }
+        .artwork-bar:nth-child(1) { height: 20px; animation: barPulse 1.8s ease-in-out infinite 0s; }
+        .artwork-bar:nth-child(2) { height: 35px; animation: barPulse 1.6s ease-in-out infinite 0.15s; }
+        .artwork-bar:nth-child(3) { height: 50px; animation: barPulse 1.4s ease-in-out infinite 0.3s; }
+        .artwork-bar:nth-child(4) { height: 40px; animation: barPulse 1.7s ease-in-out infinite 0.45s; }
+        .artwork-bar:nth-child(5) { height: 25px; animation: barPulse 1.9s ease-in-out infinite 0.6s; }
+
+        @keyframes barPulse {
+            0%, 100% { transform: scaleY(0.4); opacity: 0.3; }
+            50% { transform: scaleY(1); opacity: 0.7; }
+        }
+
+        body.playing .artwork-bar {
+            opacity: 0.8;
+        }
+        body.playing .artwork-bar:nth-child(1) { animation-duration: 0.8s; }
+        body.playing .artwork-bar:nth-child(2) { animation-duration: 0.6s; }
+        body.playing .artwork-bar:nth-child(3) { animation-duration: 0.7s; }
+        body.playing .artwork-bar:nth-child(4) { animation-duration: 0.65s; }
+        body.playing .artwork-bar:nth-child(5) { animation-duration: 0.85s; }
+
+        /* ── Story info ────────────────────────────────────── */
+
+        .story-info {
+            text-align: center;
+            width: 100%;
+        }
+        .story-title {
+            font-family: var(--font-display);
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-heading);
+            line-height: 1.35;
+            letter-spacing: 0.01em;
+        }
+        .story-meta {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+
+        /* ── Progress bar ──────────────────────────────────── */
+
+        .progress-container {
+            width: 100%;
+            padding: 0 0.5rem;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+            outline: none;
+        }
+        .progress-bar::-webkit-slider-runnable-track {
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(90deg, #1a1214, #1a1a1a);
+        }
+        .progress-bar::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-bright);
+            margin-top: -6px;
+            box-shadow: 0 0 8px var(--accent-glow), 0 0 16px rgba(196, 58, 63, 0.15);
+            transition: box-shadow var(--transition-fast);
+        }
+        .progress-bar:hover::-webkit-slider-thumb {
+            box-shadow: 0 0 12px var(--accent-glow), 0 0 24px rgba(196, 58, 63, 0.2);
+        }
+        .progress-bar::-moz-range-track {
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(90deg, #1a1214, #1a1a1a);
+            border: none;
+        }
+        .progress-bar::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-bright);
+            border: none;
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.3rem;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ── Playback controls ─────────────────────────────── */
+
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3rem;
+        }
+        .control-btn {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            padding: 0.5rem;
+            font-size: 1.4rem;
+            opacity: 0.7;
+            transition: opacity var(--transition-fast), transform var(--transition-fast);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .control-btn:hover, .control-btn:active { opacity: 1; }
+
+        .play-btn {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.7rem;
+            opacity: 1;
+            box-shadow: 0 4px 20px var(--accent-glow);
+            transition: all var(--transition-fast);
+        }
+        .play-btn:hover {
+            background: var(--accent-bright);
+            box-shadow: 0 4px 28px var(--accent-glow), 0 0 40px rgba(196, 58, 63, 0.15);
+        }
+        .play-btn:active { transform: scale(0.92); }
+
+        body.playing .play-btn {
+            animation: breathe 3s ease-in-out infinite;
+        }
+
+        /* ── Speed control ─────────────────────────────────── */
+
+        .speed-control {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0 0.5rem;
+        }
+        .speed-label {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            min-width: 2.5rem;
+        }
+        .speed-slider {
+            flex: 1;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+            outline: none;
+        }
+        .speed-slider::-webkit-slider-runnable-track {
+            height: 4px;
+            border-radius: 2px;
+            background: var(--border-hover);
+        }
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            margin-top: -5px;
+            transition: background var(--transition-fast);
+        }
+        .speed-slider::-webkit-slider-thumb:hover {
+            background: var(--accent-bright);
+        }
+        .speed-slider::-moz-range-track {
+            height: 4px;
+            border-radius: 2px;
+            background: var(--border-hover);
+            border: none;
+        }
+        .speed-slider::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            border: none;
+        }
+        .speed-slider::-moz-range-thumb:hover {
+            background: var(--accent-bright);
+        }
+        .speed-input-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.15rem;
+        }
+        .speed-input {
+            width: 3.2rem;
+            background: var(--bg-hover);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            padding: 0.375rem 0.4rem;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+            outline: none;
+            transition: border-color var(--transition-fast);
+            -moz-appearance: textfield;
+        }
+        .speed-input::-webkit-inner-spin-button,
+        .speed-input::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .speed-input:focus {
+            border-color: var(--accent);
+        }
+        .speed-suffix {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* ── Secondary actions ─────────────────────────────── */
+
+        .secondary-actions {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 0.5rem;
+        }
+        .secondary-btn {
+            background: none;
+            border: 1px solid var(--border-default);
+            color: var(--text-secondary);
+            padding: 0.625rem 1.25rem;
+            border-radius: 20px;
+            font-size: 0.8125rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all var(--transition-fast);
+        }
+        .secondary-btn:hover {
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+        }
+
+        /* ── Resume banner ─────────────────────────────────── */
+
+        .resume-banner {
+            background: var(--info-bg);
+            border: 1px solid var(--info-border);
+            border-radius: var(--radius-md);
+            padding: 0.875rem 1.25rem;
+            font-size: 0.875rem;
+            color: var(--info);
+            width: 100%;
+            text-align: center;
+            cursor: pointer;
+            transition: background var(--transition-fast);
+        }
+        .resume-banner:hover { background: rgba(136, 136, 204, 0.12); }
+
+        .status {
+            font-size: 0.8rem;
+            color: var(--text-faint);
+            min-height: 1.2rem;
+        }
+
+        /* ── Browser tips ──────────────────────────────────── */
+
+        .browser-tip {
+            background: var(--bg-hover);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-md);
+            padding: 0.75rem 1rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            width: 100%;
+            line-height: 1.4;
+        }
+        .browser-tip strong { color: var(--text-secondary); }
+        .browser-tip-dismiss {
+            background: none;
+            border: none;
+            color: var(--text-faint);
+            float: right;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0;
+            margin: -0.25rem 0 0 0.5rem;
+        }
+
+        /* ── Series section ────────────────────────────────── */
+
+        .series-section {
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+        .series-title {
+            font-family: var(--font-display);
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        .series-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .series-part {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            transition: border-color var(--transition-fast);
+        }
+        .series-part:hover { border-color: var(--border-hover); }
+        .series-part.current { border-color: var(--accent); background: var(--accent-bg); }
+        .series-part-num {
+            font-weight: 700;
+            color: var(--text-muted);
+            min-width: 1.5rem;
+            text-align: center;
+        }
+{% endblock %}
+
+{% block body %}
+    <div class="vignette"></div>
+    <a href="/story/{{ story.id }}" class="back-link">&larr; Story details</a>
+
+    <div class="player-container">
+        <div class="artwork">
+            <div class="artwork-bars">
+                <div class="artwork-bar"></div>
+                <div class="artwork-bar"></div>
+                <div class="artwork-bar"></div>
+                <div class="artwork-bar"></div>
+                <div class="artwork-bar"></div>
+            </div>
+        </div>
+
+        <div class="story-info">
+            <div class="story-title">{{ story.title }}</div>
+            <div class="story-meta">
+                {% if story.author %}by u/{{ story.author }} &middot; {% endif %}{{ story.part_count }} part{{ 's' if story.part_count != 1 else '' }}
+            </div>
+        </div>
+
+        {% if resume_position > 0 %}
+        <div class="resume-banner" id="resumeBanner" onclick="resumePlayback()">
+            Resume from {{ '%d:%02d' % (resume_position // 60, resume_position % 60) }}
+        </div>
+        {% endif %}
+
+        <div class="progress-container">
+            <input type="range" class="progress-bar" id="progressBar" value="0" min="0" max="100" step="0.1">
+            <div class="time-display">
+                <span id="currentTime">0:00</span>
+                <span id="duration">0:00</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="skip(-30)" title="Back 30s">&#9664;&#9664; 30</button>
+            <button class="control-btn play-btn" id="playBtn" onclick="togglePlay()">&#9654;</button>
+            <button class="control-btn" onclick="skip(30)" title="Forward 30s">30 &#9654;&#9654;</button>
+        </div>
+
+        <div class="speed-control">
+            <span class="speed-label">Speed</span>
+            <input type="range" class="speed-slider" id="speedSlider" min="0.5" max="3" step="0.05" value="1">
+            <div class="speed-input-wrap">
+                <input type="number" class="speed-input" id="speedInput" min="0.5" max="3" step="0.05" value="1.00">
+                <span class="speed-suffix">x</span>
+            </div>
+        </div>
+
+        <div class="secondary-actions">
+            <a href="/story/{{ story.id }}" class="secondary-btn">Script &amp; Settings</a>
+            <a href="/download/{{ story.id }}" class="secondary-btn">Download MP3</a>
+        </div>
+
+        <div class="series-section" id="seriesSection" style="display:none;">
+            <div class="series-title">Series Parts</div>
+            <ul class="series-list" id="seriesList"></ul>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <!-- Platform-specific background playback tips -->
+        <div class="browser-tip" id="androidTip" style="display:none;">
+            <button class="browser-tip-dismiss" onclick="dismissTip('android')">&times;</button>
+            <strong>Listening with screen locked?</strong> In Samsung Internet, enable
+            <em>Settings &rarr; Useful Features &rarr; Background Play</em>.
+            On any Android browser, set the browser to <em>Unrestricted</em> battery mode
+            in your phone's app settings.
+        </div>
+        <div class="browser-tip" id="iosTip" style="display:none;">
+            <button class="browser-tip-dismiss" onclick="dismissTip('ios')">&times;</button>
+            <strong>For the best experience on iPhone:</strong> Tap the share button
+            and choose <em>Add to Home Screen</em>. This gives you lock-screen controls
+            and background playback without Safari's toolbar.
+        </div>
+    </div>
+
+    <audio id="audio" preload="metadata" playsinline src="/stream/{{ story.id }}"></audio>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+    const audio = document.getElementById('audio');
+    const playBtn = document.getElementById('playBtn');
+    const progressBar = document.getElementById('progressBar');
+    const currentTimeEl = document.getElementById('currentTime');
+    const durationEl = document.getElementById('duration');
+    const statusEl = document.getElementById('status');
+    const speedSlider = document.getElementById('speedSlider');
+    const speedInput = document.getElementById('speedInput');
+    const storyId = {{ story.id }};
+    const resumePosition = {{ resume_position }};
+
+    let isSeeking = false;
+    let saveTimer = null;
+
+    // --- Playback speed control ---
+
+    function setPlaybackSpeed(rate) {
+        rate = Math.max(0.5, Math.min(3, parseFloat(rate) || 1));
+        // Round to nearest 0.05 to avoid floating-point display issues
+        rate = Math.round(rate * 20) / 20;
+        audio.playbackRate = rate;
+        speedSlider.value = rate;
+        speedInput.value = rate.toFixed(2);
+        localStorage.setItem('vttd_playback_speed', rate);
+        updatePositionState();
+    }
+
+    speedSlider.addEventListener('input', () => {
+        setPlaybackSpeed(speedSlider.value);
+    });
+
+    speedInput.addEventListener('change', () => {
+        setPlaybackSpeed(speedInput.value);
+    });
+
+    // Allow Enter key to apply the value from the number input
+    speedInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.target.blur();
+        }
+    });
+
+    // Restore saved speed preference
+    (function() {
+        const saved = parseFloat(localStorage.getItem('vttd_playback_speed'));
+        if (saved && saved >= 0.5 && saved <= 3) {
+            setPlaybackSpeed(saved);
+        }
+    })();
+
+    // --- Playback controls ---
+
+    function togglePlay() {
+        if (audio.paused) {
+            audio.play().catch(err => {
+                statusEl.textContent = 'Tap to play';
+            });
+        } else {
+            audio.pause();
+        }
+    }
+
+    function skip(seconds) {
+        audio.currentTime = Math.max(0, Math.min(audio.currentTime + seconds, audio.duration || 0));
+        updatePositionState();
+    }
+
+    function resumePlayback() {
+        audio.currentTime = resumePosition;
+        audio.play().catch(() => {});
+        const banner = document.getElementById('resumeBanner');
+        if (banner) banner.style.display = 'none';
+    }
+
+    // --- Time formatting ---
+
+    function formatTime(seconds) {
+        if (!seconds || !isFinite(seconds)) return '0:00';
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return m + ':' + (s < 10 ? '0' : '') + s;
+    }
+
+    // --- Audio event listeners ---
+
+    audio.addEventListener('play', () => {
+        playBtn.innerHTML = '&#10074;&#10074;';
+        document.body.classList.add('playing');
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+        setupMediaSession();
+    });
+
+    audio.addEventListener('pause', () => {
+        playBtn.innerHTML = '&#9654;';
+        document.body.classList.remove('playing');
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+        savePosition();
+    });
+
+    audio.addEventListener('timeupdate', () => {
+        if (isSeeking) return;
+        const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+        progressBar.value = pct;
+        currentTimeEl.textContent = formatTime(audio.currentTime);
+        updatePositionState();
+    });
+
+    audio.addEventListener('loadedmetadata', () => {
+        durationEl.textContent = formatTime(audio.duration);
+        progressBar.max = 100;
+        updatePositionState();
+    });
+
+    audio.addEventListener('ended', () => {
+        playBtn.innerHTML = '&#9654;';
+        document.body.classList.remove('playing');
+        savePosition();
+    });
+
+    // --- Progress bar seeking ---
+
+    progressBar.addEventListener('input', () => {
+        isSeeking = true;
+        const time = (progressBar.value / 100) * (audio.duration || 0);
+        currentTimeEl.textContent = formatTime(time);
+    });
+
+    progressBar.addEventListener('change', () => {
+        const time = (progressBar.value / 100) * (audio.duration || 0);
+        audio.currentTime = time;
+        isSeeking = false;
+        updatePositionState();
+    });
+
+    // --- Playback position persistence ---
+
+    function savePosition() {
+        if (!audio.currentTime || audio.currentTime < 1) return;
+        const body = JSON.stringify({
+            story_id: storyId,
+            position_seconds: Math.floor(audio.currentTime)
+        });
+        navigator.sendBeacon('/stories/playback', new Blob([body], { type: 'application/json' }));
+    }
+
+    // Auto-save every 15 seconds during playback
+    audio.addEventListener('playing', () => {
+        clearInterval(saveTimer);
+        saveTimer = setInterval(savePosition, 15000);
+    });
+    audio.addEventListener('pause', () => clearInterval(saveTimer));
+    audio.addEventListener('ended', () => clearInterval(saveTimer));
+
+    // Save on page hide (phone lock, tab switch, app switch)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') savePosition();
+    });
+    window.addEventListener('beforeunload', savePosition);
+
+    // --- Media Session API (lock-screen controls) ---
+
+    function setupMediaSession() {
+        if (!('mediaSession' in navigator)) return;
+
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: {{ story.title | tojson }},
+            artist: 'Voice To The Dark',
+            album: 'NoSleep Narrations',
+            artwork: [
+                { src: '/static/icon-192.png', sizes: '192x192', type: 'image/png' },
+                { src: '/static/icon-512.png', sizes: '512x512', type: 'image/png' },
+            ]
+        });
+
+        const handlers = [
+            ['play', () => audio.play()],
+            ['pause', () => audio.pause()],
+            ['seekbackward', (d) => skip(-(d.seekOffset || 15))],
+            ['seekforward', (d) => skip(d.seekOffset || 15)],
+            ['seekto', (d) => {
+                if (d.fastSeek && 'fastSeek' in audio) audio.fastSeek(d.seekTime);
+                else audio.currentTime = d.seekTime;
+                updatePositionState();
+            }],
+            ['stop', () => { audio.pause(); audio.currentTime = 0; savePosition(); }],
+        ];
+        for (const [action, handler] of handlers) {
+            try { navigator.mediaSession.setActionHandler(action, handler); }
+            catch (e) { /* action not supported in this browser */ }
+        }
+    }
+
+    // --- Platform-specific background playback tips ---
+
+    (function() {
+        var ua = navigator.userAgent || '';
+        var isIOS = /iPhone|iPad|iPod/.test(ua);
+        var isAndroid = /Android/i.test(ua);
+        // Detect if running as installed PWA (added to home screen)
+        var isStandalone = window.navigator.standalone === true
+            || window.matchMedia('(display-mode: standalone)').matches;
+
+        if (isIOS && !isStandalone && !localStorage.getItem('vttd_tip_ios_dismissed')) {
+            var tip = document.getElementById('iosTip');
+            if (tip) tip.style.display = 'block';
+        } else if (isAndroid && !localStorage.getItem('vttd_tip_android_dismissed')) {
+            var tip = document.getElementById('androidTip');
+            if (tip) tip.style.display = 'block';
+        }
+    })();
+
+    function dismissTip(platform) {
+        localStorage.setItem('vttd_tip_' + platform + '_dismissed', '1');
+        var tip = document.getElementById(platform + 'Tip');
+        if (tip) tip.style.display = 'none';
+    }
+
+    function updatePositionState() {
+        if (!('mediaSession' in navigator) || !isFinite(audio.duration) || audio.duration <= 0) return;
+        try {
+            navigator.mediaSession.setPositionState({
+                duration: audio.duration,
+                playbackRate: audio.playbackRate,
+                position: audio.currentTime,
+            });
+        } catch(e) {}
+    }
+
+    // --- Series parts ---
+
+    (async function loadSeriesParts() {
+        try {
+            const resp = await fetch('/stories/' + storyId + '/series-parts');
+            if (!resp.ok) return;
+            const parts = await resp.json();
+            if (!parts || parts.length < 2) return;  // only show if there are multiple parts
+
+            const section = document.getElementById('seriesSection');
+            const list = document.getElementById('seriesList');
+            section.style.display = 'block';
+
+            const currentUrl = {{ story.reddit_url | tojson }};
+            for (const part of parts) {
+                const li = document.createElement('li');
+                const isCurrent = currentUrl && part.url && (
+                    currentUrl.replace(/\/$/, '') === part.url.replace(/\/$/, '')
+                );
+                const partNum = part.part_number || '?';
+                const partTitle = part.title || 'Part ' + partNum;
+
+                if (isCurrent) {
+                    li.innerHTML =
+                        '<div class="series-part current">' +
+                            '<span class="series-part-num">' + partNum + '</span>' +
+                            '<span>' + escapeHtml(partTitle) + ' (current)</span>' +
+                        '</div>';
+                } else {
+                    // Link to submit page with URL pre-filled
+                    const href = '/submit#url=' + encodeURIComponent(part.url);
+                    li.innerHTML =
+                        '<a class="series-part" href="' + href + '">' +
+                            '<span class="series-part-num">' + partNum + '</span>' +
+                            '<span>' + escapeHtml(partTitle) + '</span>' +
+                        '</a>';
+                }
+                list.appendChild(li);
+            }
+        } catch(e) {}
+    })();
+
+    function escapeHtml(text) {
+        const d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
+    }
+    </script>
+{% endblock %}
