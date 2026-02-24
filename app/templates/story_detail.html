@@ -265,6 +265,44 @@
             font-weight: 600;
         }
         .login-prompt a:hover { text-decoration: underline; }
+
+        /* ── Series parts ─────────────────────────────────── */
+        .series-section {
+            margin-top: 1.5rem;
+        }
+        .series-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #888;
+            margin-bottom: 0.5rem;
+        }
+        .series-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .series-part {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: #111;
+            border: 1px solid #1a1a1a;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #ccc;
+            font-size: 0.85rem;
+            transition: border-color 0.15s;
+        }
+        .series-part:hover { border-color: #333; }
+        .series-part.current { border-color: #c0392b; background: #1a0f0f; }
+        .series-part-num {
+            font-weight: 700;
+            color: #666;
+            min-width: 1.5rem;
+            text-align: center;
+        }
 {% endblock %}
 
 {% block body %}
@@ -283,6 +321,9 @@
         <div class="story-header">
             <div class="story-title">{{ story.title }}</div>
             <div class="story-meta">
+                {% if story.author %}
+                <span>by u/{{ story.author }}</span>
+                {% endif %}
                 <span>{{ story.part_count }} part{{ 's' if story.part_count != 1 else '' }}</span>
                 {% if story.created_at %}
                 <span>Added {{ story.created_at.strftime('%b %d, %Y') }}</span>
@@ -394,6 +435,11 @@
             </a>
         </div>
         {% endif %}
+
+        <div class="series-section" id="seriesSection" style="display:none;">
+            <div class="series-title">Series Parts</div>
+            <ul class="series-list" id="seriesList"></ul>
+        </div>
     </div>
 {% endblock %}
 
@@ -494,6 +540,53 @@
             btn.textContent = 'Retry';
             stepNum.className = 'step-number pending';
         }
+    }
+
+    // --- Series parts ---
+
+    (async function loadSeriesParts() {
+        try {
+            const resp = await fetch('/stories/' + storyId + '/series-parts');
+            if (!resp.ok) return;
+            const parts = await resp.json();
+            if (!parts || parts.length < 2) return;
+
+            const section = document.getElementById('seriesSection');
+            const list = document.getElementById('seriesList');
+            section.style.display = 'block';
+
+            const currentUrl = {{ story.reddit_url | default("null", true) | tojson }};
+            for (const part of parts) {
+                const li = document.createElement('li');
+                const isCurrent = currentUrl && part.url && (
+                    currentUrl.replace(/\/$/, '') === part.url.replace(/\/$/, '')
+                );
+                const partNum = part.part_number || '?';
+                const partTitle = part.title || 'Part ' + partNum;
+
+                if (isCurrent) {
+                    li.innerHTML =
+                        '<div class="series-part current">' +
+                            '<span class="series-part-num">' + partNum + '</span>' +
+                            '<span>' + escapeHtml(partTitle) + ' (current)</span>' +
+                        '</div>';
+                } else {
+                    const href = '/submit#url=' + encodeURIComponent(part.url);
+                    li.innerHTML =
+                        '<a class="series-part" href="' + href + '">' +
+                            '<span class="series-part-num">' + partNum + '</span>' +
+                            '<span>' + escapeHtml(partTitle) + '</span>' +
+                        '</a>';
+                }
+                list.appendChild(li);
+            }
+        } catch(e) {}
+    })();
+
+    function escapeHtml(text) {
+        const d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
     }
     </script>
 {% endblock %}
