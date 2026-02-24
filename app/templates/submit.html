@@ -317,6 +317,7 @@
         <div class="auth-nav">
             {% if user %}
             <span class="username">{{ user.username }}</span>
+            <a href="/settings">Settings</a>
             <a href="#" onclick="fetch('/auth/logout',{method:'POST'}).then(()=>location.reload())">Sign out</a>
             {% else %}
             <a href="/login?next=/submit">Sign in</a>

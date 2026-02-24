@@ -362,7 +362,7 @@
                 </div>
                 <div class="step-body">
                     <div class="step-info">
-                        {{ story.narration_text | length | default(0) }} characters of narration text
+                        {{ (story.narration_text or '') | length }} characters of narration text
                     </div>
                 </div>
             </div>

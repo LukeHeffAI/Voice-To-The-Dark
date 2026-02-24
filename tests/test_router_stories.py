@@ -53,6 +53,40 @@ class TestCheckDuplicate:
         assert data["existing_story_id"] == sample_story.id
 
 
+class TestTopNosleep:
+    @patch("app.services.reddit.fetch_top_posts")
+    def test_returns_posts(self, mock_fetch, client, db_session):
+        mock_fetch.return_value = [
+            {"title": "A Scary Story", "url": "https://reddit.com/r/nosleep/comments/abc/story/",
+             "score": 500, "id": "abc", "author": "ghost_writer", "gilded": 0,
+             "flair": None, "series_flair": None},
+        ]
+        resp = client.get("/stories/top-nosleep?timeframe=alltime")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["title"] == "A Scary Story"
+        assert data[0]["already_submitted"] is False
+
+    @patch("app.services.reddit.fetch_top_posts")
+    def test_flags_already_submitted(self, mock_fetch, client, sample_story, db_session):
+        mock_fetch.return_value = [
+            {"title": "The Haunted House", "url": sample_story.reddit_url,
+             "score": 1000, "id": "abc123", "author": "test", "gilded": 0,
+             "flair": None, "series_flair": None},
+        ]
+        resp = client.get("/stories/top-nosleep")
+        assert resp.status_code == 200
+        assert resp.json()[0]["already_submitted"] is True
+
+    @patch("app.services.reddit.fetch_top_posts")
+    def test_reddit_unavailable_returns_502(self, mock_fetch, client, db_session):
+        mock_fetch.side_effect = RuntimeError("Failed to fetch after 4 attempts")
+        resp = client.get("/stories/top-nosleep")
+        assert resp.status_code == 502
+        assert "unreachable" in resp.json()["detail"].lower()
+
+
 class TestSubmitStory:
     @patch("app.routers.stories.fetch_post_metadata")
     @patch("app.routers.stories.fetch_multi_part_story")
