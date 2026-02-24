@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, Float, DateTime
+from sqlalchemy import Column, Integer, String, Text, Boolean, Float, DateTime, UniqueConstraint
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -23,8 +23,12 @@ class Story(Base):
 
 class PlaybackState(Base):
     __tablename__ = 'playback_states'
+    __table_args__ = (
+        UniqueConstraint('user_id', 'story_id', name='uq_user_story_playback'),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False, index=True)
     story_id = Column(Integer, nullable=False, index=True)
     position_seconds = Column(Float, default=0.0)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

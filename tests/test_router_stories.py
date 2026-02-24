@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import patch
-from app.models.story import Story, PlaybackState
+from app.models.story import Story, PlaybackState, User
 
 
 class TestListStories:
@@ -186,47 +186,108 @@ class TestManualSubmitStory:
 
 
 class TestPlaybackState:
-    def test_save_playback_position(self, client, sample_story, db_session):
+    def test_save_playback_position(self, client, sample_story, auth_headers, db_session):
         resp = client.post("/stories/playback", json={
             "story_id": sample_story.id,
             "position_seconds": 45.5,
-        })
+        }, headers=auth_headers)
         assert resp.status_code == 200
         data = resp.json()
         assert data["story_id"] == sample_story.id
         assert data["position_seconds"] == 45.5
 
-    def test_update_playback_position(self, client, sample_story, db_session):
+    def test_update_playback_position(self, client, sample_story, auth_headers, db_session):
         # Save initial
         client.post("/stories/playback", json={
             "story_id": sample_story.id,
             "position_seconds": 10.0,
-        })
+        }, headers=auth_headers)
         # Update
         resp = client.post("/stories/playback", json={
             "story_id": sample_story.id,
             "position_seconds": 90.0,
-        })
+        }, headers=auth_headers)
         assert resp.status_code == 200
         assert resp.json()["position_seconds"] == 90.0
 
-    def test_get_playback_default(self, client, sample_story, db_session):
+    def test_get_playback_default(self, client, sample_story, auth_headers, db_session):
+        resp = client.get(f"/stories/playback/{sample_story.id}", headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json()["position_seconds"] == 0.0
+
+    def test_get_playback_saved(self, client, sample_story, auth_headers, db_session):
+        client.post("/stories/playback", json={
+            "story_id": sample_story.id,
+            "position_seconds": 120.5,
+        }, headers=auth_headers)
+        resp = client.get(f"/stories/playback/{sample_story.id}", headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json()["position_seconds"] == 120.5
+
+    def test_save_playback_nonexistent_story(self, client, auth_headers, db_session):
+        resp = client.post("/stories/playback", json={
+            "story_id": 9999,
+            "position_seconds": 10.0,
+        }, headers=auth_headers)
+        assert resp.status_code == 404
+
+    def test_anonymous_save_returns_zero(self, client, sample_story, db_session):
+        """Anonymous users get a zero-position response without saving."""
+        resp = client.post("/stories/playback", json={
+            "story_id": sample_story.id,
+            "position_seconds": 45.5,
+        })
+        assert resp.status_code == 200
+        assert resp.json()["position_seconds"] == 0.0
+
+    def test_anonymous_get_returns_zero(self, client, sample_story, db_session):
+        """Anonymous users always get zero position."""
         resp = client.get(f"/stories/playback/{sample_story.id}")
         assert resp.status_code == 200
         assert resp.json()["position_seconds"] == 0.0
 
-    def test_get_playback_saved(self, client, sample_story, db_session):
+    def test_per_user_isolation(self, client, sample_story, db_session):
+        """Two different users have independent playback positions."""
+        from app.auth import hash_password, create_access_token
+
+        # Create a second user
+        user2 = User(
+            username="otheruser",
+            password_hash=hash_password("otherpass"),
+            is_admin=False,
+        )
+        db_session.add(user2)
+        db_session.commit()
+        db_session.refresh(user2)
+
+        # First user (from test_user fixture via auth_headers)
+        user1 = User(
+            username="user1",
+            password_hash=hash_password("pass1"),
+            is_admin=False,
+        )
+        db_session.add(user1)
+        db_session.commit()
+        db_session.refresh(user1)
+
+        headers1 = {"Authorization": f"Bearer {create_access_token(user1.id, user1.username)}"}
+        headers2 = {"Authorization": f"Bearer {create_access_token(user2.id, user2.username)}"}
+
+        # User 1 saves at 30s
         client.post("/stories/playback", json={
             "story_id": sample_story.id,
-            "position_seconds": 120.5,
-        })
-        resp = client.get(f"/stories/playback/{sample_story.id}")
-        assert resp.status_code == 200
-        assert resp.json()["position_seconds"] == 120.5
+            "position_seconds": 30.0,
+        }, headers=headers1)
 
-    def test_save_playback_nonexistent_story(self, client, db_session):
-        resp = client.post("/stories/playback", json={
-            "story_id": 9999,
-            "position_seconds": 10.0,
-        })
-        assert resp.status_code == 404
+        # User 2 saves at 120s
+        client.post("/stories/playback", json={
+            "story_id": sample_story.id,
+            "position_seconds": 120.0,
+        }, headers=headers2)
+
+        # Each user sees their own position
+        resp1 = client.get(f"/stories/playback/{sample_story.id}", headers=headers1)
+        assert resp1.json()["position_seconds"] == 30.0
+
+        resp2 = client.get(f"/stories/playback/{sample_story.id}", headers=headers2)
+        assert resp2.json()["position_seconds"] == 120.0

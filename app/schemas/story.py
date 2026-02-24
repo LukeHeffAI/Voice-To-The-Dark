@@ -60,6 +60,7 @@ class PlaybackStateRequest(BaseModel):
 
 class PlaybackStateResponse(BaseModel):
     story_id: int
+    user_id: Optional[int] = None
     position_seconds: float
     updated_at: Optional[datetime] = None
 
