@@ -3,22 +3,322 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0{% block viewport_extra %}{% endblock %}">
-    <meta name="theme-color" content="#0a0a0a">
+    <meta name="theme-color" content="#050505">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Voice To The Dark">
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
     <link rel="manifest" href="/static/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <title>{% block title %}Voice To The Dark{% endblock %}</title>
     <style>
+        /* ── Design tokens ─────────────────────────────────── */
+        :root {
+            --bg-deep: #050505;
+            --bg-base: #0a0a0a;
+            --bg-surface: #0f0f0f;
+            --bg-elevated: #141414;
+            --bg-hover: #1a1a1a;
+
+            --border-subtle: #1a1a1a;
+            --border-default: #222;
+            --border-hover: #333;
+            --border-active: #8b2020;
+
+            --text-primary: #d4d0c8;
+            --text-heading: #e8e4dc;
+            --text-secondary: #999;
+            --text-muted: #666;
+            --text-faint: #444;
+
+            --accent: #9b2226;
+            --accent-bright: #c0392b;
+            --accent-dim: #6b1a1d;
+            --accent-glow: rgba(155, 34, 38, 0.4);
+            --accent-bg: #1a0a0a;
+
+            --success: #4caf50;
+            --success-bg: #0f1a0f;
+            --success-border: #1e3a1e;
+            --info: #7070aa;
+            --info-bg: #0f0f1a;
+            --info-border: #1e1e3a;
+            --error: #c05050;
+            --error-bg: #1a0f0f;
+            --error-border: #3a1e1e;
+            --warning: #b8962e;
+
+            --font-display: 'Playfair Display', 'Georgia', serif;
+            --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+
+            --transition-fast: 0.15s ease;
+            --transition-med: 0.25s ease;
+            --transition-slow: 0.4s ease;
+        }
+
+        /* ── Reset ─────────────────────────────────────────── */
         * { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-            background: #0a0a0a;
-            color: #e0e0e0;
+            font-family: var(--font-body);
+            background: var(--bg-base);
+            color: var(--text-primary);
             min-height: 100vh;
             -webkit-tap-highlight-color: transparent;
+            position: relative;
+            overflow-x: hidden;
         }
+
+        /* ── Film grain overlay ────────────────────────────── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            pointer-events: none;
+            opacity: 0.035;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            background-size: 256px 256px;
+        }
+
+        /* ── Ambient fog ───────────────────────────────────── */
+        body::after {
+            content: '';
+            position: fixed;
+            top: -40%;
+            left: -20%;
+            width: 140%;
+            height: 80%;
+            z-index: 9998;
+            pointer-events: none;
+            opacity: 0.07;
+            background: radial-gradient(ellipse at 30% 20%, rgba(155, 34, 38, 0.3), transparent 60%),
+                        radial-gradient(ellipse at 70% 10%, rgba(60, 30, 60, 0.2), transparent 50%);
+            animation: drift 30s ease-in-out infinite alternate;
+        }
+
+        /* ── Shared keyframes ──────────────────────────────── */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes breathe {
+            0%, 100% { box-shadow: 0 0 8px var(--accent-glow); }
+            50% { box-shadow: 0 0 20px var(--accent-glow), 0 0 40px rgba(155, 34, 38, 0.15); }
+        }
+
+        @keyframes drift {
+            from { transform: translateX(0) translateY(0); }
+            to { transform: translateX(5%) translateY(3%); }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulseRing {
+            0% { box-shadow: 0 0 0 0 rgba(155, 34, 38, 0.4); }
+            70% { box-shadow: 0 0 0 8px rgba(155, 34, 38, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(155, 34, 38, 0); }
+        }
+
+        @keyframes indeterminate {
+            0%   { width: 0%; margin-left: 0; }
+            50%  { width: 40%; margin-left: 30%; }
+            100% { width: 0%; margin-left: 100%; }
+        }
+
+        /* ── Shared components ─────────────────────────────── */
+
+        .page-container {
+            max-width: 600px;
+            margin: 0 auto;
+            animation: fadeIn 0.4s ease both;
+        }
+
+        .back-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 0.5rem 0;
+            display: inline-block;
+            transition: color var(--transition-fast);
+        }
+        .back-link:hover { color: var(--text-primary); }
+
+        .auth-nav {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: right;
+            padding: 0.5rem 0;
+            font-size: 0.8rem;
+        }
+        .auth-nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            margin-left: 1rem;
+            transition: color var(--transition-fast);
+        }
+        .auth-nav a:hover { color: var(--text-primary); }
+        .auth-nav .username { color: var(--text-secondary); }
+
+        /* ── Buttons ───────────────────────────────────────── */
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background var(--transition-fast), box-shadow var(--transition-fast);
+        }
+        .btn-primary:hover {
+            background: var(--accent-bright);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+        .btn-primary:disabled {
+            background: #222;
+            color: var(--text-muted);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-hover);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        .btn-secondary:hover {
+            border-color: var(--text-muted);
+            color: var(--text-primary);
+        }
+
+        /* ── Form messages ─────────────────────────────────── */
+
+        .form-message {
+            margin-top: 0.75rem;
+            padding: 0.6rem 0.9rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            display: none;
+        }
+        .form-message.error {
+            display: block;
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            color: var(--error);
+        }
+        .form-message.success {
+            display: block;
+            background: var(--success-bg);
+            border: 1px solid var(--success-border);
+            color: var(--success);
+        }
+
+        /* ── Input styling ─────────────────────────────────── */
+
+        .form-input, .url-input, .manual-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-hover);
+            border-radius: var(--radius-md);
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+        }
+        .form-input:focus, .url-input:focus, .manual-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 8px rgba(155, 34, 38, 0.2);
+        }
+        .form-input::placeholder, .url-input::placeholder, .manual-input::placeholder {
+            color: var(--text-faint);
+        }
+
+        /* ── Spinner ───────────────────────────────────────── */
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #333;
+            border-top-color: var(--accent-bright);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite, pulseRing 2s ease-in-out infinite;
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
+
+        /* ── Decorative separator ──────────────────────────── */
+
+        .separator {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
+            border: none;
+            margin: 1.5rem 0;
+        }
+
+        /* ── Badges ────────────────────────────────────────── */
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.55rem;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+        .badge-audio {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid var(--success-border);
+        }
+        .badge-script {
+            background: var(--info-bg);
+            color: var(--info);
+            border: 1px solid var(--info-border);
+        }
+        .badge-pending {
+            background: var(--bg-hover);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-default);
+        }
+
+        /* ── Login prompt ──────────────────────────────────── */
+
+        .login-prompt {
+            text-align: center;
+            padding: 1rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        .login-prompt a {
+            color: var(--accent-bright);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .login-prompt a:hover { text-decoration: underline; }
+
         {% block styles %}{% endblock %}
     </style>
     {% block head_extra %}{% endblock %}

@@ -10,116 +10,116 @@
             padding: 1rem;
         }
 
+        /* Atmospheric radial gradient behind the form */
+        .login-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background: radial-gradient(ellipse at 50% 40%, rgba(155, 34, 38, 0.08), transparent 60%);
+        }
+
         .auth-container {
             width: 100%;
             max-width: 380px;
+            position: relative;
+            z-index: 1;
+            animation: fadeIn 0.5s ease both;
         }
 
         .auth-header {
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
         }
         .auth-header h1 {
-            font-size: 1.4rem;
+            font-family: var(--font-display);
+            font-size: 1.7rem;
             font-weight: 700;
-            color: #c0392b;
+            color: var(--text-heading);
+            letter-spacing: 0.02em;
+            text-shadow: 0 0 30px rgba(155, 34, 38, 0.3);
         }
         .auth-header p {
             font-size: 0.85rem;
-            color: #666;
-            margin-top: 0.3rem;
+            color: var(--text-muted);
+            margin-top: 0.4rem;
+            letter-spacing: 0.04em;
+        }
+
+        .auth-form-card {
+            background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated));
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 2rem 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(155, 34, 38, 0.04);
         }
 
         .form-group {
-            margin-bottom: 1rem;
+            margin-bottom: 1.2rem;
         }
         .form-label {
             display: block;
             font-size: 0.85rem;
-            color: #888;
-            margin-bottom: 0.3rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.4rem;
+            letter-spacing: 0.02em;
         }
-        .form-input {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border: 1px solid #333;
-            border-radius: 8px;
-            background: #111;
-            color: #e0e0e0;
-            font-size: 0.95rem;
-            outline: none;
-            transition: border-color 0.15s;
-        }
-        .form-input:focus { border-color: #c0392b; }
 
         .form-submit {
             width: 100%;
-            padding: 0.75rem;
+            padding: 0.85rem;
             border: none;
-            border-radius: 8px;
-            background: #c0392b;
+            border-radius: var(--radius-md);
+            background: var(--accent);
             color: #fff;
             font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.15s;
-            margin-top: 0.5rem;
-        }
-        .form-submit:hover { background: #a93226; }
-        .form-submit:disabled {
-            background: #333;
-            color: #666;
-            cursor: not-allowed;
-        }
-
-        .form-message {
+            transition: background var(--transition-fast), box-shadow var(--transition-fast);
             margin-top: 0.75rem;
-            padding: 0.6rem 0.8rem;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            display: none;
         }
-        .form-message.error {
-            display: block;
-            background: #2e1a1a;
-            border: 1px solid #4e2a2a;
-            color: #e07070;
+        .form-submit:hover {
+            background: var(--accent-bright);
+            box-shadow: 0 0 16px var(--accent-glow);
         }
-        .form-message.success {
-            display: block;
-            background: #1a2e1a;
-            border: 1px solid #2e4a2e;
-            color: #70e070;
+        .form-submit:disabled {
+            background: #222;
+            color: var(--text-muted);
+            cursor: not-allowed;
+            box-shadow: none;
         }
 
         .back-link {
             display: block;
             text-align: center;
             margin-top: 1.5rem;
-            color: #555;
+            color: var(--text-faint);
             text-decoration: none;
             font-size: 0.85rem;
         }
-        .back-link:hover { color: #888; }
+        .back-link:hover { color: var(--text-secondary); }
 {% endblock %}
 
 {% block body %}
+    <div class="login-bg"></div>
     <div class="auth-container">
         <div class="auth-header">
             <h1>Voice To The Dark</h1>
             <p>Sign in to continue</p>
         </div>
 
-        <div class="form-group">
-            <label class="form-label" for="username">Username</label>
-            <input class="form-input" id="username" type="text" autocomplete="username" autocapitalize="off">
+        <div class="auth-form-card">
+            <div class="form-group">
+                <label class="form-label" for="username">Username</label>
+                <input class="form-input" id="username" type="text" autocomplete="username" autocapitalize="off">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input class="form-input" id="password" type="password" autocomplete="current-password">
+            </div>
+            <button class="form-submit" id="loginBtn" onclick="doLogin()">Sign In</button>
+            <div class="form-message" id="msg"></div>
         </div>
-        <div class="form-group">
-            <label class="form-label" for="password">Password</label>
-            <input class="form-input" id="password" type="password" autocomplete="current-password">
-        </div>
-        <button class="form-submit" id="loginBtn" onclick="doLogin()">Sign In</button>
-        <div class="form-message" id="msg"></div>
 
         <a href="/" class="back-link">&larr; Back to stories</a>
     </div>

@@ -7,19 +7,30 @@
 
         .header {
             text-align: center;
-            padding: 1.5rem 0;
-            border-bottom: 1px solid #1a1a1a;
-            margin-bottom: 1.5rem;
+            padding: 2rem 0 1.5rem;
+            margin-bottom: 0.5rem;
         }
         .header h1 {
-            font-size: 1.4rem;
+            font-family: var(--font-display);
+            font-size: 1.7rem;
             font-weight: 700;
-            color: #c0392b;
+            color: var(--text-heading);
+            letter-spacing: 0.02em;
+            text-shadow: 0 0 30px rgba(155, 34, 38, 0.3);
         }
         .header p {
             font-size: 0.85rem;
-            color: #666;
-            margin-top: 0.3rem;
+            color: var(--text-muted);
+            margin-top: 0.4rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .header-separator {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
+            border: none;
+            margin-bottom: 1.5rem;
         }
 
         .submit-link {
@@ -27,18 +38,20 @@
             max-width: 600px;
             margin: 0 auto 1.5rem;
             text-align: center;
-            padding: 0.75rem 1.5rem;
-            border: 1px dashed #333;
-            border-radius: 10px;
-            color: #888;
+            padding: 0.85rem 1.5rem;
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-md);
+            color: var(--text-muted);
             text-decoration: none;
             font-size: 0.9rem;
-            transition: all 0.15s;
+            transition: all var(--transition-med);
+            background: linear-gradient(135deg, var(--bg-surface), var(--bg-base));
         }
         .submit-link:hover {
-            border-color: #c0392b;
-            color: #c0392b;
-            background: #1a0f0f;
+            border-color: var(--accent);
+            color: var(--accent-bright);
+            background: var(--accent-bg);
+            box-shadow: 0 0 20px rgba(155, 34, 38, 0.1);
         }
 
         .story-list {
@@ -49,83 +62,70 @@
             flex-direction: column;
             gap: 0.75rem;
         }
+        .story-list li {
+            animation: fadeIn 0.4s ease both;
+        }
+        .story-list li:nth-child(1) { animation-delay: 0.05s; }
+        .story-list li:nth-child(2) { animation-delay: 0.1s; }
+        .story-list li:nth-child(3) { animation-delay: 0.15s; }
+        .story-list li:nth-child(4) { animation-delay: 0.2s; }
+        .story-list li:nth-child(5) { animation-delay: 0.25s; }
+        .story-list li:nth-child(6) { animation-delay: 0.3s; }
+        .story-list li:nth-child(7) { animation-delay: 0.35s; }
+        .story-list li:nth-child(8) { animation-delay: 0.4s; }
+        .story-list li:nth-child(n+9) { animation-delay: 0.45s; }
 
         .story-card {
-            background: #111;
-            border: 1px solid #1a1a1a;
-            border-radius: 10px;
+            background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated));
+            border: 1px solid var(--border-subtle);
+            border-left: 3px solid transparent;
+            border-radius: var(--radius-md);
             padding: 1rem 1.2rem;
             text-decoration: none;
             color: inherit;
             display: block;
-            transition: border-color 0.15s;
+            transition: all var(--transition-med);
         }
-        .story-card:hover { border-color: #333; }
+        .story-card:hover {
+            border-left-color: var(--accent);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 12px rgba(155, 34, 38, 0.06);
+            transform: translateY(-1px);
+        }
 
         .story-card-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: #f0f0f0;
-            line-height: 1.3;
+            font-family: var(--font-display);
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-heading);
+            line-height: 1.35;
         }
 
         .story-card-meta {
             display: flex;
             gap: 1rem;
-            margin-top: 0.4rem;
+            margin-top: 0.5rem;
             font-size: 0.8rem;
-            color: #666;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 0.15rem 0.5rem;
-            border-radius: 10px;
-            font-size: 0.7rem;
-            font-weight: 600;
-        }
-        .badge-audio {
-            background: #1a2e1a;
-            color: #4caf50;
-            border: 1px solid #2e4a2e;
-        }
-        .badge-script {
-            background: #1a1a2e;
-            color: #8888cc;
-            border: 1px solid #2a2a4e;
-        }
-        .badge-pending {
-            background: #1a1a1a;
-            color: #888;
-            border: 1px solid #2a2a2a;
+            color: var(--text-muted);
+            align-items: center;
         }
 
         .empty-state {
             text-align: center;
-            padding: 3rem 1rem;
-            color: #555;
+            padding: 4rem 1rem;
+            color: var(--text-faint);
+            animation: fadeIn 0.6s ease both;
+        }
+        .empty-state .empty-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            opacity: 0.4;
         }
         .empty-state p { margin-top: 0.5rem; font-size: 0.9rem; }
         .empty-state a {
-            color: #c0392b;
+            color: var(--accent-bright);
             text-decoration: none;
         }
         .empty-state a:hover { text-decoration: underline; }
-
-        .auth-nav {
-            max-width: 600px;
-            margin: 0 auto;
-            text-align: right;
-            padding: 0.5rem 0;
-            font-size: 0.8rem;
-        }
-        .auth-nav a {
-            color: #666;
-            text-decoration: none;
-            margin-left: 1rem;
-        }
-        .auth-nav a:hover { color: #ccc; }
-        .auth-nav .username { color: #888; }
 {% endblock %}
 
 {% block body %}
@@ -141,8 +141,9 @@
 
     <div class="header">
         <h1>Voice To The Dark</h1>
-        <p>NoSleep horror narrations</p>
+        <p>Horror narrations from the deep</p>
     </div>
+    <hr class="header-separator">
 
     <a href="/submit" class="submit-link">+ Submit a new story</a>
 
@@ -168,8 +169,9 @@
     </ul>
     {% else %}
     <div class="empty-state">
-        <p>No stories yet.</p>
-        <p><a href="/submit">Submit a NoSleep story</a> to get started.</p>
+        <div class="empty-icon">&#127911;</div>
+        <p>The darkness awaits its first story.</p>
+        <p><a href="/submit">Submit a NoSleep story</a> to begin.</p>
     </div>
     {% endif %}
 {% endblock %}

@@ -7,18 +7,10 @@
             padding: 1rem;
         }
 
-        .back-link {
-            color: #888;
-            text-decoration: none;
-            font-size: 0.9rem;
-            padding: 0.5rem 0;
-            display: inline-block;
-        }
-        .back-link:hover { color: #ccc; }
-
         .page-container {
             max-width: 700px;
             margin: 0 auto;
+            animation: fadeIn 0.4s ease both;
         }
 
         .page-header {
@@ -26,58 +18,69 @@
             justify-content: space-between;
             align-items: flex-start;
             padding: 1rem 0 1.5rem;
-            border-bottom: 1px solid #1a1a1a;
             margin-bottom: 1rem;
             gap: 1rem;
             flex-wrap: wrap;
         }
         .page-header h1 {
-            font-size: 1.2rem;
+            font-family: var(--font-display);
+            font-size: 1.3rem;
             font-weight: 700;
-            color: #f0f0f0;
+            color: var(--text-heading);
         }
         .page-header .subtitle {
             font-size: 0.8rem;
-            color: #666;
+            color: var(--text-muted);
             margin-top: 0.2rem;
+        }
+        .page-header-separator {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
+            border: none;
+            margin-top: -0.5rem;
+            margin-bottom: 1rem;
         }
 
         .save-btn {
             padding: 0.6rem 1.5rem;
             border: none;
-            border-radius: 8px;
-            background: #c0392b;
+            border-radius: var(--radius-md);
+            background: var(--accent);
             color: #fff;
             font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.15s;
+            transition: background var(--transition-fast), box-shadow var(--transition-fast);
             white-space: nowrap;
         }
-        .save-btn:hover { background: #a93226; }
-        .save-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+        .save-btn:hover {
+            background: var(--accent-bright);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+        .save-btn:disabled { background: #222; color: var(--text-muted); cursor: not-allowed; box-shadow: none; }
 
         .save-status {
             font-size: 0.8rem;
-            color: #666;
+            color: var(--text-muted);
             text-align: right;
             margin-top: 0.3rem;
         }
-        .save-status.error { color: #e07070; }
-        .save-status.success { color: #4caf50; }
+        .save-status.error { color: var(--error); }
+        .save-status.success { color: var(--success); }
 
-        /* ── Characters panel ────────────────────────────── */
+        /* ── Characters panel ──────────────────────────────── */
         .characters-panel {
-            background: #111;
-            border: 1px solid #1a1a1a;
-            border-radius: 10px;
+            background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated));
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
             padding: 1rem 1.2rem;
             margin-bottom: 1rem;
         }
         .characters-panel h2 {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #aaa;
+            font-family: var(--font-display);
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-secondary);
             margin-bottom: 0.75rem;
         }
         .character-list {
@@ -93,23 +96,27 @@
             border-radius: 16px;
             font-size: 0.8rem;
             font-weight: 500;
+            transition: all var(--transition-fast);
+        }
+        .character-tag:hover {
+            transform: translateY(-1px);
         }
         .character-tag.narrator {
-            background: #1a2e1a;
-            color: #4caf50;
-            border: 1px solid #2e4a2e;
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid var(--success-border);
         }
         .character-tag.dialogue {
-            background: #1a1a2e;
-            color: #8888cc;
-            border: 1px solid #2a2a4e;
+            background: var(--info-bg);
+            color: var(--info);
+            border: 1px solid var(--info-border);
         }
         .character-profile {
-            color: #666;
+            color: var(--text-muted);
             font-style: italic;
         }
 
-        /* ── Segments list ───────────────────────────────── */
+        /* ── Segments list ─────────────────────────────────── */
         .segments-header {
             display: flex;
             justify-content: space-between;
@@ -117,13 +124,14 @@
             margin-bottom: 0.75rem;
         }
         .segments-header h2 {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: #ccc;
+            font-family: var(--font-display);
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
         }
         .segment-count {
             font-size: 0.8rem;
-            color: #555;
+            color: var(--text-faint);
         }
 
         .segment-list {
@@ -133,14 +141,19 @@
         }
 
         .segment-card {
-            background: #111;
-            border: 1px solid #1a1a1a;
-            border-radius: 8px;
+            background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated));
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
             padding: 0.75rem 1rem;
-            transition: border-color 0.15s;
+            transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+            cursor: pointer;
         }
-        .segment-card:hover { border-color: #2a2a2a; }
-        .segment-card.editing { border-color: #c0392b; }
+        .segment-card:hover { border-color: var(--border-hover); }
+        .segment-card.editing {
+            border-color: var(--accent);
+            box-shadow: 0 0 12px rgba(155, 34, 38, 0.1);
+            cursor: default;
+        }
 
         .segment-top {
             display: flex;
@@ -156,42 +169,42 @@
             border-radius: 4px;
             letter-spacing: 0.03em;
         }
-        .type-narration { background: #1a2e1a; color: #4caf50; }
-        .type-dialogue { background: #1a1a2e; color: #8888cc; }
-        .type-sfx { background: #2e2e1a; color: #cccc44; }
-        .type-ambient { background: #1a2e2e; color: #44cccc; }
-        .type-pause { background: #1a1a1a; color: #888; }
+        .type-narration { background: var(--success-bg); color: var(--success); }
+        .type-dialogue { background: var(--info-bg); color: var(--info); }
+        .type-sfx { background: #1a1a0f; color: #cccc44; }
+        .type-ambient { background: #0f1a1a; color: #44cccc; }
+        .type-pause { background: var(--bg-hover); color: var(--text-secondary); }
 
         .segment-character {
             font-size: 0.8rem;
-            color: #999;
+            color: var(--text-secondary);
             font-weight: 500;
         }
         .segment-tone {
             font-size: 0.75rem;
-            color: #665;
+            color: var(--text-faint);
             font-style: italic;
             margin-left: auto;
         }
         .segment-index {
             font-size: 0.7rem;
-            color: #444;
+            color: var(--text-faint);
             margin-left: auto;
         }
 
         .segment-text {
             font-size: 0.85rem;
-            color: #ccc;
+            color: var(--text-primary);
             line-height: 1.4;
             word-break: break-word;
         }
         .segment-description {
             font-size: 0.85rem;
-            color: #999;
+            color: var(--text-secondary);
             font-style: italic;
         }
 
-        /* ── Inline edit fields ──────────────────────────── */
+        /* ── Inline edit fields ────────────────────────────── */
         .segment-edit {
             display: none;
             margin-top: 0.5rem;
@@ -204,16 +217,20 @@
         .edit-field {
             width: 100%;
             padding: 0.5rem 0.7rem;
-            border: 1px solid #333;
-            border-radius: 6px;
-            background: #0a0a0a;
-            color: #e0e0e0;
+            border: 1px solid var(--border-hover);
+            border-radius: var(--radius-sm);
+            background: var(--bg-base);
+            color: var(--text-primary);
             font-size: 0.85rem;
             font-family: inherit;
             resize: vertical;
             outline: none;
+            transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
         }
-        .edit-field:focus { border-color: #c0392b; }
+        .edit-field:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 6px rgba(155, 34, 38, 0.15);
+        }
 
         textarea.edit-field { min-height: 60px; }
 
@@ -230,22 +247,22 @@
         }
         .edit-btn {
             padding: 0.35rem 0.8rem;
-            border-radius: 6px;
+            border-radius: var(--radius-sm);
             font-size: 0.8rem;
             cursor: pointer;
             border: none;
-            transition: all 0.15s;
+            transition: all var(--transition-fast);
         }
-        .edit-btn-save { background: #1a2e1a; color: #4caf50; }
-        .edit-btn-save:hover { background: #2e4a2e; }
-        .edit-btn-cancel { background: #1a1a1a; color: #888; }
-        .edit-btn-cancel:hover { background: #222; }
-        .edit-btn-delete { background: #2e1a1a; color: #e07070; }
-        .edit-btn-delete:hover { background: #4e2a2a; }
+        .edit-btn-save { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+        .edit-btn-save:hover { background: var(--success-border); }
+        .edit-btn-cancel { background: var(--bg-hover); color: var(--text-secondary); border: 1px solid var(--border-default); }
+        .edit-btn-cancel:hover { background: var(--border-default); }
+        .edit-btn-delete { background: var(--error-bg); color: var(--error); border: 1px solid var(--error-border); }
+        .edit-btn-delete:hover { background: var(--error-border); }
 
         .click-hint {
             font-size: 0.75rem;
-            color: #444;
+            color: var(--text-faint);
             text-align: center;
             margin-bottom: 1rem;
         }
@@ -265,6 +282,7 @@
                 <div class="save-status" id="saveStatus"></div>
             </div>
         </div>
+        <hr class="page-header-separator">
 
         <!-- Characters -->
         <div class="characters-panel">
