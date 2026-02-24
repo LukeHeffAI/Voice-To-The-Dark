@@ -17,7 +17,7 @@ from app.services.reddit import fetch_multi_part_story, fetch_story_text, fetch_
 from app.services.hashing import hash_content
 from app.services.text_cleaner import clean_for_narration
 from app.models.story import User
-from app.deps import get_current_user
+from app.deps import get_current_user, get_optional_user
 
 logger = logging.getLogger(__name__)
 
@@ -248,17 +248,27 @@ def get_story(story_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/playback", response_model=PlaybackStateResponse)
-def save_playback_position(req: PlaybackStateRequest, db: Session = Depends(get_db)):
-    """Save the current playback position for a story so it can be resumed later."""
+def save_playback_position(req: PlaybackStateRequest, user: User | None = Depends(get_optional_user), db: Session = Depends(get_db)):
+    """Save the current playback position for a story so it can be resumed later.
+
+    Requires authentication so each user gets their own playback position.
+    Anonymous requests are silently ignored (returns zero position).
+    """
+    if not user:
+        return PlaybackStateResponse(story_id=req.story_id, position_seconds=0.0)
+
     story = db.query(Story).filter(Story.id == req.story_id).first()
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
 
-    state = db.query(PlaybackState).filter(PlaybackState.story_id == req.story_id).first()
+    state = db.query(PlaybackState).filter(
+        PlaybackState.user_id == user.id,
+        PlaybackState.story_id == req.story_id,
+    ).first()
     if state:
         state.position_seconds = req.position_seconds
     else:
-        state = PlaybackState(story_id=req.story_id, position_seconds=req.position_seconds)
+        state = PlaybackState(user_id=user.id, story_id=req.story_id, position_seconds=req.position_seconds)
         db.add(state)
 
     db.commit()
@@ -266,19 +276,30 @@ def save_playback_position(req: PlaybackStateRequest, db: Session = Depends(get_
 
     return PlaybackStateResponse(
         story_id=state.story_id,
+        user_id=state.user_id,
         position_seconds=state.position_seconds,
         updated_at=state.updated_at,
     )
 
 
 @router.get("/playback/{story_id}", response_model=PlaybackStateResponse)
-def get_playback_position(story_id: int, db: Session = Depends(get_db)):
-    """Get the saved playback position for a story to resume listening."""
-    state = db.query(PlaybackState).filter(PlaybackState.story_id == story_id).first()
+def get_playback_position(story_id: int, user: User | None = Depends(get_optional_user), db: Session = Depends(get_db)):
+    """Get the saved playback position for a story to resume listening.
+
+    Returns the position for the authenticated user, or 0.0 for anonymous users.
+    """
+    if not user:
+        return PlaybackStateResponse(story_id=story_id, position_seconds=0.0)
+
+    state = db.query(PlaybackState).filter(
+        PlaybackState.user_id == user.id,
+        PlaybackState.story_id == story_id,
+    ).first()
     if not state:
         return PlaybackStateResponse(story_id=story_id, position_seconds=0.0)
     return PlaybackStateResponse(
         story_id=state.story_id,
+        user_id=state.user_id,
         position_seconds=state.position_seconds,
         updated_at=state.updated_at,
     )
