@@ -34,8 +34,7 @@ if [ ! -f .env ]; then
     cp .env.example .env
     echo
     echo "*** IMPORTANT: Edit .env and add your API keys before continuing! ***"
-    echo "  Required keys: ELEVENLABS_API_KEY, ANTHROPIC_API_KEY,"
-    echo "                 REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET"
+    echo "  Required keys: ELEVENLABS_API_KEY, ANTHROPIC_API_KEY"
     echo
     read -p "Press Enter after you've edited .env (or Ctrl+C to abort)..."
 fi
@@ -70,16 +69,7 @@ echo
 $COMPOSE exec -T voice-to-the-dark python -m app.create_user "$ADMIN_USER" "$ADMIN_PASS" --admin
 echo
 
-# ── 7. Create girlfriend's account ───────────────────────────────
-echo "── Create your girlfriend's account ──"
-read -p "  Her username: " GF_USER
-read -sp "  Her password: " GF_PASS
-echo
-
-$COMPOSE exec -T voice-to-the-dark python -m app.create_user "$GF_USER" "$GF_PASS"
-echo
-
-# ── 8. Detect LAN IP and print access info ───────────────────────
+# ── 7. Detect LAN IP and print access info ───────────────────────
 LAN_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
 if [ -z "$LAN_IP" ]; then
     LAN_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}')
@@ -97,7 +87,6 @@ echo "  On this machine:    http://localhost:8000"
 echo "  On her phone:       http://${LAN_IP}:8000"
 echo
 echo "  Admin account:      $ADMIN_USER"
-echo "  Her account:        $GF_USER"
 echo
 echo "  Data stored in:     ./data/"
 echo "  Logs:               docker compose logs -f"

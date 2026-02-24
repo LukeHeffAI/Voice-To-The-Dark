@@ -8,7 +8,6 @@
 - **API keys** (add to `.env`):
   - [ElevenLabs](https://elevenlabs.io) — for TTS and sound effects
   - [Anthropic](https://console.anthropic.com) — for Claude script adaptation
-  - [Reddit](https://www.reddit.com/prefs/apps) — create a "script" app for API access
 
 ### One-Command Deploy
 

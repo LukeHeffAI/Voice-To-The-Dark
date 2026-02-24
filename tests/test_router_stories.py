@@ -1,7 +1,7 @@
 """Tests for the /stories router endpoints."""
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from app.models.story import Story, PlaybackState
 
 
@@ -53,15 +53,45 @@ class TestCheckDuplicate:
         assert data["existing_story_id"] == sample_story.id
 
 
+class TestTopNosleep:
+    @patch("app.services.reddit.fetch_top_posts")
+    def test_returns_posts(self, mock_fetch, client, db_session):
+        mock_fetch.return_value = [
+            {"title": "A Scary Story", "url": "https://reddit.com/r/nosleep/comments/abc/story/",
+             "score": 500, "id": "abc", "author": "ghost_writer", "gilded": 0,
+             "flair": None, "series_flair": None},
+        ]
+        resp = client.get("/stories/top-nosleep?timeframe=alltime")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["title"] == "A Scary Story"
+        assert data[0]["already_submitted"] is False
+
+    @patch("app.services.reddit.fetch_top_posts")
+    def test_flags_already_submitted(self, mock_fetch, client, sample_story, db_session):
+        mock_fetch.return_value = [
+            {"title": "The Haunted House", "url": sample_story.reddit_url,
+             "score": 1000, "id": "abc123", "author": "test", "gilded": 0,
+             "flair": None, "series_flair": None},
+        ]
+        resp = client.get("/stories/top-nosleep")
+        assert resp.status_code == 200
+        assert resp.json()[0]["already_submitted"] is True
+
+    @patch("app.services.reddit.fetch_top_posts")
+    def test_reddit_unavailable_returns_502(self, mock_fetch, client, db_session):
+        mock_fetch.side_effect = RuntimeError("Failed to fetch after 4 attempts")
+        resp = client.get("/stories/top-nosleep")
+        assert resp.status_code == 502
+        assert "unreachable" in resp.json()["detail"].lower()
+
+
 class TestSubmitStory:
-    @patch("app.routers.stories.init_reddit")
+    @patch("app.routers.stories.fetch_post_metadata")
     @patch("app.routers.stories.fetch_multi_part_story")
-    def test_submit_new_story(self, mock_fetch, mock_init, client, auth_headers, db_session):
-        mock_reddit = MagicMock()
-        mock_sub = MagicMock()
-        mock_sub.title = "My Scary Story"
-        mock_reddit.submission.return_value = mock_sub
-        mock_init.return_value = mock_reddit
+    def test_submit_new_story(self, mock_fetch, mock_metadata, client, auth_headers, db_session):
+        mock_metadata.return_value = {"title": "My Scary Story", "author": "scary_author"}
         mock_fetch.return_value = "Once upon a time, in a dark forest, something terrible happened."
 
         resp = client.post("/stories/submit", json={
@@ -70,11 +100,12 @@ class TestSubmitStory:
         assert resp.status_code == 200
         data = resp.json()
         assert data["title"] == "My Scary Story"
+        assert data["author"] == "scary_author"
         assert data["part_count"] == 1
 
-    @patch("app.routers.stories.init_reddit")
+    @patch("app.routers.stories.fetch_post_metadata")
     @patch("app.routers.stories.fetch_multi_part_story")
-    def test_submit_returns_existing_on_duplicate_url(self, mock_fetch, mock_init, client, auth_headers, sample_story, db_session):
+    def test_submit_returns_existing_on_duplicate_url(self, mock_fetch, mock_metadata, client, auth_headers, sample_story, db_session):
         """Submitting an existing URL returns the existing story (200, not error)."""
         resp = client.post("/stories/submit", json={
             "reddit_url": sample_story.reddit_url
@@ -82,8 +113,8 @@ class TestSubmitStory:
         assert resp.status_code == 200
         data = resp.json()
         assert data["id"] == sample_story.id
-        # Reddit API should NOT have been called
-        mock_init.assert_not_called()
+        # Reddit should NOT have been called
+        mock_metadata.assert_not_called()
 
     def test_submit_requires_auth(self, client, db_session):
         resp = client.post("/stories/submit", json={

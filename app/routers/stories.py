@@ -1,3 +1,4 @@
+import json
 import logging
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
@@ -12,7 +13,7 @@ from app.schemas.story import (
     PlaybackStateResponse,
     DuplicateCheckResponse,
 )
-from app.services.reddit import fetch_multi_part_story, fetch_story_text, init_reddit
+from app.services.reddit import fetch_multi_part_story, fetch_story_text, fetch_post_metadata, find_series_parts
 from app.services.hashing import hash_content
 from app.services.text_cleaner import clean_for_narration
 from app.models.story import User
@@ -36,11 +37,11 @@ def submit_story(req: StorySubmitRequest, user: User = Depends(get_current_user)
     if existing:
         return existing
 
-    # Fetch story from Reddit
-    reddit = init_reddit()
+    # Fetch post metadata (title, author, etc.) via Reddit .json endpoint
     try:
-        submission = reddit.submission(url=req.reddit_url)
-        title = submission.title
+        metadata = fetch_post_metadata(req.reddit_url)
+        title = metadata["title"]
+        author = metadata.get("author", "")
     except Exception as e:
         logger.error(f"Failed to fetch Reddit submission: {e}")
         raise HTTPException(status_code=400, detail=f"Could not fetch Reddit post: {e}")
@@ -67,13 +68,23 @@ def submit_story(req: StorySubmitRequest, user: User = Depends(get_current_user)
 
     narration = clean_for_narration(text)
 
+    # Discover series parts from author's page (best-effort)
+    series_parts = []
+    if author:
+        try:
+            series_parts = find_series_parts(author, title)
+        except Exception:
+            pass
+
     story = Story(
         title=title,
+        author=author or None,
         reddit_url=req.reddit_url,
         text_content=text,
         narration_text=narration,
         content_hash=content_digest,
         part_count=part_count,
+        series_json=json.dumps(series_parts) if series_parts else None,
     )
     db.add(story)
     db.commit()
@@ -137,6 +148,7 @@ def list_stories(skip: int = 0, limit: int = 25, db: Session = Depends(get_db)):
         StoryListResponse(
             id=s.id,
             title=s.title,
+            author=s.author,
             reddit_url=s.reddit_url,
             has_audio=s.audio_file_path is not None,
             has_script=s.script_json is not None,
@@ -151,12 +163,23 @@ def list_stories(skip: int = 0, limit: int = 25, db: Session = Depends(get_db)):
 def top_nosleep_posts(timeframe: str = "alltime", limit: int = 50, db: Session = Depends(get_db)):
     """Fetch top posts from r/nosleep for the story browser.
 
-    Returns a list of posts with title, URL, and score. Already-submitted
-    stories are flagged so the frontend can indicate them.
+    Returns a list of posts with title, URL, score, author, gilding, and flair.
+    Already-submitted stories are flagged so the frontend can indicate them.
+    Uses a configurable cache TTL (default 1 week) from app settings.
     """
     from app.services.reddit import fetch_top_posts
+    from app.models.app_setting import get_setting
 
-    posts = fetch_top_posts(timeframe=timeframe, limit=limit)
+    cache_ttl = int(get_setting(db, "reddit_cache_ttl", "604800"))
+
+    try:
+        posts = fetch_top_posts(timeframe=timeframe, limit=limit, cache_ttl=cache_ttl)
+    except Exception as e:
+        logger.warning("Failed to fetch top NoSleep posts: %s", e)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Reddit is currently unreachable: {e}"
+        )
 
     # Check which URLs are already in the database
     existing_urls = {
@@ -184,6 +207,35 @@ def check_duplicate(reddit_url: str, db: Session = Depends(get_db)):
         existing_story_id=None,
         message="No duplicate found"
     )
+
+
+@router.get("/{story_id}/series-parts")
+def get_series_parts(story_id: int, db: Session = Depends(get_db)):
+    """Return discovered series parts for a story.
+
+    Checks the cached series_json first. If not available and the story
+    has an author, attempts discovery from the author's Reddit page.
+    """
+    story = db.query(Story).filter(Story.id == story_id).first()
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    # Return cached series parts if available
+    if story.series_json:
+        return json.loads(story.series_json)
+
+    # Attempt discovery if we have an author
+    if story.author and story.title:
+        try:
+            parts = find_series_parts(story.author, story.title)
+            if parts:
+                story.series_json = json.dumps(parts)
+                db.commit()
+            return parts
+        except Exception:
+            pass
+
+    return []
 
 
 @router.get("/{story_id}", response_model=StoryResponse)

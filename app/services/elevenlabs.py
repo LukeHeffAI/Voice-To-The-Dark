@@ -25,22 +25,22 @@ MAX_TEXT_LENGTH = 4900  # safe margin for ElevenLabs per-request char limit
 # Higher style = more pronounced character.
 VOICE_PRESETS = {
     "horror_narrator": {
-        "stability": 0.40,
+        "stability": 0.5,
         "similarity_boost": 0.75,
         "style": 0.45,
     },
     "horror_dialogue": {
-        "stability": 0.35,
+        "stability": 0.5,
         "similarity_boost": 0.70,
         "style": 0.50,
     },
     "whisper": {
-        "stability": 0.30,
+        "stability": 0.5,
         "similarity_boost": 0.80,
         "style": 0.55,
     },
     "calm": {
-        "stability": 0.55,
+        "stability": 0.5,
         "similarity_boost": 0.75,
         "style": 0.30,
     },
@@ -57,7 +57,7 @@ SFX_CACHE_DIR = "./data/sfx_cache"
 def generate_audio(
     text: str,
     voice_id: str,
-    output_path: str = None,
+    output_path: Optional[str] = None,
     preset: str = "horror_narrator",
     model_id: str = MODEL_ELEVEN_V3,
 ) -> str:

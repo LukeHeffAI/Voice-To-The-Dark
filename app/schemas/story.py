@@ -16,6 +16,7 @@ class ManualStorySubmitRequest(BaseModel):
 class StoryResponse(BaseModel):
     id: int
     title: str
+    author: Optional[str] = None
     reddit_url: Optional[str] = None
     narration_text: Optional[str] = None
     content_hash: str
@@ -30,6 +31,7 @@ class StoryResponse(BaseModel):
 class StoryListResponse(BaseModel):
     id: int
     title: str
+    author: Optional[str] = None
     reddit_url: Optional[str] = None
     has_audio: bool
     has_script: bool

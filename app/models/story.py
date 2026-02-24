@@ -13,8 +13,10 @@ class Story(Base):
     narration_text = Column(Text, nullable=True)
     script_json = Column(Text, nullable=True)
     content_hash = Column(String(64), nullable=False, index=True)
+    author = Column(String, nullable=True)
     audio_file_path = Column(String, nullable=True)
     part_count = Column(Integer, default=1)
+    series_json = Column(Text, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
