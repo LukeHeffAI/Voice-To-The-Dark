@@ -1,6 +1,9 @@
 # SQLite databases
 *.db
 
+# Runtime data (database, Reddit cache)
+data/
+
 # Generated audio and SFX cache
 stories/
 sfx_cache/
