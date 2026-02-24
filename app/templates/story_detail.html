@@ -416,7 +416,7 @@
                                 {{ 'disabled' if not story.script_json }}>
                             Generate Audio
                         </button>
-                        <div class="step-info" id="audioNote" style="{{ '' if not story.script_json else 'display:none' }}">
+                        <div class="step-info" id="audioNote" {% if story.script_json %}style="display:none"{% endif %}>
                             Generate a script first
                         </div>
                         <div class="step-status" id="audioStatus"></div>
@@ -445,7 +445,7 @@
 
 {% block scripts %}
     <script>
-    const storyId = {{ story.id }};
+    const storyId = JSON.parse('{{ story.id | tojson }}');
 
     async function generateScript() {
         const btn = document.getElementById('genScriptBtn');
@@ -555,7 +555,7 @@
             const list = document.getElementById('seriesList');
             section.style.display = 'block';
 
-            const currentUrl = {{ story.reddit_url | default("null", true) | tojson }};
+            const currentUrl = JSON.parse('{{ story.reddit_url | tojson if story.reddit_url else "null" }}');
             for (const part of parts) {
                 const li = document.createElement('li');
                 const isCurrent = currentUrl && part.url && (
