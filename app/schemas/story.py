@@ -7,10 +7,16 @@ class StorySubmitRequest(BaseModel):
     reddit_url: str
 
 
+class ManualStorySubmitRequest(BaseModel):
+    title: str
+    text_content: str
+    reddit_url: Optional[str] = None
+
+
 class StoryResponse(BaseModel):
     id: int
     title: str
-    reddit_url: str
+    reddit_url: Optional[str] = None
     narration_text: Optional[str] = None
     content_hash: str
     audio_file_path: Optional[str] = None
@@ -24,7 +30,7 @@ class StoryResponse(BaseModel):
 class StoryListResponse(BaseModel):
     id: int
     title: str
-    reddit_url: str
+    reddit_url: Optional[str] = None
     has_audio: bool
     has_script: bool
     part_count: int = 1

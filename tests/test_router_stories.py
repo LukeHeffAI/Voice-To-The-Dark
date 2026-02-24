@@ -92,6 +92,68 @@ class TestSubmitStory:
         assert resp.status_code == 401
 
 
+class TestManualSubmitStory:
+    def test_manual_submit_new_story(self, client, auth_headers, db_session):
+        resp = client.post("/stories/submit-manual", json={
+            "title": "My Manual Story",
+            "text_content": "It was a dark and stormy night. The old house creaked.",
+        }, headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["title"] == "My Manual Story"
+        assert data["part_count"] == 1
+        assert data["reddit_url"] is None
+
+    def test_manual_submit_with_reddit_url(self, client, auth_headers, db_session):
+        resp = client.post("/stories/submit-manual", json={
+            "title": "Story With Source",
+            "text_content": "Something lurked in the shadows of the abandoned mall.",
+            "reddit_url": "https://www.reddit.com/r/nosleep/comments/xyz/source/",
+        }, headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["title"] == "Story With Source"
+        assert data["reddit_url"] == "https://www.reddit.com/r/nosleep/comments/xyz/source/"
+
+    def test_manual_submit_duplicate_content(self, client, auth_headers, db_session):
+        """Submitting the same text twice returns the existing story."""
+        text = "The mirror showed a reflection that wasn't mine."
+        resp1 = client.post("/stories/submit-manual", json={
+            "title": "First Title",
+            "text_content": text,
+        }, headers=auth_headers)
+        assert resp1.status_code == 200
+        first_id = resp1.json()["id"]
+
+        resp2 = client.post("/stories/submit-manual", json={
+            "title": "Second Title",
+            "text_content": text,
+        }, headers=auth_headers)
+        assert resp2.status_code == 200
+        assert resp2.json()["id"] == first_id
+
+    def test_manual_submit_empty_text(self, client, auth_headers, db_session):
+        resp = client.post("/stories/submit-manual", json={
+            "title": "Empty Story",
+            "text_content": "   ",
+        }, headers=auth_headers)
+        assert resp.status_code == 400
+
+    def test_manual_submit_empty_title(self, client, auth_headers, db_session):
+        resp = client.post("/stories/submit-manual", json={
+            "title": "   ",
+            "text_content": "Some actual content here.",
+        }, headers=auth_headers)
+        assert resp.status_code == 400
+
+    def test_manual_submit_requires_auth(self, client, db_session):
+        resp = client.post("/stories/submit-manual", json={
+            "title": "Unauthorized Story",
+            "text_content": "This should not work.",
+        })
+        assert resp.status_code == 401
+
+
 class TestPlaybackState:
     def test_save_playback_position(self, client, sample_story, db_session):
         resp = client.post("/stories/playback", json={

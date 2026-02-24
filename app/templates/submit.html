@@ -47,6 +47,29 @@
             margin-top: 0.3rem;
         }
 
+        /* ── Mode toggle tabs ─────────────────────────────── */
+        .mode-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .mode-tab {
+            padding: 0.5rem 1rem;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: transparent;
+            color: #888;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .mode-tab:hover { border-color: #666; color: #ccc; }
+        .mode-tab.active {
+            border-color: #c0392b;
+            color: #c0392b;
+            background: #1a0f0f;
+        }
+
         /* ── URL submission form ─────────────────────────── */
         .submit-section {
             margin-bottom: 2rem;
@@ -61,7 +84,7 @@
             display: flex;
             gap: 0.5rem;
         }
-        .url-input {
+        .url-input, .manual-input {
             flex: 1;
             padding: 0.75rem 1rem;
             border: 1px solid #333;
@@ -72,8 +95,36 @@
             outline: none;
             transition: border-color 0.15s;
         }
-        .url-input:focus { border-color: #c0392b; }
-        .url-input::placeholder { color: #555; }
+        .url-input:focus, .manual-input:focus { border-color: #c0392b; }
+        .url-input::placeholder, .manual-input::placeholder { color: #555; }
+
+        .manual-textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 0.75rem 1rem;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: #111;
+            color: #e0e0e0;
+            font-size: 0.95rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.15s;
+            resize: vertical;
+        }
+        .manual-textarea:focus { border-color: #c0392b; }
+        .manual-textarea::placeholder { color: #555; }
+
+        .manual-form {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .manual-form label {
+            font-size: 0.85rem;
+            color: #888;
+        }
 
         .submit-btn {
             padding: 0.75rem 1.5rem;
@@ -267,13 +318,45 @@
 
         {% if user %}
         <div class="submit-section">
-            <h2>Reddit URL</h2>
-            <div class="url-form">
-                <input type="text" class="url-input" id="urlInput"
-                       placeholder="https://reddit.com/r/nosleep/comments/..."
-                       autocomplete="off" autocapitalize="off" spellcheck="false">
-                <button class="submit-btn" id="submitBtn" onclick="submitStory()">Submit</button>
+            <div class="mode-tabs">
+                <button class="mode-tab active" id="tabReddit" onclick="setMode('reddit')">Reddit URL</button>
+                <button class="mode-tab" id="tabManual" onclick="setMode('manual')">Manual Entry</button>
             </div>
+
+            <!-- Reddit URL mode -->
+            <div id="redditMode">
+                <div class="url-form">
+                    <input type="text" class="url-input" id="urlInput"
+                           placeholder="https://reddit.com/r/nosleep/comments/..."
+                           autocomplete="off" autocapitalize="off" spellcheck="false">
+                    <button class="submit-btn" id="submitBtn" onclick="submitStory()">Submit</button>
+                </div>
+            </div>
+
+            <!-- Manual entry mode -->
+            <div id="manualMode" style="display:none;">
+                <div class="manual-form">
+                    <div>
+                        <label for="manualTitle">Story Title</label>
+                        <input type="text" class="manual-input" id="manualTitle"
+                               placeholder="e.g. I Found Something in My Basement"
+                               autocomplete="off" spellcheck="false">
+                    </div>
+                    <div>
+                        <label for="manualText">Story Text</label>
+                        <textarea class="manual-textarea" id="manualText"
+                                  placeholder="Paste the full story text here..."></textarea>
+                    </div>
+                    <div>
+                        <label for="manualUrl">Source URL (optional)</label>
+                        <input type="text" class="manual-input" id="manualUrl"
+                               placeholder="https://reddit.com/r/nosleep/comments/..."
+                               autocomplete="off" spellcheck="false">
+                    </div>
+                    <button class="submit-btn" id="manualSubmitBtn" onclick="submitManualStory()">Submit</button>
+                </div>
+            </div>
+
             <div class="form-message" id="formMessage"></div>
         </div>
         {% else %}
@@ -310,6 +393,80 @@
 
     let currentFilter = 'alltime';
     let storyCache = {};
+    let currentMode = 'reddit';
+
+    // ── Mode toggle ─────────────────────────────────────
+
+    function setMode(mode) {
+        currentMode = mode;
+        const redditMode = document.getElementById('redditMode');
+        const manualMode = document.getElementById('manualMode');
+        const tabReddit = document.getElementById('tabReddit');
+        const tabManual = document.getElementById('tabManual');
+
+        if (mode === 'reddit') {
+            redditMode.style.display = 'block';
+            manualMode.style.display = 'none';
+            tabReddit.classList.add('active');
+            tabManual.classList.remove('active');
+        } else {
+            redditMode.style.display = 'none';
+            manualMode.style.display = 'block';
+            tabReddit.classList.remove('active');
+            tabManual.classList.add('active');
+        }
+        hideMessage();
+    }
+
+    // ── Submit manual story ─────────────────────────────
+
+    async function submitManualStory() {
+        const title = document.getElementById('manualTitle').value.trim();
+        const text = document.getElementById('manualText').value.trim();
+        const url = document.getElementById('manualUrl').value.trim() || null;
+
+        if (!title) {
+            showMessage('Please enter a story title.', 'error');
+            return;
+        }
+        if (!text) {
+            showMessage('Please paste the story text.', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('manualSubmitBtn');
+        btn.disabled = true;
+        btn.textContent = 'Submitting...';
+        hideMessage();
+
+        try {
+            const body = { title: title, text_content: text };
+            if (url) body.reddit_url = url;
+
+            const resp = await fetch('/stories/submit-manual', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+
+            const data = await resp.json();
+
+            if (resp.ok) {
+                showMessage('Loading story...', 'success');
+                window.location.href = '/story/' + data.id;
+            } else if (resp.status === 401) {
+                window.location.href = '/login?next=/submit';
+            } else {
+                showMessage(data.detail || 'Submission failed.', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Submit';
+            }
+        } catch (err) {
+            showMessage('Network error. Please try again.', 'error');
+            btn.disabled = false;
+            btn.textContent = 'Submit';
+        }
+    }
 
     // ── Submit a story URL ──────────────────────────────
 
@@ -380,7 +537,7 @@
             storyCache[timeframe] = stories;
             renderTopStories(stories);
         } catch (err) {
-            loadingSpinner.textContent = 'Could not load stories. Check Reddit API keys.';
+            loadingSpinner.textContent = 'Reddit browsing unavailable \u2014 use Manual Entry to add stories directly.';
         }
     }
 

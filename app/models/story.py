@@ -8,7 +8,7 @@ class Story(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
-    reddit_url = Column(String, nullable=False, unique=True, index=True)
+    reddit_url = Column(String, nullable=True, unique=True, index=True)
     text_content = Column(Text, nullable=False)
     narration_text = Column(Text, nullable=True)
     script_json = Column(Text, nullable=True)

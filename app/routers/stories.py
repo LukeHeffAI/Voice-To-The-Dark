@@ -5,6 +5,7 @@ from app.database import get_db
 from app.models.story import Story, PlaybackState
 from app.schemas.story import (
     StorySubmitRequest,
+    ManualStorySubmitRequest,
     StoryResponse,
     StoryListResponse,
     PlaybackStateRequest,
@@ -70,6 +71,53 @@ def submit_story(req: StorySubmitRequest, user: User = Depends(get_current_user)
         title=title,
         reddit_url=req.reddit_url,
         text_content=text,
+        narration_text=narration,
+        content_hash=content_digest,
+        part_count=part_count,
+    )
+    db.add(story)
+    db.commit()
+    db.refresh(story)
+
+    return story
+
+
+@router.post("/submit-manual", response_model=StoryResponse)
+def submit_story_manual(req: ManualStorySubmitRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Manually submit a story by pasting the title and text directly.
+
+    Bypasses the Reddit API entirely. Useful when Reddit API keys are
+    unavailable or when the story source is not on Reddit.
+    """
+
+    if not req.text_content or not req.text_content.strip():
+        raise HTTPException(status_code=400, detail="Story text cannot be empty")
+
+    if not req.title or not req.title.strip():
+        raise HTTPException(status_code=400, detail="Story title cannot be empty")
+
+    # Check for duplicate by URL if a reddit_url was provided
+    if req.reddit_url:
+        existing = db.query(Story).filter(Story.reddit_url == req.reddit_url).first()
+        if existing:
+            return existing
+
+    # Check for duplicate by content hash
+    content_digest = hash_content(req.text_content)
+    duplicate = db.query(Story).filter(Story.content_hash == content_digest).first()
+    if duplicate:
+        return duplicate
+
+    # Count parts by separator
+    parts = req.text_content.split("\n\n---\n\n")
+    part_count = len(parts)
+
+    narration = clean_for_narration(req.text_content)
+
+    story = Story(
+        title=req.title.strip(),
+        reddit_url=req.reddit_url or None,
+        text_content=req.text_content,
         narration_text=narration,
         content_hash=content_digest,
         part_count=part_count,
