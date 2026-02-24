@@ -1,12 +1,9 @@
 {% extends "base.html" %}
-
 {% block title %}{{ story.title }} — Voice To The Dark{% endblock %}
-
 {% block styles %}
         body {
             padding: 1rem;
         }
-
         .back-link {
             color: #888;
             text-decoration: none;
@@ -15,12 +12,10 @@
             display: inline-block;
         }
         .back-link:hover { color: #ccc; }
-
         .page-container {
             max-width: 600px;
             margin: 0 auto;
         }
-
         .story-header {
             padding: 1.5rem 0;
             border-bottom: 1px solid #1a1a1a;
@@ -42,7 +37,6 @@
         }
         .story-meta a { color: #888; text-decoration: none; }
         .story-meta a:hover { color: #ccc; }
-
         .story-teaser {
             margin-top: 1rem;
             font-size: 0.9rem;
@@ -52,7 +46,6 @@
             border-left: 2px solid #2a2a2a;
             padding-left: 1rem;
         }
-
         .story-stats {
             display: flex;
             gap: 1.5rem;
@@ -67,7 +60,6 @@
             color: #999;
             font-weight: 600;
         }
-
         .resume-info {
             margin-top: 0.6rem;
             font-size: 0.8rem;
@@ -78,14 +70,12 @@
             padding: 0.5rem 0.75rem;
             display: inline-block;
         }
-
         /* ── Pipeline steps ──────────────────────────────── */
         .pipeline {
             display: flex;
             flex-direction: column;
             gap: 1rem;
         }
-
         .step {
             background: #111;
             border: 1px solid #1a1a1a;
@@ -93,7 +83,6 @@
             padding: 1rem 1.2rem;
             transition: border-color 0.15s;
         }
-
         .step-header {
             display: flex;
             align-items: center;
@@ -125,19 +114,16 @@
             color: #c0392b;
             border: 1px solid #4e2a2a;
         }
-
         .step-title {
             font-size: 0.95rem;
             font-weight: 600;
             color: #ddd;
             flex: 1;
         }
-
         .step-body {
             margin-top: 0.75rem;
             padding-left: 2.75rem;
         }
-
         .step-action {
             padding: 0.6rem 1.2rem;
             border: none;
@@ -164,7 +150,6 @@
             margin-left: 0.5rem;
         }
         .btn-secondary:hover { border-color: #666; color: #ccc; }
-
         .step-status {
             font-size: 0.8rem;
             color: #666;
@@ -172,13 +157,11 @@
         }
         .step-status.error { color: #e07070; }
         .step-status.success { color: #4caf50; }
-
         .step-info {
             font-size: 0.8rem;
             color: #555;
             margin-top: 0.4rem;
         }
-
         /* ── Listen button ───────────────────────────────── */
         .listen-section {
             margin-top: 1.5rem;
@@ -201,7 +184,6 @@
             transition: background 0.15s;
         }
         .listen-btn:hover { background: #a93226; }
-
         /* ── Loading indicator ───────────────────────────── */
         .spinner {
             display: inline-block;
@@ -215,7 +197,6 @@
             vertical-align: middle;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-
         .progress-bar-track {
             width: 100%;
             height: 4px;
@@ -236,7 +217,6 @@
             50%  { width: 40%; margin-left: 30%; }
             100% { width: 0%; margin-left: 100%; }
         }
-
         .auth-nav {
             text-align: right;
             padding: 0.5rem 0;
@@ -249,7 +229,6 @@
         }
         .auth-nav a:hover { color: #ccc; }
         .auth-nav .username { color: #888; }
-
         .login-prompt {
             text-align: center;
             padding: 1rem;
@@ -265,7 +244,6 @@
             font-weight: 600;
         }
         .login-prompt a:hover { text-decoration: underline; }
-
         /* ── Series parts ─────────────────────────────────── */
         .series-section {
             margin-top: 1.5rem;
@@ -304,7 +282,6 @@
             text-align: center;
         }
 {% endblock %}
-
 {% block body %}
     <div class="page-container">
         <div class="auth-nav">
@@ -315,9 +292,7 @@
             <a href="/login?next=/story/{{ story.id }}">Sign in</a>
             {% endif %}
         </div>
-
         <a href="/" class="back-link">&larr; All stories</a>
-
         <div class="story-header">
             <div class="story-title">{{ story.title }}</div>
             <div class="story-meta">
@@ -332,11 +307,9 @@
                 <a href="{{ story.reddit_url }}" target="_blank" rel="noopener">View on Reddit</a>
                 {% endif %}
             </div>
-
             {% if teaser %}
             <div class="story-teaser">{{ teaser }}</div>
             {% endif %}
-
             <div class="story-stats">
                 {% if word_count %}
                 <div class="stat"><span class="stat-value">{{ '{:,}'.format(word_count) }}</span> words</div>
@@ -345,14 +318,12 @@
                 <div class="stat">~<span class="stat-value">{{ est_minutes }}</span> min listen</div>
                 {% endif %}
             </div>
-
             {% if resume_seconds > 0 and story.audio_file_path %}
             <div class="resume-info">
                 Previously listened to {{ '%d:%02d' | format(resume_seconds // 60, resume_seconds % 60) }}
             </div>
             {% endif %}
         </div>
-
         <div class="pipeline">
             <!-- Step 1: Story Fetched (always done) -->
             <div class="step">
@@ -366,7 +337,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Step 2: Script Generation -->
             <div class="step" id="scriptStep">
                 <div class="step-header">
@@ -397,7 +367,6 @@
                     {% endif %}
                 </div>
             </div>
-
             <!-- Step 3: Audio Generation -->
             <div class="step" id="audioStep">
                 <div class="step-header">
@@ -435,7 +404,6 @@
                 </div>
             </div>
         </div>
-
         {% if story.audio_file_path %}
         <div class="listen-section">
             <a href="/listen/{{ story.id }}" class="listen-btn">
@@ -443,48 +411,40 @@
             </a>
         </div>
         {% endif %}
-
         <div class="series-section" id="seriesSection" style="display:none;">
             <div class="series-title">Series Parts</div>
             <ul class="series-list" id="seriesList"></ul>
         </div>
     </div>
 {% endblock %}
-
 {% block scripts %}
     <script>
     const storyId = JSON.parse('{{ story.id | tojson }}');
-
     async function generateScript() {
         const btn = document.getElementById('genScriptBtn');
         const status = document.getElementById('scriptStatus');
         const stepNum = document.getElementById('scriptStepNum');
-
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> Generating...';
         status.textContent = 'Claude is analyzing the story and building a narration script. This may take a minute for long stories...';
         status.className = 'step-status';
         stepNum.className = 'step-number active';
-
         try {
             const resp = await fetch('/audio/generate-script', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ story_id: storyId }),
             });
-
             if (resp.status === 401) {
                 window.location.href = '/login?next=/story/' + storyId;
                 return;
             }
-
             let data;
             try {
                 data = await resp.json();
             } catch {
                 throw new Error('Server returned an unexpected response (status ' + resp.status + ')');
             }
-
             if (resp.ok) {
                 status.textContent = 'Script generated! Reloading...';
                 status.className = 'step-status success';
@@ -500,13 +460,11 @@
             stepNum.className = 'step-number pending';
         }
     }
-
     async function generateAudio() {
         const btn = document.getElementById('genAudioBtn');
         const status = document.getElementById('audioStatus');
         const stepNum = document.getElementById('audioStepNum');
         const note = document.getElementById('audioNote');
-
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> Generating...';
         if (note) note.style.display = 'none';
@@ -514,26 +472,22 @@
             '<div class="progress-bar-track"><div class="progress-bar-fill"></div></div>';
         status.className = 'step-status';
         stepNum.className = 'step-number active';
-
         try {
             const resp = await fetch('/audio/generate-narration', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ story_id: storyId }),
             });
-
             if (resp.status === 401) {
                 window.location.href = '/login?next=/story/' + storyId;
                 return;
             }
-
             let data;
             try {
                 data = await resp.json();
             } catch {
                 throw new Error('Server returned an unexpected response (status ' + resp.status + ')');
             }
-
             if (resp.ok) {
                 status.textContent = 'Audio generated! Reloading...';
                 status.className = 'step-status success';
@@ -549,41 +503,33 @@
             stepNum.className = 'step-number pending';
         }
     }
-
-<<<<<<< claude/add-script-settings-button-3stvR
     async function regenerateAudio() {
         if (!confirm('Regenerate audio? This will replace the current audio file.')) return;
-
         const btn = document.getElementById('regenAudioBtn');
         const status = document.getElementById('regenAudioStatus');
         const stepNum = document.getElementById('audioStepNum');
-
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> Regenerating...';
         status.innerHTML = 'Regenerating multi-voice audio with SFX and ambient sound. This will take several minutes...' +
             '<div class="progress-bar-track"><div class="progress-bar-fill"></div></div>';
         status.className = 'step-status';
         stepNum.className = 'step-number active';
-
         try {
             const resp = await fetch('/audio/generate-narration', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ story_id: storyId, force_regenerate: true }),
             });
-
             if (resp.status === 401) {
                 window.location.href = '/login?next=/story/' + storyId;
                 return;
             }
-
             let data;
             try {
                 data = await resp.json();
             } catch {
                 throw new Error('Server returned an unexpected response (status ' + resp.status + ')');
             }
-
             if (resp.ok) {
                 status.textContent = 'Audio regenerated! Reloading...';
                 status.className = 'step-status success';
@@ -598,20 +544,17 @@
             btn.textContent = 'Regenerate Audio';
             stepNum.className = 'step-number done';
         }
-=======
+    }
     // --- Series parts ---
-
     (async function loadSeriesParts() {
         try {
             const resp = await fetch('/stories/' + storyId + '/series-parts');
             if (!resp.ok) return;
             const parts = await resp.json();
             if (!parts || parts.length < 2) return;
-
             const section = document.getElementById('seriesSection');
             const list = document.getElementById('seriesList');
             section.style.display = 'block';
-
             const currentUrl = JSON.parse('{{ story.reddit_url | tojson if story.reddit_url else "null" }}');
             for (const part of parts) {
                 const li = document.createElement('li');
@@ -620,7 +563,6 @@
                 );
                 const partNum = part.part_number || '?';
                 const partTitle = part.title || 'Part ' + partNum;
-
                 if (isCurrent) {
                     li.innerHTML =
                         '<div class="series-part current">' +
@@ -639,12 +581,10 @@
             }
         } catch(e) {}
     })();
-
     function escapeHtml(text) {
         const d = document.createElement('div');
         d.textContent = text;
         return d.innerHTML;
->>>>>>> dev
     }
     </script>
 {% endblock %}
