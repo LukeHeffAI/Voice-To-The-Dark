@@ -140,6 +140,93 @@
         }
         .play-btn:active { transform: scale(0.95); }
 
+        .speed-control {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0 0.5rem;
+        }
+        .speed-label {
+            font-size: 0.8rem;
+            color: #888;
+            white-space: nowrap;
+            min-width: 2.5rem;
+        }
+        .speed-slider {
+            flex: 1;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+            outline: none;
+        }
+        .speed-slider::-webkit-slider-runnable-track {
+            height: 4px;
+            border-radius: 2px;
+            background: #333;
+        }
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #888;
+            margin-top: -5px;
+            transition: background 0.15s;
+        }
+        .speed-slider::-webkit-slider-thumb:hover {
+            background: #c0392b;
+        }
+        .speed-slider::-moz-range-track {
+            height: 4px;
+            border-radius: 2px;
+            background: #333;
+            border: none;
+        }
+        .speed-slider::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #888;
+            border: none;
+        }
+        .speed-slider::-moz-range-thumb:hover {
+            background: #c0392b;
+        }
+        .speed-input-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.15rem;
+        }
+        .speed-input {
+            width: 3.2rem;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-size: 0.85rem;
+            padding: 0.3rem 0.3rem;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+            outline: none;
+            transition: border-color 0.15s;
+            -moz-appearance: textfield;
+        }
+        .speed-input::-webkit-inner-spin-button,
+        .speed-input::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .speed-input:focus {
+            border-color: #c0392b;
+        }
+        .speed-suffix {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
         .secondary-actions {
             display: flex;
             gap: 2rem;
@@ -231,6 +318,15 @@
             <button class="control-btn" onclick="skip(30)" title="Forward 30s">30 &#9654;&#9654;</button>
         </div>
 
+        <div class="speed-control">
+            <span class="speed-label">Speed</span>
+            <input type="range" class="speed-slider" id="speedSlider" min="0.5" max="3" step="0.05" value="1">
+            <div class="speed-input-wrap">
+                <input type="number" class="speed-input" id="speedInput" min="0.5" max="3" step="0.05" value="1.00">
+                <span class="speed-suffix">x</span>
+            </div>
+        </div>
+
         <div class="secondary-actions">
             <a href="/download/{{ story.id }}" class="secondary-btn">Download MP3</a>
         </div>
@@ -264,11 +360,49 @@
     const currentTimeEl = document.getElementById('currentTime');
     const durationEl = document.getElementById('duration');
     const statusEl = document.getElementById('status');
+    const speedSlider = document.getElementById('speedSlider');
+    const speedInput = document.getElementById('speedInput');
     const storyId = {{ story.id }};
     const resumePosition = {{ resume_position }};
 
     let isSeeking = false;
     let saveTimer = null;
+
+    // --- Playback speed control ---
+
+    function setPlaybackSpeed(rate) {
+        rate = Math.max(0.5, Math.min(3, parseFloat(rate) || 1));
+        // Round to nearest 0.05 to avoid floating-point display issues
+        rate = Math.round(rate * 20) / 20;
+        audio.playbackRate = rate;
+        speedSlider.value = rate;
+        speedInput.value = rate.toFixed(2);
+        localStorage.setItem('vttd_playback_speed', rate);
+        updatePositionState();
+    }
+
+    speedSlider.addEventListener('input', () => {
+        setPlaybackSpeed(speedSlider.value);
+    });
+
+    speedInput.addEventListener('change', () => {
+        setPlaybackSpeed(speedInput.value);
+    });
+
+    // Allow Enter key to apply the value from the number input
+    speedInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.target.blur();
+        }
+    });
+
+    // Restore saved speed preference
+    (function() {
+        const saved = parseFloat(localStorage.getItem('vttd_playback_speed'));
+        if (saved && saved >= 0.5 && saved <= 3) {
+            setPlaybackSpeed(saved);
+        }
+    })();
 
     // --- Playback controls ---
 
