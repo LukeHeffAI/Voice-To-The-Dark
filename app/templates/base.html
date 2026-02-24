@@ -11,7 +11,7 @@
     <link rel="manifest" href="/static/manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet">
     <title>{% block title %}Voice To The Dark{% endblock %}</title>
     <style>
         /* ── Design tokens ─────────────────────────────────── */
@@ -25,37 +25,37 @@
             --border-subtle: #1a1a1a;
             --border-default: #222;
             --border-hover: #333;
-            --border-active: #8b2020;
+            --border-active: #c43a3f;
 
-            --text-primary: #d4d0c8;
-            --text-heading: #e8e4dc;
-            --text-secondary: #999;
-            --text-muted: #666;
-            --text-faint: #444;
+            --text-primary: #e4e2de;
+            --text-heading: #f0ede8;
+            --text-secondary: #a8a4a0;
+            --text-muted: #787470;
+            --text-faint: #504c48;
 
-            --accent: #9b2226;
-            --accent-bright: #c0392b;
-            --accent-dim: #6b1a1d;
-            --accent-glow: rgba(155, 34, 38, 0.4);
-            --accent-bg: #1a0a0a;
+            --accent: #c43a3f;
+            --accent-bright: #dc4a50;
+            --accent-dim: #7a2528;
+            --accent-glow: rgba(196, 58, 63, 0.35);
+            --accent-bg: rgba(196, 58, 63, 0.06);
 
-            --success: #4caf50;
-            --success-bg: #0f1a0f;
-            --success-border: #1e3a1e;
-            --info: #7070aa;
-            --info-bg: #0f0f1a;
-            --info-border: #1e1e3a;
-            --error: #c05050;
-            --error-bg: #1a0f0f;
-            --error-border: #3a1e1e;
-            --warning: #b8962e;
+            --success: #3dbb61;
+            --success-bg: rgba(61, 187, 97, 0.08);
+            --success-border: rgba(61, 187, 97, 0.2);
+            --info: #8888cc;
+            --info-bg: rgba(136, 136, 204, 0.08);
+            --info-border: rgba(136, 136, 204, 0.2);
+            --error: #e05555;
+            --error-bg: rgba(224, 85, 85, 0.08);
+            --error-border: rgba(224, 85, 85, 0.2);
+            --warning: #d4a017;
 
-            --font-display: 'Playfair Display', 'Georgia', serif;
+            --font-display: 'Source Serif 4', Georgia, 'Times New Roman', serif;
             --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 
             --radius-sm: 6px;
-            --radius-md: 10px;
-            --radius-lg: 14px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
 
             --transition-fast: 0.15s ease;
             --transition-med: 0.25s ease;
@@ -69,6 +69,7 @@
             font-family: var(--font-body);
             background: var(--bg-base);
             color: var(--text-primary);
+            line-height: 1.6;
             min-height: 100vh;
             -webkit-tap-highlight-color: transparent;
             position: relative;
@@ -99,7 +100,7 @@
             z-index: 9998;
             pointer-events: none;
             opacity: 0.07;
-            background: radial-gradient(ellipse at 30% 20%, rgba(155, 34, 38, 0.3), transparent 60%),
+            background: radial-gradient(ellipse at 30% 20%, rgba(196, 58, 63, 0.3), transparent 60%),
                         radial-gradient(ellipse at 70% 10%, rgba(60, 30, 60, 0.2), transparent 50%);
             animation: drift 30s ease-in-out infinite alternate;
         }
@@ -112,7 +113,7 @@
 
         @keyframes breathe {
             0%, 100% { box-shadow: 0 0 8px var(--accent-glow); }
-            50% { box-shadow: 0 0 20px var(--accent-glow), 0 0 40px rgba(155, 34, 38, 0.15); }
+            50% { box-shadow: 0 0 20px var(--accent-glow), 0 0 40px rgba(196, 58, 63, 0.12); }
         }
 
         @keyframes drift {
@@ -147,7 +148,8 @@
         .back-link {
             color: var(--text-muted);
             text-decoration: none;
-            font-size: 0.9rem;
+            font-size: 0.875rem;
+            letter-spacing: 0.01em;
             padding: 0.5rem 0;
             display: inline-block;
             transition: color var(--transition-fast);
@@ -176,20 +178,23 @@
             background: var(--accent);
             color: #fff;
             border: none;
-            padding: 0.6rem 1.2rem;
-            border-radius: var(--radius-sm);
-            font-size: 0.85rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-md);
+            font-size: 0.9375rem;
             font-weight: 600;
             cursor: pointer;
             transition: background var(--transition-fast), box-shadow var(--transition-fast);
         }
         .btn-primary:hover {
             background: var(--accent-bright);
-            box-shadow: 0 0 12px var(--accent-glow);
+            box-shadow: 0 2px 12px var(--accent-glow);
+        }
+        .btn-primary:active {
+            transform: scale(0.98);
         }
         .btn-primary:disabled {
-            background: #222;
-            color: var(--text-muted);
+            background: var(--bg-elevated);
+            color: var(--text-faint);
             cursor: not-allowed;
             box-shadow: none;
         }
@@ -197,16 +202,17 @@
         .btn-secondary {
             background: transparent;
             color: var(--text-secondary);
-            border: 1px solid var(--border-hover);
-            padding: 0.5rem 1rem;
-            border-radius: var(--radius-sm);
-            font-size: 0.85rem;
+            border: 1px solid var(--border-default);
+            padding: 0.625rem 1.25rem;
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
             cursor: pointer;
             transition: all var(--transition-fast);
         }
         .btn-secondary:hover {
-            border-color: var(--text-muted);
+            border-color: var(--border-hover);
             color: var(--text-primary);
+            background: var(--bg-surface);
         }
 
         /* ── Form messages ─────────────────────────────────── */
@@ -236,17 +242,18 @@
         .form-input, .url-input, .manual-input {
             width: 100%;
             padding: 0.75rem 1rem;
-            border: 1px solid var(--border-hover);
+            border: 1px solid var(--border-default);
             border-radius: var(--radius-md);
             background: var(--bg-surface);
             color: var(--text-primary);
-            font-size: 0.95rem;
+            font-size: 1rem;
+            line-height: 1.5;
             outline: none;
             transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
         }
         .form-input:focus, .url-input:focus, .manual-input:focus {
             border-color: var(--accent);
-            box-shadow: 0 0 8px rgba(155, 34, 38, 0.2);
+            box-shadow: 0 0 0 3px rgba(196, 58, 63, 0.08);
         }
         .form-input::placeholder, .url-input::placeholder, .manual-input::placeholder {
             color: var(--text-faint);
@@ -258,11 +265,11 @@
             display: inline-block;
             width: 16px;
             height: 16px;
-            border: 2px solid #333;
-            border-top-color: var(--accent-bright);
+            border: 2px solid var(--border-default);
+            border-top-color: var(--accent);
             border-radius: 50%;
-            animation: spin 0.8s linear infinite, pulseRing 2s ease-in-out infinite;
-            margin-right: 0.4rem;
+            animation: spin 0.8s linear infinite;
+            margin-right: 0.5rem;
             vertical-align: middle;
         }
 
@@ -270,18 +277,18 @@
 
         .separator {
             height: 1px;
-            background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
+            background: var(--border-subtle);
             border: none;
-            margin: 1.5rem 0;
+            margin: 2rem 0;
         }
 
         /* ── Badges ────────────────────────────────────────── */
 
         .badge {
             display: inline-block;
-            padding: 0.15rem 0.55rem;
-            border-radius: 10px;
-            font-size: 0.7rem;
+            padding: 0.25rem 0.625rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
             font-weight: 600;
             letter-spacing: 0.02em;
         }
@@ -313,7 +320,7 @@
             color: var(--text-secondary);
         }
         .login-prompt a {
-            color: var(--accent-bright);
+            color: var(--accent);
             text-decoration: none;
             font-weight: 600;
         }

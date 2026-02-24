@@ -17,7 +17,7 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            padding: 1rem 0 1.5rem;
+            padding: 1.5rem 0 1.75rem;
             margin-bottom: 1rem;
             gap: 1rem;
             flex-wrap: wrap;
@@ -25,13 +25,13 @@
         .page-header h1 {
             font-family: var(--font-display);
             font-size: 1.3rem;
-            font-weight: 700;
+            font-weight: 600;
             color: var(--text-heading);
         }
         .page-header .subtitle {
-            font-size: 0.8rem;
+            font-size: 0.8125rem;
             color: var(--text-muted);
-            margin-top: 0.2rem;
+            margin-top: 0.25rem;
         }
         .page-header-separator {
             height: 1px;
@@ -42,7 +42,7 @@
         }
 
         .save-btn {
-            padding: 0.6rem 1.5rem;
+            padding: 0.75rem 1.5rem;
             border: none;
             border-radius: var(--radius-md);
             background: var(--accent);
@@ -73,28 +73,28 @@
             background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated));
             border: 1px solid var(--border-subtle);
             border-radius: var(--radius-md);
-            padding: 1rem 1.2rem;
-            margin-bottom: 1rem;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
         }
         .characters-panel h2 {
             font-family: var(--font-display);
-            font-size: 0.95rem;
-            font-weight: 700;
+            font-size: 1rem;
+            font-weight: 600;
             color: var(--text-secondary);
             margin-bottom: 0.75rem;
         }
         .character-list {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.5rem;
+            gap: 0.625rem;
         }
         .character-tag {
             display: flex;
             align-items: center;
             gap: 0.4rem;
-            padding: 0.35rem 0.75rem;
+            padding: 0.5rem 0.875rem;
             border-radius: 16px;
-            font-size: 0.8rem;
+            font-size: 0.8125rem;
             font-weight: 500;
             transition: all var(--transition-fast);
         }
@@ -126,7 +126,7 @@
         .segments-header h2 {
             font-family: var(--font-display);
             font-size: 1rem;
-            font-weight: 700;
+            font-weight: 600;
             color: var(--text-primary);
         }
         .segment-count {
@@ -137,42 +137,42 @@
         .segment-list {
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 0.75rem;
         }
 
         .segment-card {
             background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated));
             border: 1px solid var(--border-subtle);
             border-radius: var(--radius-md);
-            padding: 0.75rem 1rem;
+            padding: 1rem 1.25rem;
             transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
             cursor: pointer;
         }
         .segment-card:hover { border-color: var(--border-hover); }
         .segment-card.editing {
             border-color: var(--accent);
-            box-shadow: 0 0 12px rgba(155, 34, 38, 0.1);
+            box-shadow: 0 0 12px rgba(196, 58, 63, 0.1);
             cursor: default;
         }
 
         .segment-top {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.4rem;
+            gap: 0.625rem;
+            margin-bottom: 0.5rem;
         }
         .segment-type {
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             font-weight: 700;
             text-transform: uppercase;
-            padding: 0.15rem 0.4rem;
+            padding: 0.25rem 0.5rem;
             border-radius: 4px;
             letter-spacing: 0.03em;
         }
         .type-narration { background: var(--success-bg); color: var(--success); }
         .type-dialogue { background: var(--info-bg); color: var(--info); }
-        .type-sfx { background: #1a1a0f; color: #cccc44; }
-        .type-ambient { background: #0f1a1a; color: #44cccc; }
+        .type-sfx { background: rgba(204, 204, 68, 0.08); color: #cccc44; border: 1px solid rgba(204, 204, 68, 0.2); }
+        .type-ambient { background: rgba(68, 204, 204, 0.08); color: #44cccc; border: 1px solid rgba(68, 204, 204, 0.2); }
         .type-pause { background: var(--bg-hover); color: var(--text-secondary); }
 
         .segment-character {
@@ -193,13 +193,13 @@
         }
 
         .segment-text {
-            font-size: 0.85rem;
+            font-size: 0.9375rem;
             color: var(--text-primary);
-            line-height: 1.4;
+            line-height: 1.6;
             word-break: break-word;
         }
         .segment-description {
-            font-size: 0.85rem;
+            font-size: 0.9375rem;
             color: var(--text-secondary);
             font-style: italic;
         }
@@ -207,21 +207,21 @@
         /* ── Inline edit fields ────────────────────────────── */
         .segment-edit {
             display: none;
-            margin-top: 0.5rem;
+            margin-top: 0.625rem;
             flex-direction: column;
-            gap: 0.4rem;
+            gap: 0.5rem;
         }
         .segment-card.editing .segment-edit { display: flex; }
         .segment-card.editing .segment-display { display: none; }
 
         .edit-field {
             width: 100%;
-            padding: 0.5rem 0.7rem;
+            padding: 0.625rem 0.875rem;
             border: 1px solid var(--border-hover);
             border-radius: var(--radius-sm);
             background: var(--bg-base);
             color: var(--text-primary);
-            font-size: 0.85rem;
+            font-size: 0.9375rem;
             font-family: inherit;
             resize: vertical;
             outline: none;
@@ -229,10 +229,10 @@
         }
         .edit-field:focus {
             border-color: var(--accent);
-            box-shadow: 0 0 6px rgba(155, 34, 38, 0.15);
+            box-shadow: 0 0 6px rgba(196, 58, 63, 0.15);
         }
 
-        textarea.edit-field { min-height: 60px; }
+        textarea.edit-field { min-height: 80px; }
 
         .edit-row {
             display: flex;
@@ -242,13 +242,13 @@
 
         .edit-actions {
             display: flex;
-            gap: 0.5rem;
-            margin-top: 0.3rem;
+            gap: 0.625rem;
+            margin-top: 0.5rem;
         }
         .edit-btn {
-            padding: 0.35rem 0.8rem;
+            padding: 0.5rem 1rem;
             border-radius: var(--radius-sm);
-            font-size: 0.8rem;
+            font-size: 0.8125rem;
             cursor: pointer;
             border: none;
             transition: all var(--transition-fast);
@@ -261,10 +261,10 @@
         .edit-btn-delete:hover { background: var(--error-border); }
 
         .click-hint {
-            font-size: 0.75rem;
+            font-size: 0.8125rem;
             color: var(--text-faint);
             text-align: center;
-            margin-bottom: 1rem;
+            margin-bottom: 1.25rem;
         }
 {% endblock %}
 
