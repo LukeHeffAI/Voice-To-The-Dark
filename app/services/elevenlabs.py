@@ -10,6 +10,15 @@ from app.services.audio_utils import stitch_audio_files, create_tmp_folder, clea
 
 logger = logging.getLogger(__name__)
 
+
+class ElevenLabsError(Exception):
+    """Raised when an ElevenLabs API call fails."""
+
+    def __init__(self, message: str, status_code: int | None = None, detail: str | None = None):
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(message)
+
 MAX_TEXT_LENGTH = 4900  # safe margin for ElevenLabs per-request char limit
 
 # Horror-tuned voice presets. Lower stability = more emotional range.
@@ -113,6 +122,9 @@ def generate_sfx(
     if not output_path:
         output_path = os.path.join(SFX_CACHE_DIR, f"{cache_key}.mp3")
 
+    if not settings.ELEVENLABS_API_KEY:
+        raise ElevenLabsError("ELEVENLABS_API_KEY is not set in environment")
+
     url = "https://api.elevenlabs.io/v1/sound-generation"
     headers = {
         "xi-api-key": settings.ELEVENLABS_API_KEY,
@@ -124,8 +136,27 @@ def generate_sfx(
         "duration_seconds": duration_seconds,
     }
 
-    response = requests.post(url, headers=headers, json=data, stream=True)
-    response.raise_for_status()
+    logger.info(f"SFX request: description='{description[:50]}...', duration={duration_seconds}s")
+
+    try:
+        response = requests.post(url, headers=headers, json=data, stream=True)
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as exc:
+        body = ""
+        try:
+            body = exc.response.text
+        except Exception:
+            pass
+        status = exc.response.status_code if exc.response is not None else None
+        logger.error(f"ElevenLabs SFX failed (HTTP {status}): {body}")
+        raise ElevenLabsError(
+            f"ElevenLabs SFX API error (HTTP {status}): {body}",
+            status_code=status,
+            detail=body,
+        ) from exc
+    except requests.exceptions.ConnectionError as exc:
+        logger.error(f"ElevenLabs SFX connection error: {exc}")
+        raise ElevenLabsError(f"Could not connect to ElevenLabs API: {exc}") from exc
 
     with open(output_path, "wb") as f:
         for chunk in response.iter_content(chunk_size=8192):
@@ -190,6 +221,9 @@ def tts_request(
     model_id: str = MODEL_ELEVEN_V3,
 ):
     """Call the ElevenLabs TTS API with horror-tuned voice settings."""
+    if not settings.ELEVENLABS_API_KEY:
+        raise ElevenLabsError("ELEVENLABS_API_KEY is not set in environment")
+
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream"
 
     voice_settings = VOICE_PRESETS.get(preset, VOICE_PRESETS["horror_narrator"])
@@ -205,8 +239,27 @@ def tts_request(
         "voice_settings": voice_settings,
     }
 
-    response = requests.post(url, headers=headers, json=data, stream=True)
-    response.raise_for_status()
+    logger.info(f"TTS request: voice={voice_id}, model={model_id}, preset={preset}, text_len={len(text)}")
+
+    try:
+        response = requests.post(url, headers=headers, json=data, stream=True)
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as exc:
+        body = ""
+        try:
+            body = exc.response.text
+        except Exception:
+            pass
+        status = exc.response.status_code if exc.response is not None else None
+        logger.error(f"ElevenLabs TTS failed (HTTP {status}): {body}")
+        raise ElevenLabsError(
+            f"ElevenLabs TTS API error (HTTP {status}): {body}",
+            status_code=status,
+            detail=body,
+        ) from exc
+    except requests.exceptions.ConnectionError as exc:
+        logger.error(f"ElevenLabs TTS connection error: {exc}")
+        raise ElevenLabsError(f"Could not connect to ElevenLabs API: {exc}") from exc
 
     with open(output_file, "wb") as f:
         for chunk in response.iter_content(chunk_size=8192):

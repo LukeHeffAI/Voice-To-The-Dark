@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.services.elevenlabs import generate_audio
+from app.services.elevenlabs import generate_audio, ElevenLabsError
 from app.services.script_adapter import generate_script
 from app.services.narration_generator import generate_narration
 from app.models.story import Story
@@ -37,7 +37,20 @@ def generate_audio_route(req: GenerateAudioRequest, user: User = Depends(get_cur
         return {"message": "Already generated", "audio_file": story.audio_file_path}
 
     tts_text = story.narration_text or story.text_content
-    new_audio_path = generate_audio(tts_text, req.voice_id)
+    try:
+        new_audio_path = generate_audio(tts_text, req.voice_id)
+    except ElevenLabsError as exc:
+        logger.exception("ElevenLabs audio generation failed for story %s", req.story_id)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Audio generation failed: {exc}",
+        ) from exc
+    except Exception as exc:
+        logger.exception("Unexpected error generating audio for story %s", req.story_id)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Audio generation failed unexpectedly: {exc}",
+        ) from exc
     story.audio_file_path = new_audio_path
     db.commit()
     db.refresh(story)
@@ -170,7 +183,20 @@ def generate_narration_route(req: GenerateNarrationRequest, _rl=Depends(rate_lim
                        f"Required characters: {script.character_names()}",
             )
 
-    audio_path = generate_narration(script, voice_map)
+    try:
+        audio_path = generate_narration(script, voice_map)
+    except ElevenLabsError as exc:
+        logger.exception("ElevenLabs narration generation failed for story %s", req.story_id)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Narration generation failed: {exc}",
+        ) from exc
+    except Exception as exc:
+        logger.exception("Unexpected error generating narration for story %s", req.story_id)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Narration generation failed unexpectedly: {exc}",
+        ) from exc
 
     story.audio_file_path = audio_path
     db.commit()
