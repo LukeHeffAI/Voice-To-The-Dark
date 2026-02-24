@@ -72,7 +72,14 @@ def generate_script_route(req: GenerateScriptRequest, _rl=Depends(rate_limit(10,
     if not text:
         raise HTTPException(status_code=400, detail="Story has no text to adapt")
 
-    script = generate_script(story.title, text)
+    try:
+        script = generate_script(story.title, text)
+    except Exception as exc:
+        logger.exception("Script generation failed for story %s", req.story_id)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Script generation failed: {exc}",
+        ) from exc
 
     story.script_json = json.dumps(script.model_dump())
     db.commit()

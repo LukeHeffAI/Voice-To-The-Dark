@@ -419,14 +419,22 @@
                 body: JSON.stringify({ story_id: storyId }),
             });
 
-            const data = await resp.json();
+            if (resp.status === 401) {
+                window.location.href = '/login?next=/story/' + storyId;
+                return;
+            }
+
+            let data;
+            try {
+                data = await resp.json();
+            } catch {
+                throw new Error('Server returned an unexpected response (status ' + resp.status + ')');
+            }
 
             if (resp.ok) {
                 status.textContent = 'Script generated! Reloading...';
                 status.className = 'step-status success';
                 setTimeout(() => location.reload(), 800);
-            } else if (resp.status === 401) {
-                window.location.href = '/login?next=/story/' + storyId;
             } else {
                 throw new Error(data.detail || 'Script generation failed');
             }
@@ -460,14 +468,22 @@
                 body: JSON.stringify({ story_id: storyId }),
             });
 
-            const data = await resp.json();
+            if (resp.status === 401) {
+                window.location.href = '/login?next=/story/' + storyId;
+                return;
+            }
+
+            let data;
+            try {
+                data = await resp.json();
+            } catch {
+                throw new Error('Server returned an unexpected response (status ' + resp.status + ')');
+            }
 
             if (resp.ok) {
                 status.textContent = 'Audio generated! Reloading...';
                 status.className = 'step-status success';
                 setTimeout(() => location.reload(), 800);
-            } else if (resp.status === 401) {
-                window.location.href = '/login?next=/story/' + storyId;
             } else {
                 throw new Error(data.detail || 'Audio generation failed');
             }

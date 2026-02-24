@@ -122,7 +122,14 @@ def _adapt_section(
         if raw_text.endswith("```"):
             raw_text = raw_text[:-3].strip()
 
-    script_data = json.loads(raw_text)
+    try:
+        script_data = json.loads(raw_text)
+    except json.JSONDecodeError as exc:
+        logger.error("Claude returned invalid JSON for '%s': %s", title, raw_text[:500])
+        raise ValueError(
+            f"Script generation failed: Claude did not return valid JSON ({exc})"
+        ) from exc
+
     return NarrationScript(**script_data)
 
 
