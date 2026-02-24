@@ -409,6 +409,14 @@
                 <div class="step-body">
                     {% if story.audio_file_path %}
                     <div class="step-info step-status success">Audio ready</div>
+                    {% if user %}
+                    <div style="margin-top: 0.5rem;">
+                        <button class="step-action btn-secondary" id="regenAudioBtn" onclick="regenerateAudio()">
+                            Regenerate Audio
+                        </button>
+                    </div>
+                    <div class="step-status" id="regenAudioStatus"></div>
+                    {% endif %}
                     {% else %}
                         {% if user %}
                         <button class="step-action btn-primary" id="genAudioBtn"
@@ -542,6 +550,55 @@
         }
     }
 
+<<<<<<< claude/add-script-settings-button-3stvR
+    async function regenerateAudio() {
+        if (!confirm('Regenerate audio? This will replace the current audio file.')) return;
+
+        const btn = document.getElementById('regenAudioBtn');
+        const status = document.getElementById('regenAudioStatus');
+        const stepNum = document.getElementById('audioStepNum');
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Regenerating...';
+        status.innerHTML = 'Regenerating multi-voice audio with SFX and ambient sound. This will take several minutes...' +
+            '<div class="progress-bar-track"><div class="progress-bar-fill"></div></div>';
+        status.className = 'step-status';
+        stepNum.className = 'step-number active';
+
+        try {
+            const resp = await fetch('/audio/generate-narration', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ story_id: storyId, force_regenerate: true }),
+            });
+
+            if (resp.status === 401) {
+                window.location.href = '/login?next=/story/' + storyId;
+                return;
+            }
+
+            let data;
+            try {
+                data = await resp.json();
+            } catch {
+                throw new Error('Server returned an unexpected response (status ' + resp.status + ')');
+            }
+
+            if (resp.ok) {
+                status.textContent = 'Audio regenerated! Reloading...';
+                status.className = 'step-status success';
+                setTimeout(() => location.reload(), 800);
+            } else {
+                throw new Error(data.detail || 'Audio regeneration failed');
+            }
+        } catch (err) {
+            status.textContent = err.message;
+            status.className = 'step-status error';
+            btn.disabled = false;
+            btn.textContent = 'Regenerate Audio';
+            stepNum.className = 'step-number done';
+        }
+=======
     // --- Series parts ---
 
     (async function loadSeriesParts() {
@@ -587,6 +644,7 @@
         const d = document.createElement('div');
         d.textContent = text;
         return d.innerHTML;
+>>>>>>> dev
     }
     </script>
 {% endblock %}
