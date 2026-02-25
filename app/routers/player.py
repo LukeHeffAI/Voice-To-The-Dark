@@ -12,6 +12,7 @@ from app.models.story import Story, PlaybackState, User, StoryView, StoryFolder,
 from app.schemas.narration import NarrationScript
 from app.deps import get_optional_user
 from app.services.voice_pool import VOICE_POOL
+from app.services.winks import get_winks_remaining, estimate_story_winks, estimate_stories_winks
 
 logger = logging.getLogger(__name__)
 
@@ -65,12 +66,17 @@ def story_list_page(request: Request, db: Session = Depends(get_db), user: User 
     else:
         stories = db.query(Story).order_by(Story.created_at.desc()).all()
 
+    winks_remaining = get_winks_remaining() if user else None
+    story_winks_map = estimate_stories_winks(stories) if user else {}
+
     return templates.TemplateResponse("story_list.html", {
         "request": request,
         "stories": stories,
         "user": user,
         "folders": folders,
         "is_recently_viewed": user is not None,
+        "winks_remaining": winks_remaining,
+        "story_winks_map": story_winks_map,
     })
 
 
@@ -95,12 +101,17 @@ def folder_page(request: Request, folder_id: int, db: Session = Depends(get_db),
     folders = db.query(StoryFolder).filter(
         StoryFolder.user_id == user.id
     ).order_by(StoryFolder.name).all()
+    winks_remaining = get_winks_remaining()
+    story_winks_map = estimate_stories_winks(memberships)
+
     return templates.TemplateResponse("folder.html", {
         "request": request,
         "folder": folder,
         "stories": memberships,
         "folders": folders,
         "user": user,
+        "winks_remaining": winks_remaining,
+        "story_winks_map": story_winks_map,
     })
 
 
@@ -188,6 +199,9 @@ def story_detail_page(request: Request, story_id: int, db: Session = Depends(get
         ).first()
     resume_seconds = playback.position_seconds if playback else 0.0
 
+    winks_remaining = get_winks_remaining() if user else None
+    story_winks_cost = estimate_story_winks(story) if user and not story.audio_file_path else None
+
     return templates.TemplateResponse("story_detail.html", {
         "request": request,
         "story": story,
@@ -199,6 +213,8 @@ def story_detail_page(request: Request, story_id: int, db: Session = Depends(get
         "sfx_count": sfx_count,
         "resume_seconds": resume_seconds,
         "user": user,
+        "winks_remaining": winks_remaining,
+        "story_winks_cost": story_winks_cost,
     })
 
 

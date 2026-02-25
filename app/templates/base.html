@@ -317,6 +317,31 @@
         }
         .login-prompt a:hover { text-decoration: underline; }
 
+        /* ── Winks currency badge ────────────────────────── */
+        .winks-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            background: var(--warn-dim);
+            border: 1px solid rgba(184,160,64,0.15);
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--warn);
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
+        .winks-badge-icon {
+            font-size: 0.75rem;
+            line-height: 1;
+        }
+        .winks-estimate {
+            color: var(--warn);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
         {% block styles %}{% endblock %}
     </style>
     {% block head_extra %}{% endblock %}

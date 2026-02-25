@@ -357,6 +357,9 @@
     <div class="auth-nav">
         {% if user %}
         <span class="username">{{ user.username }}</span>
+        {% if winks_remaining %}
+        <span class="winks-badge"><span class="winks-badge-icon">&#10022;</span> {{ winks_remaining[0] }}/{{ winks_remaining[1] }} Winks</span>
+        {% endif %}
         <a href="/settings">Settings</a>
         <a href="#" onclick="fetch('/auth/logout',{method:'POST'}).then(()=>location.reload())">Sign out</a>
         {% else %}
@@ -404,6 +407,9 @@
                         <span class="badge badge-script">Script ready</span>
                         {% else %}
                         <span class="badge badge-pending">Fetched</span>
+                        {% endif %}
+                        {% if story_winks_map and story.id in story_winks_map %}
+                        <span class="winks-estimate">~{{ story_winks_map[story.id] }} Winks</span>
                         {% endif %}
                     </div>
                 </a>

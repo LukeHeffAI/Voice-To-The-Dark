@@ -254,6 +254,9 @@
         <div class="auth-nav">
             {% if user %}
             <span class="username">{{ user.username }}</span>
+            {% if winks_remaining %}
+            <span class="winks-badge"><span class="winks-badge-icon">&#10022;</span> {{ winks_remaining[0] }}/{{ winks_remaining[1] }} Winks</span>
+            {% endif %}
             <a href="#" onclick="fetch('/auth/logout',{method:'POST'}).then(()=>location.reload())">Sign out</a>
             {% else %}
             <a href="/login?next=/story/{{ story.id }}">Sign in</a>
@@ -283,6 +286,9 @@
                 {% endif %}
                 {% if est_minutes %}
                 <div class="stat">~<span class="stat-value">{{ est_minutes }}</span> min listen</div>
+                {% endif %}
+                {% if story_winks_cost %}
+                <div class="stat winks-estimate">~<span class="stat-value">{{ story_winks_cost }}</span> Winks</div>
                 {% endif %}
             </div>
             {% if resume_seconds > 0 and story.audio_file_path %}
