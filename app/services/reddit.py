@@ -162,6 +162,7 @@ def fetch_top_posts(timeframe: str = "today", limit: int = 25, cache_ttl: Option
             "score": post.get("ups", post.get("score", 0)),
             "id": post.get("id", ""),
             "author": post.get("author", ""),
+            "selftext": post.get("selftext", ""),
             "gilded": post.get("gilded", 0),
             "flair": post.get("author_flair_text"),
             "series_flair": post.get("link_flair_text"),

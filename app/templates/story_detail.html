@@ -498,6 +498,38 @@
             stepNum.className = 'step-number done';
         }
     }
+    async function submitSeriesPart(url, element) {
+        // Auto-submit a series part and navigate to its story page
+        const origHtml = element.innerHTML;
+        element.style.pointerEvents = 'none';
+        element.style.opacity = '0.6';
+        element.innerHTML =
+            '<span class="series-part-num" style="opacity:0.5">...</span>' +
+            '<span>Fetching story...</span>';
+        try {
+            const resp = await fetch('/stories/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reddit_url: url }),
+            });
+            if (resp.status === 401) {
+                window.location.href = '/login?next=/story/' + storyId;
+                return;
+            }
+            const data = await resp.json();
+            if (resp.ok) {
+                window.location.href = '/story/' + data.id;
+            } else {
+                element.innerHTML = origHtml;
+                element.style.pointerEvents = '';
+                element.style.opacity = '';
+            }
+        } catch (err) {
+            element.innerHTML = origHtml;
+            element.style.pointerEvents = '';
+            element.style.opacity = '';
+        }
+    }
     (async function loadSeriesParts() {
         try {
             const resp = await fetch('/stories/' + storyId + '/series-parts');
@@ -521,13 +553,28 @@
                             '<span class="series-part-num">' + partNum + '</span>' +
                             '<span>' + escapeHtml(partTitle) + ' (current)</span>' +
                         '</div>';
-                } else {
-                    const href = '/submit#url=' + encodeURIComponent(part.url);
+                } else if (part.story_id) {
+                    // Part already submitted — link directly to its story page
                     li.innerHTML =
-                        '<a class="series-part" href="' + href + '">' +
+                        '<a class="series-part" href="/story/' + part.story_id + '">' +
                             '<span class="series-part-num">' + partNum + '</span>' +
                             '<span>' + escapeHtml(partTitle) + '</span>' +
                         '</a>';
+                } else {
+                    // Part not yet submitted — auto-submit on click
+                    const a = document.createElement('a');
+                    a.className = 'series-part';
+                    a.href = '#';
+                    a.innerHTML =
+                        '<span class="series-part-num">' + partNum + '</span>' +
+                        '<span>' + escapeHtml(partTitle) + '</span>';
+                    (function(partUrl) {
+                        a.onclick = function(e) {
+                            e.preventDefault();
+                            submitSeriesPart(partUrl, a);
+                        };
+                    })(part.url);
+                    li.appendChild(a);
                 }
                 list.appendChild(li);
             }

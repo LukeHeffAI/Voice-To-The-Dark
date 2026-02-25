@@ -745,12 +745,12 @@
                     (metaHtml ? '<div class="top-story-meta">' + metaHtml + '</div>' : '') +
                 '</div>' +
                 '<div class="top-story-score">' + scoreText + ' pts</div>';
-            li.onclick = () => submitTopStory(story.url, li);
+            li.onclick = () => submitTopStory(story, li);
             topStoriesList.appendChild(li);
         }
     }
 
-    async function submitTopStory(url, element) {
+    async function submitTopStory(story, element) {
         if (!isLoggedIn) {
             window.location.href = '/login?next=/submit';
             return;
@@ -765,10 +765,16 @@
         hideMessage();
 
         try {
-            const resp = await fetch('/stories/submit', {
+            // Use submit-manual with cached data to avoid fetching from Reddit
+            const body = { reddit_url: story.url };
+            if (story.title) body.title = story.title;
+            if (story.author) body.author = story.author;
+            if (story.selftext) body.text_content = story.selftext;
+
+            const resp = await fetch('/stories/submit-manual', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reddit_url: url }),
+                body: JSON.stringify(body),
             });
 
             const data = await resp.json();

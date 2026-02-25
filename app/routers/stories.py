@@ -148,7 +148,7 @@ def submit_story_manual(req: ManualStorySubmitRequest, user: User = Depends(get_
     title = (req.title or "").strip()
     text = (req.text_content or "").strip()
     url = (req.reddit_url or "").strip() or None
-    author = None
+    author = (req.author or "").strip() or None
 
     # Validate and normalize the Reddit URL when provided (prevents SSRF; strips query/fragment)
     if url:
@@ -326,27 +326,54 @@ def get_series_parts(story_id: int, db: Session = Depends(get_db)):
 
     Checks the cached series_json first. If not available and the story
     has an author, attempts discovery from the author's Reddit page.
+
+    Each part is enriched with ``story_id`` if it has already been
+    submitted to the database, so the frontend can link directly to the
+    story detail page instead of the submit form.
     """
     story = db.query(Story).filter(Story.id == story_id).first()
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
 
+    parts = None
+
     # Return cached series parts if available
     if story.series_json:
-        return json.loads(story.series_json)
+        parts = json.loads(story.series_json)
 
     # Attempt discovery if we have an author
-    if story.author and story.title:
+    if parts is None and story.author and story.title:
         try:
             parts = find_series_parts(story.author, story.title)
             if parts:
                 story.series_json = json.dumps(parts)
                 db.commit()
-            return parts
         except Exception:
             pass
 
-    return []
+    if not parts:
+        return []
+
+    # Enrich parts with story_id for those already submitted
+    existing = {
+        row.reddit_url: row.id
+        for row in db.query(Story.id, Story.reddit_url).filter(
+            Story.reddit_url.isnot(None)
+        ).all()
+    }
+    for part in parts:
+        part_url = (part.get("url") or "").rstrip("/")
+        # Check with and without trailing slash since URLs may vary
+        matched_id = existing.get(part_url) or existing.get(part_url + "/")
+        # Also try matching with normalized host variants
+        if not matched_id:
+            for db_url, db_id in existing.items():
+                if db_url and db_url.rstrip("/") == part_url:
+                    matched_id = db_id
+                    break
+        part["story_id"] = matched_id
+
+    return parts
 
 
 @router.get("/{story_id}", response_model=StoryResponse)
