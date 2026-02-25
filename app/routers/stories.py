@@ -68,6 +68,14 @@ def _validate_and_normalize_reddit_url(url: str) -> str:
     return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
 
 
+def _canonical_url_key(url: str) -> tuple[str, str]:
+    """Return (netloc_without_www, path_without_trailing_slash) for URL dedup."""
+    parsed = urlparse(url)
+    netloc = parsed.netloc.lower().removeprefix("www.")
+    path = parsed.path.rstrip("/")
+    return (netloc, path)
+
+
 def _auto_submit_series_parts(
     series_parts: list[dict],
     submitted_url: str,
@@ -79,26 +87,46 @@ def _auto_submit_series_parts(
     """Create Story records for all other parts in a series (best-effort).
 
     Skips any parts whose URL matches *submitted_url* (already created by
-    the caller) or that already exist in the database.
+    the caller) or that already exist in the database.  URL matching uses
+    canonical host/path comparison to handle reddit.com vs www.reddit.com.
     """
-    from urllib.parse import urlparse
+    submitted_key = _canonical_url_key(submitted_url)
 
-    def _urls_equivalent(a: str, b: str) -> bool:
-        pa, pb = urlparse(a), urlparse(b)
-        na = pa.netloc.lower().removeprefix("www.")
-        nb = pb.netloc.lower().removeprefix("www.")
-        return na == nb and pa.path.rstrip("/") == pb.path.rstrip("/")
+    # Build a set of canonical keys for all URLs already in the DB
+    # so we don't re-fetch every existing story one by one.
+    candidate_urls = set()
+    for part in series_parts:
+        raw = (part.get("url") or "").strip()
+        if not raw:
+            continue
+        base = raw.rstrip("/")
+        candidate_urls.add(base)
+        candidate_urls.add(base + "/")
+        try:
+            p = urlparse(raw)
+            alt_netloc = p.netloc.lower()
+            alt_netloc = alt_netloc[4:] if alt_netloc.startswith("www.") else "www." + alt_netloc
+            alt = p._replace(netloc=alt_netloc).geturl().rstrip("/")
+            candidate_urls.add(alt)
+            candidate_urls.add(alt + "/")
+        except Exception:
+            pass
+
+    existing_keys: set[tuple[str, str]] = set()
+    if candidate_urls:
+        for row in db.query(Story.reddit_url).filter(Story.reddit_url.in_(candidate_urls)).all():
+            if row[0]:
+                existing_keys.add(_canonical_url_key(row[0]))
 
     for part in series_parts:
         part_url = (part.get("url") or "").strip()
         if not part_url:
             continue
-        if _urls_equivalent(part_url, submitted_url):
-            continue
 
-        # Skip if already in the DB
-        existing = db.query(Story.id).filter(Story.reddit_url == part_url).first()
-        if existing:
+        part_key = _canonical_url_key(part_url)
+        if part_key == submitted_key:
+            continue
+        if part_key in existing_keys:
             continue
 
         try:
@@ -113,6 +141,7 @@ def _auto_submit_series_parts(
         content_digest = hash_content(part_text)
         dup = db.query(Story.id).filter(Story.content_hash == content_digest).first()
         if dup:
+            existing_keys.add(part_key)
             continue
 
         narration = clean_for_narration(part_text)
@@ -127,6 +156,7 @@ def _auto_submit_series_parts(
             series_json=series_json_str,
         )
         db.add(story)
+        existing_keys.add(part_key)
 
     try:
         db.commit()
@@ -541,25 +571,34 @@ def get_series_parts(story_id: int, db: Session = Depends(get_db)):
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
 
+    # Always attempt fresh discovery when possible.  find_series_parts()
+    # uses a disk-cached Reddit response (1-week TTL) so this is cheap.
+    # Fresh data guarantees created_utc is present (needed for ordering)
+    # and ensures all parts are found regardless of which part we're viewing.
     parts = None
-
-    # Return cached series parts if available
-    if story.series_json:
-        parts = json.loads(story.series_json)
-
-    # Attempt discovery if we have an author
-    if parts is None and story.author and story.title:
+    if story.author and story.title:
         try:
             parts = find_series_parts(story.author, story.title)
-            if parts:
-                story.series_json = json.dumps(parts)
-                db.commit()
         except Exception:
             pass
+
+    # Fall back to cached series_json if discovery failed
+    if not parts and story.series_json:
+        try:
+            parts = json.loads(story.series_json)
+        except (json.JSONDecodeError, TypeError):
+            parts = None
 
     if not parts:
         return {"parts": [], "series_word_count": 0, "series_est_minutes": 0,
                 "submitted_count": 0, "total_count": 0}
+
+    # Persist fresh discovery results so other code paths benefit
+    fresh_json = json.dumps(parts)
+    if story.series_json != fresh_json:
+        story.series_json = fresh_json
+        story.part_count = len(parts)
+        db.commit()
 
     # Sort parts by post date (oldest first) for consistent ordering
     parts.sort(key=lambda p: p.get("created_utc", 0))
@@ -600,36 +639,63 @@ def get_series_parts(story_id: int, db: Session = Depends(get_db)):
         existing = {}
 
     # Build a canonical URL lookup to handle host variants (e.g., www.reddit.com vs reddit.com)
-    canonical_existing = {}
+    canonical_existing: dict[tuple[str, str], int] = {}
     for db_url, db_id in existing.items():
-        if not db_url:
-            continue
-        parsed = urlparse(db_url)
-        netloc = parsed.netloc.lower()
-        if netloc.startswith("www."):
-            netloc = netloc[4:]
-        path = parsed.path.rstrip("/")
-        key = (netloc, path)
-        if key not in canonical_existing:
-            canonical_existing[key] = db_id
+        if db_url:
+            key = _canonical_url_key(db_url)
+            if key not in canonical_existing:
+                canonical_existing[key] = db_id
 
     for part in parts:
         raw_part_url = part.get("url") or ""
-        part_url = raw_part_url.rstrip("/")
-        # First try exact match with and without trailing slash
-        matched_id = existing.get(part_url) or existing.get(part_url + "/")
-
-        # If no exact match, try canonical host/path matching for host variants
-        if not matched_id and raw_part_url:
-            parsed_part = urlparse(raw_part_url)
-            netloc = parsed_part.netloc.lower()
-            if netloc.startswith("www."):
-                netloc = netloc[4:]
-            path = parsed_part.path.rstrip("/")
-            key = (netloc, path)
-            matched_id = canonical_existing.get(key)
-
+        if raw_part_url:
+            matched_id = canonical_existing.get(_canonical_url_key(raw_part_url))
+        else:
+            matched_id = None
         part["story_id"] = matched_id
+
+    # Auto-submit any missing parts so stats are complete and all
+    # parts are immediately navigable without manual submission.
+    missing_parts = [p for p in parts if not p.get("story_id")]
+    if missing_parts:
+        series_json_str = json.dumps(parts)
+        for mp in missing_parts:
+            mp_url = (mp.get("url") or "").strip()
+            if not mp_url:
+                continue
+            try:
+                part_text = fetch_story_text(mp_url)
+            except Exception:
+                continue
+            if not part_text or not part_text.strip():
+                continue
+            content_digest = hash_content(part_text)
+            # Check for content-hash duplicate
+            dup = db.query(Story.id).filter(Story.content_hash == content_digest).first()
+            if dup:
+                mp["story_id"] = dup[0]
+                continue
+            narration = clean_for_narration(part_text)
+            new_story = Story(
+                title=mp.get("title", "Unknown"),
+                author=story.author or None,
+                reddit_url=mp_url,
+                text_content=part_text,
+                narration_text=narration,
+                content_hash=content_digest,
+                part_count=len(parts),
+                series_json=series_json_str,
+            )
+            db.add(new_story)
+            try:
+                db.flush()
+                mp["story_id"] = new_story.id
+            except Exception:
+                db.rollback()
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
 
     # Compute series-level word count from all submitted parts
     submitted_ids = [p["story_id"] for p in parts if p.get("story_id")]
