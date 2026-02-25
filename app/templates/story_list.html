@@ -90,6 +90,13 @@
             letter-spacing: 0.02em;
             transition: all 0.25s var(--ease);
             background: transparent;
+            max-width: 200px;
+            overflow: hidden;
+        }
+        .folder-pill span:not(.folder-pill-icon) {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         .folder-pill:hover {
             border-color: var(--border-hover);
@@ -363,11 +370,11 @@
     {% if user and folders %}
     <nav class="folder-nav">
         <a href="/" class="folder-pill active">
-            <span class="folder-pill-icon">&#9716;</span> Recent
+            <span class="folder-pill-icon">&#9716;</span><span class="folder-pill-label">Recent</span>
         </a>
         {% for f in folders %}
         <a href="/folder/{{ f.id }}" class="folder-pill">
-            <span class="folder-pill-icon">&#9776;</span> {{ f.name }}
+            <span class="folder-pill-icon">&#9776;</span><span class="folder-pill-label">{{ f.name }}</span>
         </a>
         {% endfor %}
     </nav>
