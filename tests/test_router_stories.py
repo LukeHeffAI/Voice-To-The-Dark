@@ -105,6 +105,38 @@ class TestSubmitStory:
 
     @patch("app.routers.stories.fetch_post_metadata")
     @patch("app.routers.stories.fetch_multi_part_story")
+    def test_submit_strips_query_string(self, mock_fetch, mock_metadata, client, auth_headers, db_session):
+        """Query strings/fragments are stripped from the URL before fetching and storing."""
+        mock_metadata.return_value = {"title": "Share Link Story", "author": "author"}
+        mock_fetch.return_value = "Story text here."
+
+        resp = client.post("/stories/submit", json={
+            "reddit_url": "https://www.reddit.com/r/nosleep/comments/abc/share/?utm_source=share&utm_medium=web"
+        }, headers=auth_headers)
+        assert resp.status_code == 200
+        # The stored URL should have no query string (trailing slash in path is preserved)
+        assert resp.json()["reddit_url"] == "https://www.reddit.com/r/nosleep/comments/abc/share/"
+        # The normalized URL was passed to the fetch helpers
+        mock_metadata.assert_called_once_with("https://www.reddit.com/r/nosleep/comments/abc/share/")
+
+    def test_submit_rejects_non_reddit_host(self, client, auth_headers, db_session):
+        """SSRF: URLs not from reddit.com are rejected."""
+        resp = client.post("/stories/submit", json={
+            "reddit_url": "https://evil.com/r/nosleep/comments/xyz/story/"
+        }, headers=auth_headers)
+        assert resp.status_code == 400
+        assert "host" in resp.json()["detail"].lower()
+
+    def test_submit_rejects_non_nosleep_path(self, client, auth_headers, db_session):
+        """URLs from reddit.com but not r/nosleep/comments are rejected."""
+        resp = client.post("/stories/submit", json={
+            "reddit_url": "https://www.reddit.com/r/horror/comments/xyz/story/"
+        }, headers=auth_headers)
+        assert resp.status_code == 400
+        assert "nosleep" in resp.json()["detail"].lower()
+
+    @patch("app.routers.stories.fetch_post_metadata")
+    @patch("app.routers.stories.fetch_multi_part_story")
     def test_submit_returns_existing_on_duplicate_url(self, mock_fetch, mock_metadata, client, auth_headers, sample_story, db_session):
         """Submitting an existing URL returns the existing story (200, not error)."""
         resp = client.post("/stories/submit", json={
@@ -145,6 +177,26 @@ class TestManualSubmitStory:
         data = resp.json()
         assert data["title"] == "Story With Source"
         assert data["reddit_url"] == "https://www.reddit.com/r/nosleep/comments/xyz/source/"
+
+    def test_manual_submit_rejects_non_reddit_url(self, client, auth_headers, db_session):
+        """SSRF: non-reddit.com URLs are rejected even in manual submit."""
+        resp = client.post("/stories/submit-manual", json={
+            "title": "A Story",
+            "text_content": "Some content.",
+            "reddit_url": "https://evil.com/r/nosleep/comments/xyz/story/",
+        }, headers=auth_headers)
+        assert resp.status_code == 400
+        assert "host" in resp.json()["detail"].lower()
+
+    def test_manual_submit_rejects_non_nosleep_reddit_url(self, client, auth_headers, db_session):
+        """URLs from reddit.com but not r/nosleep/comments are rejected."""
+        resp = client.post("/stories/submit-manual", json={
+            "title": "A Story",
+            "text_content": "Some content.",
+            "reddit_url": "https://www.reddit.com/r/AskReddit/comments/xyz/story/",
+        }, headers=auth_headers)
+        assert resp.status_code == 400
+        assert "nosleep" in resp.json()["detail"].lower()
 
     def test_manual_submit_duplicate_content(self, client, auth_headers, db_session):
         """Submitting the same text twice returns the existing story."""
