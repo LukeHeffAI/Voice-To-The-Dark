@@ -524,7 +524,7 @@
         .then(folder => {
             closeAllDropdowns();
             showToast('Created "' + folder.name + '" and added story');
-            setTimeout(() => location.reload(), 800);
+            setTimeout(() => location.reload(), 2300);
         })
         .catch(err => showToast(err.message));
     };
