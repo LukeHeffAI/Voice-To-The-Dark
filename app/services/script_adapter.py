@@ -15,7 +15,7 @@ class _TruncatedResponseError(Exception):
 # windows; 16 384 tokens gives long stories enough headroom while still
 # keeping costs reasonable.  If a section *still* gets truncated the
 # caller will automatically re-split and retry.
-MAX_OUTPUT_TOKENS = 16_384
+MAX_OUTPUT_TOKENS = 20000
 
 SYSTEM_PROMPT = """\
 You are a horror audio drama director. Your job is to transform a written \
