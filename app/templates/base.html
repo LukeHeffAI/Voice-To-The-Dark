@@ -96,51 +96,51 @@
         .fog::after {
             content: '';
             position: absolute;
-            inset: -50%;
-            width: 200%;
-            height: 200%;
-            filter: blur(50px);
+            inset: -25%;
+            width: 150%;
+            height: 150%;
+            filter: blur(28px);
             will-change: transform;
         }
         .fog::before {
             background:
-                radial-gradient(ellipse at 25% 50%, rgba(180,180,200,0.125) 0%, transparent 50%),
-                radial-gradient(ellipse at 75% 25%, rgba(160,155,175,0.085) 0%, transparent 45%),
-                radial-gradient(ellipse at 50% 85%, rgba(150,150,170,0.055) 0%, transparent 40%);
-            animation: fog-drift-1 7s linear infinite;
+                radial-gradient(ellipse at 25% 50%, rgba(190,188,210,0.22) 0%, transparent 50%),
+                radial-gradient(ellipse at 75% 25%, rgba(170,165,188,0.16) 0%, transparent 45%),
+                radial-gradient(ellipse at 50% 85%, rgba(160,158,180,0.11) 0%, transparent 40%);
+            animation: fog-drift-1 11s linear infinite;
         }
         .fog::after {
             background:
-                radial-gradient(ellipse at 65% 65%, rgba(170,165,185,0.10) 0%, transparent 55%),
-                radial-gradient(ellipse at 15% 35%, rgba(185,180,200,0.07) 0%, transparent 40%);
-            animation: fog-drift-2 11s linear infinite;
+                radial-gradient(ellipse at 65% 65%, rgba(175,170,195,0.18) 0%, transparent 55%),
+                radial-gradient(ellipse at 15% 35%, rgba(192,188,210,0.14) 0%, transparent 40%);
+            animation: fog-drift-2 17s linear infinite;
         }
         @keyframes fog-drift-1 {
             0%   { transform: translate(0, 0) scale(1) rotate(0deg); }
-            9%   { transform: translate(3vw, -2vh) scale(1.02) rotate(1.2deg); }
-            18%  { transform: translate(6vw, -4vh) scale(1.04) rotate(2.4deg); }
-            27%  { transform: translate(8vw, -5vh) scale(1.05) rotate(3deg); }
-            36%  { transform: translate(6vw, -2vh) scale(1.045) rotate(1.5deg); }
-            45%  { transform: translate(4vw, 1vh) scale(1.04) rotate(-0.5deg); }
-            55%  { transform: translate(2vw, 3vh) scale(1.03) rotate(-2deg); }
-            64%  { transform: translate(-1vw, 5vh) scale(1.025) rotate(0.5deg); }
-            73%  { transform: translate(-4vw, 7vh) scale(1.022) rotate(2.8deg); }
-            82%  { transform: translate(-5vw, 8vh) scale(1.02) rotate(4deg); }
-            91%  { transform: translate(-3vw, 4vh) scale(1.01) rotate(2deg); }
+            9%   { transform: translate(9vw, -6vh) scale(1.03) rotate(1.2deg); }
+            18%  { transform: translate(18vw, -12vh) scale(1.06) rotate(2.4deg); }
+            27%  { transform: translate(24vw, -15vh) scale(1.08) rotate(3deg); }
+            36%  { transform: translate(18vw, -6vh) scale(1.07) rotate(1.5deg); }
+            45%  { transform: translate(12vw, 3vh) scale(1.06) rotate(-0.5deg); }
+            55%  { transform: translate(6vw, 9vh) scale(1.05) rotate(-2deg); }
+            64%  { transform: translate(-3vw, 15vh) scale(1.04) rotate(0.5deg); }
+            73%  { transform: translate(-12vw, 21vh) scale(1.035) rotate(2.8deg); }
+            82%  { transform: translate(-15vw, 24vh) scale(1.03) rotate(4deg); }
+            91%  { transform: translate(-9vw, 12vh) scale(1.015) rotate(2deg); }
             100% { transform: translate(0, 0) scale(1) rotate(0deg); }
         }
         @keyframes fog-drift-2 {
             0%   { transform: translate(0, 0) scale(1.03) rotate(0deg); }
-            9%   { transform: translate(-3vw, 2vh) scale(1.005) rotate(-1.6deg); }
-            18%  { transform: translate(-6vw, 4vh) scale(0.98) rotate(-3.2deg); }
-            27%  { transform: translate(-8vw, 5vh) scale(0.97) rotate(-4deg); }
-            36%  { transform: translate(-6vw, 2.5vh) scale(0.98) rotate(-1.5deg); }
-            45%  { transform: translate(-4vw, 0vh) scale(0.995) rotate(1deg); }
-            55%  { transform: translate(-2vw, -3vh) scale(1.01) rotate(3deg); }
-            64%  { transform: translate(3vw, -3vh) scale(1.03) rotate(1deg); }
-            73%  { transform: translate(7vw, -3vh) scale(1.05) rotate(-1deg); }
-            82%  { transform: translate(10vw, -3vh) scale(1.06) rotate(-3deg); }
-            91%  { transform: translate(5vw, -1.5vh) scale(1.045) rotate(-1.5deg); }
+            9%   { transform: translate(-9vw, 6vh) scale(1.01) rotate(-1.6deg); }
+            18%  { transform: translate(-18vw, 12vh) scale(0.97) rotate(-3.2deg); }
+            27%  { transform: translate(-24vw, 15vh) scale(0.95) rotate(-4deg); }
+            36%  { transform: translate(-18vw, 7.5vh) scale(0.97) rotate(-1.5deg); }
+            45%  { transform: translate(-12vw, 0vh) scale(0.99) rotate(1deg); }
+            55%  { transform: translate(-6vw, -9vh) scale(1.02) rotate(3deg); }
+            64%  { transform: translate(9vw, -9vh) scale(1.05) rotate(1deg); }
+            73%  { transform: translate(21vw, -9vh) scale(1.08) rotate(-1deg); }
+            82%  { transform: translate(30vw, -9vh) scale(1.1) rotate(-3deg); }
+            91%  { transform: translate(15vw, -4.5vh) scale(1.07) rotate(-1.5deg); }
             100% { transform: translate(0, 0) scale(1.03) rotate(0deg); }
         }
         /* Settle — materialises on arrival */
