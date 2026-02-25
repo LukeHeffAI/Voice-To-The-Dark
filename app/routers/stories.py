@@ -96,8 +96,38 @@ def _auto_submit_series_parts(
         if _urls_equivalent(part_url, submitted_url):
             continue
 
-        # Skip if already in the DB
-        existing = db.query(Story.id).filter(Story.reddit_url == part_url).first()
+        # Skip if already in the DB (consider common URL variants)
+        parsed = urlparse(part_url)
+        netlocs = {parsed.netloc}
+        if parsed.netloc.lower().startswith("www."):
+            netlocs.add(parsed.netloc[4:])
+        elif parsed.netloc:
+            netlocs.add("www." + parsed.netloc)
+        paths = {parsed.path}
+        if parsed.path:
+            paths.add(parsed.path.rstrip("/"))
+            if not parsed.path.endswith("/"):
+                paths.add(parsed.path.rstrip("/") + "/")
+        candidate_urls = set()
+        for netloc in netlocs:
+            for path in paths:
+                candidate_urls.add(
+                    urlunparse(
+                        (
+                            parsed.scheme,
+                            netloc,
+                            path,
+                            parsed.params,
+                            parsed.query,
+                            parsed.fragment,
+                        )
+                    )
+                )
+        existing = (
+            db.query(Story.id)
+            .filter(Story.reddit_url.in_(candidate_urls))
+            .first()
+        )
         if existing:
             continue
 
