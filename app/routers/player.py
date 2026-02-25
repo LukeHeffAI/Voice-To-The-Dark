@@ -1,12 +1,14 @@
 import json
 import os
 import logging
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from sqlalchemy.sql import func as sql_func
 from app.database import get_db
-from app.models.story import Story, PlaybackState, User
+from app.models.story import Story, PlaybackState, User, StoryView, StoryFolder, StoryFolderMembership
 from app.schemas.narration import NarrationScript
 from app.deps import get_optional_user
 from app.services.voice_pool import VOICE_POOL
@@ -15,6 +17,24 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
+def _record_story_view(db: Session, user: User | None, story_id: int):
+    """Record or refresh a story view for the current user."""
+    if not user:
+        return
+    view = db.query(StoryView).filter(
+        StoryView.user_id == user.id,
+        StoryView.story_id == story_id,
+    ).first()
+    if view:
+        view.viewed_at = datetime.now(timezone.utc)
+        if view.hidden:
+            view.hidden = False
+    else:
+        view = StoryView(user_id=user.id, story_id=story_id)
+        db.add(view)
+    db.commit()
+
 templates = Jinja2Templates(
     directory=os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates")
 )
@@ -22,11 +42,64 @@ templates = Jinja2Templates(
 
 @router.get("/", response_class=HTMLResponse)
 def story_list_page(request: Request, db: Session = Depends(get_db), user: User | None = Depends(get_optional_user)):
-    """Serve the story browser page."""
-    stories = db.query(Story).order_by(Story.created_at.desc()).all()
+    """Serve the story browser page.
+
+    Logged-in users see their recently viewed stories (unhidden).
+    Anonymous users see all stories.
+    """
+    folders = []
+    if user:
+        # Recently viewed stories, excluding hidden ones, newest view first
+        viewed_rows = (
+            db.query(StoryView, Story)
+            .join(Story, Story.id == StoryView.story_id)
+            .filter(StoryView.user_id == user.id, StoryView.hidden == False)
+            .order_by(StoryView.viewed_at.desc())
+            .limit(50)
+            .all()
+        )
+        stories = [row[1] for row in viewed_rows]
+        folders = db.query(StoryFolder).filter(
+            StoryFolder.user_id == user.id
+        ).order_by(StoryFolder.name).all()
+    else:
+        stories = db.query(Story).order_by(Story.created_at.desc()).all()
+
     return templates.TemplateResponse("story_list.html", {
         "request": request,
         "stories": stories,
+        "user": user,
+        "folders": folders,
+        "is_recently_viewed": user is not None,
+    })
+
+
+@router.get("/folder/{folder_id}", response_class=HTMLResponse)
+def folder_page(request: Request, folder_id: int, db: Session = Depends(get_db), user: User | None = Depends(get_optional_user)):
+    """Serve a page showing all stories in a specific folder."""
+    if not user:
+        raise HTTPException(status_code=401, detail="Login required")
+    folder = db.query(StoryFolder).filter(
+        StoryFolder.id == folder_id,
+        StoryFolder.user_id == user.id,
+    ).first()
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+    memberships = (
+        db.query(Story)
+        .join(StoryFolderMembership, StoryFolderMembership.story_id == Story.id)
+        .filter(StoryFolderMembership.folder_id == folder_id)
+        .order_by(StoryFolderMembership.added_at.desc())
+        .all()
+    )
+    folders = db.query(StoryFolder).filter(
+        StoryFolder.user_id == user.id
+    ).order_by(StoryFolder.name).all()
+    return templates.TemplateResponse("folder.html", {
+        "request": request,
+        "folder": folder,
+        "stories": memberships,
+        "folders": folders,
         "user": user,
     })
 
@@ -49,6 +122,8 @@ def story_detail_page(request: Request, story_id: int, db: Session = Depends(get
     story = db.query(Story).filter(Story.id == story_id).first()
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
+
+    _record_story_view(db, user, story_id)
 
     # Build a 2-4 sentence teaser from the narration text
     teaser = ""
@@ -132,6 +207,8 @@ def player_page(request: Request, story_id: int, db: Session = Depends(get_db), 
         raise HTTPException(status_code=404, detail="Story not found")
     if not story.audio_file_path:
         raise HTTPException(status_code=404, detail="No audio generated for this story yet")
+
+    _record_story_view(db, user, story_id)
 
     # Get saved playback position for the current user
     state = None

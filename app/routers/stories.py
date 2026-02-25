@@ -5,7 +5,7 @@ from urllib.parse import urlparse, urlunparse
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.story import Story, PlaybackState
+from app.models.story import Story, PlaybackState, StoryView, StoryFolder, StoryFolderMembership
 from app.schemas.story import (
     StorySubmitRequest,
     ManualStorySubmitRequest,
@@ -14,6 +14,9 @@ from app.schemas.story import (
     PlaybackStateRequest,
     PlaybackStateResponse,
     DuplicateCheckResponse,
+    FolderCreateRequest,
+    FolderResponse,
+    FolderAddStoryRequest,
 )
 from app.services.reddit import fetch_multi_part_story, fetch_story_text, fetch_post_metadata, find_series_parts
 from app.services.hashing import hash_content
@@ -318,6 +321,126 @@ def check_duplicate(reddit_url: str, db: Session = Depends(get_db)):
         existing_story_id=None,
         message="No duplicate found"
     )
+
+
+# ── Story view tracking & hide ───────────────────────────────────
+
+@router.post("/{story_id}/hide")
+def hide_story_from_home(story_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Hide a story from the user's Recently Viewed list on the home page."""
+    view = db.query(StoryView).filter(
+        StoryView.user_id == user.id,
+        StoryView.story_id == story_id,
+    ).first()
+    if view:
+        view.hidden = True
+        db.commit()
+    return {"ok": True}
+
+
+@router.post("/{story_id}/unhide")
+def unhide_story(story_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Restore a hidden story back to the Recently Viewed list."""
+    view = db.query(StoryView).filter(
+        StoryView.user_id == user.id,
+        StoryView.story_id == story_id,
+    ).first()
+    if view:
+        view.hidden = False
+        db.commit()
+    return {"ok": True}
+
+
+# ── Folder management ────────────────────────────────────────────
+
+@router.get("/folders/list", response_model=list[FolderResponse])
+def list_folders(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """List all folders for the current user."""
+    folders = db.query(StoryFolder).filter(
+        StoryFolder.user_id == user.id
+    ).order_by(StoryFolder.name).all()
+    result = []
+    for f in folders:
+        count = db.query(StoryFolderMembership).filter(
+            StoryFolderMembership.folder_id == f.id
+        ).count()
+        result.append(FolderResponse(id=f.id, name=f.name, story_count=count, created_at=f.created_at))
+    return result
+
+
+@router.post("/folders/create", response_model=FolderResponse)
+def create_folder(req: FolderCreateRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Create a new folder for the current user."""
+    name = req.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Folder name cannot be empty")
+    existing = db.query(StoryFolder).filter(
+        StoryFolder.user_id == user.id,
+        StoryFolder.name == name,
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="A folder with this name already exists")
+    folder = StoryFolder(user_id=user.id, name=name)
+    db.add(folder)
+    db.commit()
+    db.refresh(folder)
+    return FolderResponse(id=folder.id, name=folder.name, story_count=0, created_at=folder.created_at)
+
+
+@router.delete("/folders/{folder_id}")
+def delete_folder(folder_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Delete a folder and all its memberships."""
+    folder = db.query(StoryFolder).filter(
+        StoryFolder.id == folder_id,
+        StoryFolder.user_id == user.id,
+    ).first()
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+    db.query(StoryFolderMembership).filter(StoryFolderMembership.folder_id == folder_id).delete()
+    db.delete(folder)
+    db.commit()
+    return {"ok": True}
+
+
+@router.post("/folders/{folder_id}/add")
+def add_story_to_folder(folder_id: int, req: FolderAddStoryRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Add a story to a folder."""
+    folder = db.query(StoryFolder).filter(
+        StoryFolder.id == folder_id,
+        StoryFolder.user_id == user.id,
+    ).first()
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+    story = db.query(Story).filter(Story.id == req.story_id).first()
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    existing = db.query(StoryFolderMembership).filter(
+        StoryFolderMembership.folder_id == folder_id,
+        StoryFolderMembership.story_id == req.story_id,
+    ).first()
+    if existing:
+        return {"ok": True, "message": "Story already in folder"}
+    membership = StoryFolderMembership(folder_id=folder_id, story_id=req.story_id)
+    db.add(membership)
+    db.commit()
+    return {"ok": True}
+
+
+@router.delete("/folders/{folder_id}/stories/{story_id}")
+def remove_story_from_folder(folder_id: int, story_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Remove a story from a folder."""
+    folder = db.query(StoryFolder).filter(
+        StoryFolder.id == folder_id,
+        StoryFolder.user_id == user.id,
+    ).first()
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+    db.query(StoryFolderMembership).filter(
+        StoryFolderMembership.folder_id == folder_id,
+        StoryFolderMembership.story_id == story_id,
+    ).delete()
+    db.commit()
+    return {"ok": True}
 
 
 @router.get("/{story_id}/series-parts")

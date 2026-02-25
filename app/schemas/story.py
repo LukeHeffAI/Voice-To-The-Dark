@@ -72,3 +72,21 @@ class DuplicateCheckResponse(BaseModel):
     is_duplicate: bool
     existing_story_id: Optional[int] = None
     message: str
+
+
+class FolderCreateRequest(BaseModel):
+    name: str
+
+
+class FolderResponse(BaseModel):
+    id: int
+    name: str
+    story_count: int = 0
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class FolderAddStoryRequest(BaseModel):
+    story_id: int

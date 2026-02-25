@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block styles %}
+        body { padding: 1.25rem; }
+
+        .page-header {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 1.5rem 0 1.5rem;
+        }
+
+        .folder-title {
+            font-family: var(--serif);
+            font-weight: 400;
+            font-size: 1.6rem;
+            color: var(--text-1);
+            letter-spacing: 0.08em;
+            margin-top: 0.5rem;
+        }
+
+        .folder-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        .delete-folder-btn {
+            padding: 0.4rem 0.9rem;
+            border: 1px solid rgba(204,68,68,0.25);
+            border-radius: var(--r-sm);
+            background: transparent;
+            color: var(--error);
+            font-family: var(--sans);
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s var(--ease);
+        }
+        .delete-folder-btn:hover {
+            background: var(--error-dim);
+            border-color: var(--error);
+        }
+
+        /* Folder pills */
+        .folder-nav {
+            max-width: 640px;
+            margin: 0 auto 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .folder-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.8rem;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            color: var(--text-3);
+            text-decoration: none;
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            transition: all 0.25s var(--ease);
+            background: transparent;
+        }
+        .folder-pill:hover {
+            border-color: var(--border-hover);
+            color: var(--text-2);
+            background: var(--surface);
+        }
+        .folder-pill.active {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-dim);
+        }
+        .folder-pill-icon {
+            font-size: 0.8rem;
+            line-height: 1;
+        }
+
+        .story-list {
+            list-style: none;
+            max-width: 640px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .story-card-wrapper {
+            position: relative;
+        }
+
+        .story-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-md);
+            padding: 1.1rem 2.8rem 1.1rem 1.3rem;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            transition: all 0.3s var(--ease);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .story-card:hover {
+            border-color: var(--border-hover);
+            background: var(--surface-hover);
+            transform: translateY(-1px);
+        }
+
+        .story-card-title {
+            font-family: var(--serif);
+            font-size: 1.15rem;
+            font-weight: 500;
+            color: var(--text-1);
+            line-height: 1.35;
+        }
+
+        .story-card-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-3);
+            letter-spacing: 0.02em;
+        }
+
+        .badge-audio {
+            background: var(--success-dim);
+            color: var(--success);
+            border: 1px solid rgba(58,125,92,0.15);
+        }
+        .badge-script {
+            background: var(--info-dim);
+            color: var(--info);
+            border: 1px solid rgba(104,104,184,0.15);
+        }
+        .badge-pending {
+            background: var(--surface);
+            color: var(--text-3);
+            border: 1px solid var(--border);
+        }
+
+        /* Remove button */
+        .card-remove-btn {
+            position: absolute;
+            top: 50%;
+            right: 0.6rem;
+            transform: translateY(-50%);
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            border-radius: var(--r-sm);
+            color: var(--text-3);
+            cursor: pointer;
+            transition: all 0.2s var(--ease);
+            z-index: 2;
+            font-size: 1rem;
+            line-height: 1;
+        }
+        .card-remove-btn:hover {
+            color: var(--error);
+            background: var(--error-dim);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 1rem;
+            color: var(--text-3);
+        }
+        .empty-state p {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .empty-state a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        .empty-state a:hover { text-decoration: underline; }
+
+        .auth-nav {
+            max-width: 640px;
+            margin: 0 auto;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            padding: 0.65rem 1.3rem;
+            background: #1a1a1a;
+            border: 1px solid var(--border-hover);
+            border-radius: var(--r-md);
+            color: var(--text-1);
+            font-size: 0.8rem;
+            z-index: 10001;
+            opacity: 0;
+            transition: all 0.35s var(--ease);
+            pointer-events: none;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+{% endblock %}
+
+{% block body %}
+    <div class="fog" aria-hidden="true"></div>
+    <div class="auth-nav">
+        {% if user %}
+        <span class="username">{{ user.username }}</span>
+        <a href="/settings">Settings</a>
+        <a href="#" onclick="fetch('/auth/logout',{method:'POST'}).then(()=>location.reload())">Sign out</a>
+        {% endif %}
+    </div>
+
+    <div class="page-header">
+        <a href="/" class="back-link">&#8592; Home</a>
+        <h1 class="folder-title">{{ folder.name }}</h1>
+        <div class="folder-actions">
+            <button class="delete-folder-btn" onclick="deleteFolder({{ folder.id }})">Delete folder</button>
+        </div>
+    </div>
+
+    <nav class="folder-nav">
+        <a href="/" class="folder-pill">
+            <span class="folder-pill-icon">&#9716;</span> Recent
+        </a>
+        {% for f in folders %}
+        <a href="/folder/{{ f.id }}" class="folder-pill {{ 'active' if f.id == folder.id else '' }}">
+            <span class="folder-pill-icon">&#9776;</span> {{ f.name }}
+        </a>
+        {% endfor %}
+    </nav>
+
+    {% if stories %}
+    <ul class="story-list">
+        {% for story in stories %}
+        <li>
+            <div class="story-card-wrapper" data-story-id="{{ story.id }}">
+                <a href="{{ '/listen/' ~ story.id if story.audio_file_path else '/story/' ~ story.id }}" class="story-card">
+                    <div class="story-card-title">{{ story.title }}</div>
+                    <div class="story-card-meta">
+                        <span>{{ story.part_count }} part{{ 's' if story.part_count != 1 else '' }}</span>
+                        {% if story.audio_file_path %}
+                        <span class="badge badge-audio">Ready to listen</span>
+                        {% elif story.script_json %}
+                        <span class="badge badge-script">Script ready</span>
+                        {% else %}
+                        <span class="badge badge-pending">Fetched</span>
+                        {% endif %}
+                    </div>
+                </a>
+                <button class="card-remove-btn" onclick="removeFromFolder({{ folder.id }}, {{ story.id }})" aria-label="Remove from folder" title="Remove from folder">&#10005;</button>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty-state">
+        <p>This folder is empty.</p>
+        <p>Use the menu on story cards on the <a href="/">home page</a> to add stories here.</p>
+    </div>
+    {% endif %}
+
+    <div class="toast" id="toast"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2200);
+    }
+
+    window.removeFromFolder = function(folderId, storyId) {
+        fetch('/stories/folders/' + folderId + '/stories/' + storyId, { method: 'DELETE' })
+            .then(r => r.json())
+            .then(() => {
+                const wrapper = document.querySelector('[data-story-id="' + storyId + '"]');
+                if (wrapper) {
+                    wrapper.parentElement.style.transition = 'opacity 0.3s, max-height 0.3s';
+                    wrapper.parentElement.style.opacity = '0';
+                    wrapper.parentElement.style.maxHeight = '0';
+                    wrapper.parentElement.style.overflow = 'hidden';
+                    setTimeout(() => wrapper.parentElement.remove(), 350);
+                }
+                showToast('Removed from folder');
+            });
+    };
+
+    window.deleteFolder = function(folderId) {
+        if (!confirm('Delete this folder? Stories will not be deleted.')) return;
+        fetch('/stories/folders/' + folderId, { method: 'DELETE' })
+            .then(r => r.json())
+            .then(() => { window.location.href = '/'; });
+    };
+})();
+</script>
+{% endblock %}
