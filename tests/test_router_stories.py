@@ -275,7 +275,127 @@ class TestManualSubmitStory:
         assert resp.json()["author"] == "reddit_author"
 
 
-class TestFetchPreview:
+class TestSeriesParts:
+    def test_returns_empty_for_story_without_parts(self, client, sample_story, db_session):
+        resp = client.get(f"/stories/{sample_story.id}/series-parts")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_returns_404_for_nonexistent_story(self, client, db_session):
+        resp = client.get("/stories/9999/series-parts")
+        assert resp.status_code == 404
+
+    def test_enriches_submitted_part_with_story_id(self, client, db_session):
+        """A series part whose URL matches a submitted story gets the story_id."""
+        import json
+        submitted_url = "https://www.reddit.com/r/nosleep/comments/part1/part_one/"
+        submitted = Story(
+            title="Part 1",
+            reddit_url=submitted_url,
+            text_content="Part one content.",
+            narration_text="Part one content.",
+            content_hash="hash_part1",
+            part_count=1,
+        )
+        db_session.add(submitted)
+
+        parts = [
+            {"title": "Part 1", "url": submitted_url},
+            {"title": "Part 2", "url": "https://www.reddit.com/r/nosleep/comments/part2/part_two/"},
+        ]
+        series_story = Story(
+            title="The Series",
+            reddit_url="https://www.reddit.com/r/nosleep/comments/series/the_series/",
+            text_content="Series content.",
+            narration_text="Series content.",
+            content_hash="hash_series",
+            part_count=1,
+            series_json=json.dumps(parts),
+        )
+        db_session.add(series_story)
+        db_session.commit()
+        db_session.refresh(submitted)
+        db_session.refresh(series_story)
+
+        resp = client.get(f"/stories/{series_story.id}/series-parts")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 2
+        assert data[0]["story_id"] == submitted.id
+        assert data[1]["story_id"] is None
+
+    def test_enriches_part_with_trailing_slash_variant(self, client, db_session):
+        """URL matching works when the DB URL has a trailing slash but the part URL does not."""
+        import json
+        submitted_url = "https://www.reddit.com/r/nosleep/comments/part1/part_one/"
+        submitted = Story(
+            title="Part 1",
+            reddit_url=submitted_url,
+            text_content="Content.",
+            narration_text="Content.",
+            content_hash="hash_trail",
+            part_count=1,
+        )
+        db_session.add(submitted)
+
+        # Part URL without trailing slash
+        parts = [{"title": "Part 1", "url": submitted_url.rstrip("/")}]
+        series_story = Story(
+            title="Series",
+            reddit_url="https://www.reddit.com/r/nosleep/comments/s/series/",
+            text_content="Series.",
+            narration_text="Series.",
+            content_hash="hash_series2",
+            part_count=1,
+            series_json=json.dumps(parts),
+        )
+        db_session.add(series_story)
+        db_session.commit()
+        db_session.refresh(submitted)
+        db_session.refresh(series_story)
+
+        resp = client.get(f"/stories/{series_story.id}/series-parts")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data[0]["story_id"] == submitted.id
+
+    def test_enriches_part_with_host_variant(self, client, db_session):
+        """URL matching handles www vs non-www host variants."""
+        import json
+        # DB has www.reddit.com URL
+        submitted = Story(
+            title="Part 1",
+            reddit_url="https://www.reddit.com/r/nosleep/comments/part1/part_one/",
+            text_content="Content.",
+            narration_text="Content.",
+            content_hash="hash_host",
+            part_count=1,
+        )
+        db_session.add(submitted)
+
+        # Part URL uses reddit.com (no www)
+        parts = [{"title": "Part 1", "url": "https://reddit.com/r/nosleep/comments/part1/part_one/"}]
+        series_story = Story(
+            title="Series",
+            reddit_url="https://www.reddit.com/r/nosleep/comments/s/series2/",
+            text_content="Series.",
+            narration_text="Series.",
+            content_hash="hash_series3",
+            part_count=1,
+            series_json=json.dumps(parts),
+        )
+        db_session.add(series_story)
+        db_session.commit()
+        db_session.refresh(submitted)
+        db_session.refresh(series_story)
+
+        resp = client.get(f"/stories/{series_story.id}/series-parts")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data[0]["story_id"] == submitted.id
+
+
+
     @patch("app.routers.stories.fetch_post_metadata")
     @patch("app.routers.stories.fetch_story_text")
     def test_returns_first_part_only(self, mock_text, mock_metadata, client, auth_headers, db_session):

@@ -765,11 +765,10 @@
         hideMessage();
 
         try {
-            // Use submit-manual with cached data to avoid fetching from Reddit
+            // Use submit-manual with cached data; omit text_content so backend can expand multi-part stories
             const body = { reddit_url: story.url };
             if (story.title) body.title = story.title;
             if (story.author) body.author = story.author;
-            if (story.selftext) body.text_content = story.selftext;
 
             const resp = await fetch('/stories/submit-manual', {
                 method: 'POST',
