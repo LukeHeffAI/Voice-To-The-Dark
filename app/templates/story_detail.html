@@ -1,92 +1,96 @@
 {% extends "base.html" %}
 {% block title %}{{ story.title }} — Voice To The Dark{% endblock %}
 {% block styles %}
-        body {
-            padding: 1rem;
-        }
-        .back-link {
-            color: #888;
-            text-decoration: none;
-            font-size: 0.9rem;
-            padding: 0.5rem 0;
-            display: inline-block;
-        }
-        .back-link:hover { color: #ccc; }
+        body { padding: 1.25rem; }
+
         .page-container {
-            max-width: 600px;
+            max-width: 640px;
             margin: 0 auto;
         }
+
         .story-header {
-            padding: 1.5rem 0;
-            border-bottom: 1px solid #1a1a1a;
-            margin-bottom: 1.5rem;
+            padding: 2rem 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1.75rem;
         }
         .story-title {
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: #f0f0f0;
+            font-family: var(--serif);
+            font-size: 1.8rem;
+            font-weight: 500;
+            color: var(--text-1);
             line-height: 1.3;
         }
         .story-meta {
-            font-size: 0.85rem;
-            color: #666;
-            margin-top: 0.4rem;
+            font-size: 0.8rem;
+            color: var(--text-3);
+            margin-top: 0.5rem;
             display: flex;
             gap: 1rem;
             flex-wrap: wrap;
+            letter-spacing: 0.02em;
         }
-        .story-meta a { color: #888; text-decoration: none; }
-        .story-meta a:hover { color: #ccc; }
+        .story-meta a {
+            color: var(--text-2);
+            text-decoration: none;
+            transition: color 0.2s var(--ease);
+        }
+        .story-meta a:hover { color: var(--text-1); }
         .story-teaser {
-            margin-top: 1rem;
-            font-size: 0.9rem;
-            color: #999;
-            line-height: 1.5;
+            margin-top: 1.25rem;
+            font-family: var(--serif);
+            font-size: 1rem;
             font-style: italic;
-            border-left: 2px solid #2a2a2a;
-            padding-left: 1rem;
+            font-weight: 300;
+            color: var(--text-2);
+            line-height: 1.6;
+            border-left: 2px solid rgba(160,32,32,0.25);
+            padding-left: 1.1rem;
         }
         .story-stats {
             display: flex;
             gap: 1.5rem;
-            margin-top: 0.75rem;
+            margin-top: 1rem;
             flex-wrap: wrap;
         }
         .stat {
-            font-size: 0.8rem;
-            color: #555;
+            font-size: 0.78rem;
+            color: var(--text-3);
+            letter-spacing: 0.02em;
         }
         .stat-value {
-            color: #999;
+            color: var(--text-2);
             font-weight: 600;
         }
         .resume-info {
-            margin-top: 0.6rem;
+            margin-top: 0.75rem;
             font-size: 0.8rem;
-            color: #8888cc;
-            background: #1a1a2e;
-            border: 1px solid #2a2a4e;
-            border-radius: 8px;
-            padding: 0.5rem 0.75rem;
+            color: var(--info);
+            background: var(--info-dim);
+            border: 1px solid rgba(104,104,184,0.15);
+            border-radius: var(--r-sm);
+            padding: 0.5rem 0.85rem;
             display: inline-block;
         }
-        /* ── Pipeline steps ──────────────────────────────── */
+
+        /* ── Pipeline ──────────────────────────────────────── */
         .pipeline {
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 0.75rem;
         }
         .step {
-            background: #111;
-            border: 1px solid #1a1a1a;
-            border-radius: 10px;
-            padding: 1rem 1.2rem;
-            transition: border-color 0.15s;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-md);
+            padding: 1.1rem 1.3rem;
+            transition: border-color 0.2s var(--ease);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
         }
         .step-header {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.8rem;
         }
         .step-number {
             width: 28px;
@@ -95,164 +99,110 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 700;
             flex-shrink: 0;
+            transition: all 0.3s var(--ease);
         }
         .step-number.done {
-            background: #1a2e1a;
-            color: #4caf50;
-            border: 1px solid #2e4a2e;
+            background: var(--success-dim);
+            color: var(--success);
+            border: 1px solid rgba(58,125,92,0.2);
         }
         .step-number.pending {
-            background: #1a1a2e;
-            color: #666;
-            border: 1px solid #2a2a4e;
+            background: var(--surface);
+            color: var(--text-3);
+            border: 1px solid var(--border);
         }
         .step-number.active {
-            background: #2e1a1a;
-            color: #c0392b;
-            border: 1px solid #4e2a2a;
+            background: var(--accent-dim);
+            color: var(--accent);
+            border: 1px solid rgba(160,32,32,0.25);
+            box-shadow: 0 0 16px rgba(160,32,32,0.15);
         }
         .step-title {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: #ddd;
+            font-family: var(--serif);
+            font-size: 1.3rem;
+            font-weight: 500;
+            color: var(--text-1);
             flex: 1;
         }
         .step-body {
             margin-top: 0.75rem;
-            padding-left: 2.75rem;
+            padding-left: 2.8rem;
         }
-        .step-action {
-            padding: 0.6rem 1.2rem;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
-        .btn-primary {
-            background: #c0392b;
-            color: #fff;
-        }
-        .btn-primary:hover { background: #a93226; }
-        .btn-primary:disabled {
-            background: #333;
-            color: #666;
-            cursor: not-allowed;
-        }
-        .btn-secondary {
-            background: transparent;
-            color: #888;
-            border: 1px solid #333;
-            margin-left: 0.5rem;
-        }
-        .btn-secondary:hover { border-color: #666; color: #ccc; }
-        .step-status {
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: 0.5rem;
-        }
-        .step-status.error { color: #e07070; }
-        .step-status.success { color: #4caf50; }
         .step-info {
-            font-size: 0.8rem;
-            color: #555;
+            font-size: 0.78rem;
+            color: var(--text-3);
             margin-top: 0.4rem;
+            letter-spacing: 0.01em;
         }
-        /* ── Listen button ───────────────────────────────── */
+
+        /* ── Listen button ─────────────────────────────────── */
         .listen-section {
-            margin-top: 1.5rem;
+            margin-top: 2rem;
             text-align: center;
         }
         .listen-btn {
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 1rem 2rem;
+            gap: 0.6rem;
+            padding: 1rem 2.5rem;
             border: none;
-            border-radius: 12px;
-            background: #c0392b;
+            border-radius: var(--r-lg);
+            background: var(--accent);
             color: #fff;
-            font-size: 1.1rem;
-            font-weight: 700;
+            font-family: var(--serif);
+            font-size: 1.2rem;
+            font-weight: 600;
             cursor: pointer;
             text-decoration: none;
-            box-shadow: 0 4px 16px rgba(192,57,43,0.4);
-            transition: background 0.15s;
+            letter-spacing: 0.04em;
+            box-shadow:
+                0 6px 32px rgba(160,32,32,0.3),
+                0 0 0 1px rgba(255,255,255,0.05);
+            transition: all 0.3s var(--ease);
         }
-        .listen-btn:hover { background: #a93226; }
-        /* ── Loading indicator ───────────────────────────── */
-        .spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #444;
-            border-top-color: #c0392b;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-right: 0.4rem;
-            vertical-align: middle;
+        .listen-btn:hover {
+            background: var(--accent-hover);
+            box-shadow:
+                0 8px 40px rgba(160,32,32,0.4),
+                0 0 0 1px rgba(255,255,255,0.08);
+            transform: translateY(-1px);
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .listen-btn:active { transform: translateY(0); }
+
+        /* ── Loading ───────────────────────────────────────── */
         .progress-bar-track {
             width: 100%;
-            height: 4px;
-            background: #222;
+            height: 3px;
+            background: rgba(255,255,255,0.06);
             border-radius: 2px;
-            margin-top: 0.5rem;
+            margin-top: 0.6rem;
             overflow: hidden;
         }
         .progress-bar-fill {
             height: 100%;
-            background: #c0392b;
+            background: var(--accent);
             border-radius: 2px;
             width: 0%;
-            animation: indeterminate 1.5s ease-in-out infinite;
+            animation: indeterminate 1.8s var(--ease-in-out) infinite;
         }
         @keyframes indeterminate {
             0%   { width: 0%; margin-left: 0; }
-            50%  { width: 40%; margin-left: 30%; }
+            50%  { width: 35%; margin-left: 35%; }
             100% { width: 0%; margin-left: 100%; }
         }
-        .auth-nav {
-            text-align: right;
-            padding: 0.5rem 0;
-            font-size: 0.8rem;
-        }
-        .auth-nav a {
-            color: #666;
-            text-decoration: none;
-            margin-left: 1rem;
-        }
-        .auth-nav a:hover { color: #ccc; }
-        .auth-nav .username { color: #888; }
-        .login-prompt {
-            text-align: center;
-            padding: 1rem;
-            background: #111;
-            border: 1px solid #1a1a1a;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            color: #888;
-        }
-        .login-prompt a {
-            color: #c0392b;
-            text-decoration: none;
-            font-weight: 600;
-        }
-        .login-prompt a:hover { text-decoration: underline; }
-        /* ── Series parts ─────────────────────────────────── */
-        .series-section {
-            margin-top: 1.5rem;
-        }
+
+        /* ── Series ────────────────────────────────────────── */
+        .series-section { margin-top: 2rem; }
         .series-title {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #888;
-            margin-bottom: 0.5rem;
+            font-family: var(--serif);
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-2);
+            margin-bottom: 0.6rem;
+            letter-spacing: 0.03em;
         }
         .series-list {
             list-style: none;
@@ -263,21 +213,27 @@
         .series-part {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 0.75rem;
-            background: #111;
-            border: 1px solid #1a1a1a;
-            border-radius: 8px;
+            gap: 0.6rem;
+            padding: 0.55rem 0.85rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
             text-decoration: none;
-            color: #ccc;
-            font-size: 0.85rem;
-            transition: border-color 0.15s;
+            color: var(--text-2);
+            font-size: 0.82rem;
+            transition: all 0.2s var(--ease);
         }
-        .series-part:hover { border-color: #333; }
-        .series-part.current { border-color: #c0392b; background: #1a0f0f; }
+        .series-part:hover {
+            border-color: var(--border-hover);
+            background: var(--surface-hover);
+        }
+        .series-part.current {
+            border-color: rgba(160,32,32,0.3);
+            background: var(--accent-dim);
+        }
         .series-part-num {
-            font-weight: 700;
-            color: #666;
+            font-weight: 600;
+            color: var(--text-3);
             min-width: 1.5rem;
             text-align: center;
         }
@@ -325,7 +281,6 @@
             {% endif %}
         </div>
         <div class="pipeline">
-            <!-- Step 1: Story Fetched (always done) -->
             <div class="step">
                 <div class="step-header">
                     <div class="step-number done">&#10003;</div>
@@ -337,7 +292,6 @@
                     </div>
                 </div>
             </div>
-            <!-- Step 2: Script Generation -->
             <div class="step" id="scriptStep">
                 <div class="step-header">
                     <div class="step-number {{ 'done' if story.script_json else 'pending' }}" id="scriptStepNum">
@@ -351,13 +305,13 @@
                         Script generated with {{ segment_count }} segments ({{ voice_count }} voice, {{ sfx_count }} SFX)
                     </div>
                     <div style="margin-top: 0.5rem;">
-                        <a href="/story/{{ story.id }}/edit-script" class="step-action btn-secondary">
+                        <a href="/story/{{ story.id }}/edit-script" class="btn-secondary">
                             Edit Script
                         </a>
                     </div>
                     {% else %}
                         {% if user %}
-                        <button class="step-action btn-primary" id="genScriptBtn" onclick="generateScript()">
+                        <button class="btn-primary" id="genScriptBtn" onclick="generateScript()">
                             Generate Script
                         </button>
                         <div class="step-status" id="scriptStatus"></div>
@@ -367,7 +321,6 @@
                     {% endif %}
                 </div>
             </div>
-            <!-- Step 3: Audio Generation -->
             <div class="step" id="audioStep">
                 <div class="step-header">
                     <div class="step-number {{ 'done' if story.audio_file_path else 'pending' }}" id="audioStepNum">
@@ -380,7 +333,7 @@
                     <div class="step-info step-status success">Audio ready</div>
                     {% if user %}
                     <div style="margin-top: 0.5rem;">
-                        <button class="step-action btn-secondary" id="regenAudioBtn" onclick="regenerateAudio()">
+                        <button class="btn-secondary" id="regenAudioBtn" onclick="regenerateAudio()">
                             Regenerate Audio
                         </button>
                     </div>
@@ -388,7 +341,7 @@
                     {% endif %}
                     {% else %}
                         {% if user %}
-                        <button class="step-action btn-primary" id="genAudioBtn"
+                        <button class="btn-primary" id="genAudioBtn"
                                 onclick="generateAudio()"
                                 {{ 'disabled' if not story.script_json }}>
                             Generate Audio
@@ -545,7 +498,6 @@
             stepNum.className = 'step-number done';
         }
     }
-    // --- Series parts ---
     (async function loadSeriesParts() {
         try {
             const resp = await fetch('/stories/' + storyId + '/series-parts');
