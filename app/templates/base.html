@@ -89,76 +89,104 @@
             pointer-events: none;
             z-index: 2;
             overflow: hidden;
+            -webkit-clip-path: inset(0);
+            clip-path: inset(0);
             opacity: 0; /* JS adds .settle / .visible / .evaporate */
         }
         .fog.visible { opacity: 1; }
+        /* Shared geometry for all three layers */
         .fog::before,
-        .fog::after {
-            content: '';
+        .fog::after,
+        .fog-l3 {
             position: absolute;
             bottom: -12%;
-            /* element is 4× the viewport wide, centred so viewport
-               sits at ~37% into it at rest — animation pans ±100 vw
-               through it, sweeping visible blobs across the screen  */
             left: -150%;
             width: 1000%;
-            height: 180%;
+            height: 200%;
             filter: blur(35px);
             will-change: transform;
         }
-        /* Layer 1 — dense base layer, blobs every ~20% across 400% width */
+        .fog::before, .fog::after { content: ''; }
+        /* Layer 1 — dense base, sweeps left, opacity dips at midpoint */
         .fog::before {
             background:
-                radial-gradient(ellipse 18% 55% at  5% 100%, rgba(195,192,215,0.28) 0%, transparent 70%),
-                radial-gradient(ellipse 22% 52% at 22% 100%, rgba(178,174,200,0.22) 0%, transparent 65%),
-                radial-gradient(ellipse 18% 48% at 40% 100%, rgba(188,184,210,0.20) 0%, transparent 62%),
-                radial-gradient(ellipse 22% 55% at 58% 100%, rgba(175,172,196,0.26) 0%, transparent 68%),
-                radial-gradient(ellipse 18% 50% at 75% 100%, rgba(165,162,186,0.18) 0%, transparent 63%),
-                radial-gradient(ellipse 22% 52% at 92% 100%, rgba(182,178,205,0.22) 0%, transparent 66%);
-            animation: fog-drift-1 24s ease-in-out infinite alternate;
+                radial-gradient(ellipse 18% 55% at  5% 100%, rgba(195,192,215,0.17) 0%, transparent 70%),
+                radial-gradient(ellipse 22% 52% at 22% 100%, rgba(178,174,200,0.14) 0%, transparent 65%),
+                radial-gradient(ellipse 18% 48% at 40% 100%, rgba(188,184,210,0.13) 0%, transparent 62%),
+                radial-gradient(ellipse 22% 55% at 58% 100%, rgba(175,172,196,0.16) 0%, transparent 68%),
+                radial-gradient(ellipse 18% 50% at 75% 100%, rgba(165,162,186,0.12) 0%, transparent 63%),
+                radial-gradient(ellipse 22% 52% at 92% 100%, rgba(182,178,205,0.15) 0%, transparent 66%);
+            animation: fog-drift-1 18s ease-in-out infinite alternate;
         }
-        /* Layer 2 — lighter wisps at offset positions, opposing drift */
+        /* Layer 2 — lighter wisps, opposing drift, opacity peaks at midpoint */
         .fog::after {
             background:
-                radial-gradient(ellipse 20% 50% at 12%  95%, rgba(196,192,216,0.18) 0%, transparent 62%),
-                radial-gradient(ellipse 22% 54% at 30% 100%, rgba(182,178,205,0.22) 0%, transparent 67%),
-                radial-gradient(ellipse 20% 48% at 49%  95%, rgba(195,190,214,0.16) 0%, transparent 62%),
-                radial-gradient(ellipse 22% 52% at 67% 100%, rgba(178,174,200,0.20) 0%, transparent 65%),
-                radial-gradient(ellipse 20% 50% at 85%  95%, rgba(190,186,210,0.18) 0%, transparent 63%);
-            animation: fog-drift-2 33s ease-in-out infinite alternate;
+                radial-gradient(ellipse 20% 50% at 12%  95%, rgba(196,192,216,0.09) 0%, transparent 62%),
+                radial-gradient(ellipse 22% 54% at 30% 100%, rgba(182,178,205,0.11) 0%, transparent 67%),
+                radial-gradient(ellipse 20% 48% at 49%  95%, rgba(195,190,214,0.08) 0%, transparent 62%),
+                radial-gradient(ellipse 22% 52% at 67% 100%, rgba(178,174,200,0.10) 0%, transparent 65%),
+                radial-gradient(ellipse 20% 50% at 85%  95%, rgba(190,186,210,0.09) 0%, transparent 63%);
+            animation: fog-drift-2 12s ease-in-out infinite alternate;
         }
-        /* Semi-linear pan: constant-speed sweep right-to-left then back.
-           Each step is evenly spaced so the velocity is near-constant —
-           the gradient blobs visibly slide across the viewport like rolling ground fog. */
+        /* Layer 3 — wispy upper tendrils, faster tighter sweep, irregular opacity */
+        .fog-l3 {
+            height: 350%;
+            filter: blur(42px);
+            background:
+                radial-gradient(ellipse 20% 46% at  8%  92%, rgba(200,196,218,0.14) 0%, transparent 63%),
+                radial-gradient(ellipse 18% 50% at 28% 100%, rgba(185,182,206,0.12) 0%, transparent 60%),
+                radial-gradient(ellipse 20% 44% at 48%  92%, rgba(192,188,212,0.13) 0%, transparent 61%),
+                radial-gradient(ellipse 18% 48% at 68% 100%, rgba(180,176,202,0.12) 0%, transparent 62%),
+                radial-gradient(ellipse 20% 46% at 88%  92%, rgba(196,192,215,0.14) 0%, transparent 63%);
+            animation: fog-drift-3 7s ease-in-out infinite alternate;
+        }
+        /* Layer 1: full → dim at peak travel → full */
         @keyframes fog-drift-1 {
-            0%   { transform: translate(0,      0); }
-            8%   { transform: translate(-8vw,  -0.4vh); }
-            17%  { transform: translate(-17vw, -0.9vh); }
-            25%  { transform: translate(-25vw, -1.3vh); }
-            33%  { transform: translate(-33vw, -1.7vh); }
-            42%  { transform: translate(-42vw, -2vh); }
-            50%  { transform: translate(-50vw, -2vh); }
-            58%  { transform: translate(-42vw, -1.7vh); }
-            67%  { transform: translate(-33vw, -1.3vh); }
-            75%  { transform: translate(-25vw, -0.9vh); }
-            83%  { transform: translate(-17vw, -0.4vh); }
-            92%  { transform: translate(-8vw,  0); }
-            100% { transform: translate(0,     0); }
+            0%   { opacity: 1.0;  transform: translate(0,      0); }
+            8%   {               transform: translate(-16vw,  -0.4vh); }
+            17%  {               transform: translate(-34vw, -0.9vh); }
+            25%  { opacity: 0.6; transform: translate(-50vw, -1.3vh); }
+            33%  {               transform: translate(-66vw, -1.7vh); }
+            42%  {               transform: translate(-84vw, -2vh); }
+            50%  { opacity: 0.4; transform: translate(-100vw, -2vh); }
+            58%  {               transform: translate(-84vw, -1.7vh); }
+            67%  {               transform: translate(-66vw, -1.3vh); }
+            75%  { opacity: 0.6; transform: translate(-50vw, -0.9vh); }
+            83%  {               transform: translate(-34vw, -0.4vh); }
+            92%  {               transform: translate(-16vw,  0); }
+            100% { opacity: 1.0; transform: translate(0,     0); }
         }
+        /* Layer 2: dim → bright at peak travel → dim (counter-phase) */
         @keyframes fog-drift-2 {
-            0%   { transform: translate(0,     0); }
-            8%   { transform: translate(5vw,   0.4vh); }
-            17%  { transform: translate(11vw,  0.9vh); }
-            25%  { transform: translate(16vw,  1.4vh); }
-            33%  { transform: translate(21vw,  1.8vh); }
-            42%  { transform: translate(27vw,  2vh); }
-            50%  { transform: translate(32vw,  2vh); }
-            58%  { transform: translate(27vw,  1.8vh); }
-            67%  { transform: translate(21vw,  1.4vh); }
-            75%  { transform: translate(16vw,  0.9vh); }
-            83%  { transform: translate(11vw,  0.4vh); }
-            92%  { transform: translate(5vw,   0); }
-            100% { transform: translate(0,     0); }
+            0%   { opacity: 0.3; transform: translate(0,     0); }
+            8%   {               transform: translate(10vw,   0.4vh); }
+            17%  {               transform: translate(22vw,  0.9vh); }
+            25%  { opacity: 0.75; transform: translate(32vw,  1.4vh); }
+            33%  {               transform: translate(42vw,  1.8vh); }
+            42%  {               transform: translate(54vw,  2vh); }
+            50%  { opacity: 0.8; transform: translate(64vw,  2vh); }
+            58%  {               transform: translate(54vw,  1.8vh); }
+            67%  {               transform: translate(42vw,  1.4vh); }
+            75%  { opacity: 0.75; transform: translate(32vw,  0.9vh); }
+            83%  {               transform: translate(22vw,  0.4vh); }
+            92%  {               transform: translate(10vw,   0); }
+            100% { opacity: 0.3; transform: translate(0,     0); }
+        }
+        /* Layer 3: two-dip opacity breathing, shorter oscillation, faster cycle */
+        @keyframes fog-drift-3 {
+            0%   { opacity: 0.75; transform: translate(0,      0); }
+            8%   {                transform: translate(-10vw,  -0.3vh); }
+            17%  {                transform: translate(-20vw, -0.7vh); }
+            25%  { opacity: 0.2;  transform: translate(-30vw, -1.1vh); }
+            33%  {                transform: translate(-40vw, -1.5vh); }
+            42%  {                transform: translate(-30vw, -1.1vh); }
+            50%  { opacity: 0.75; transform: translate(-20vw, -0.7vh); }
+            58%  {                transform: translate(-10vw,  -0.3vh); }
+            67%  {                transform: translate(0,      0); }
+            75%  { opacity: 0.2;  transform: translate(10vw,   0.3vh); }
+            83%  {                transform: translate(20vw,  0.7vh); }
+            92%  {                transform: translate(10vw,   0.3vh); }
+            100% { opacity: 0.75; transform: translate(0,     0); }
         }
         /* Settle — fog rolls in from the bottom */
         .fog.settle {
@@ -357,7 +385,7 @@
     {% block head_extra %}{% endblock %}
 </head>
 <body>
-    <div class="fog" id="global-fog" aria-hidden="true"></div>
+    <div class="fog" id="global-fog" aria-hidden="true"><div class="fog-l3"></div></div>
     <script>
     (function () {
         var fog = document.getElementById('global-fog');
