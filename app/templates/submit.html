@@ -625,6 +625,7 @@
     }
 
     function unlockFields() {
+        const wasLocked = urlLocked;
         manualTitle.readOnly = false;
         manualText.readOnly = false;
         urlLocked = false;
@@ -632,7 +633,7 @@
         urlStatus.className = 'url-status';
 
         // Only clear if they were auto-populated (i.e. locked)
-        if (urlLocked) {
+        if (wasLocked) {
             manualTitle.value = '';
             manualText.value = '';
         }
