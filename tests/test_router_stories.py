@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import patch
-from app.models.story import Story, PlaybackState, User
+from app.models.story import Story, PlaybackState, User, StoryView, StoryFolder, StoryFolderMembership
 
 
 class TestListStories:
@@ -547,3 +547,296 @@ class TestPlaybackState:
 
         resp2 = client.get(f"/stories/playback/{sample_story.id}", headers=headers2)
         assert resp2.json()["position_seconds"] == 120.0
+
+
+class TestHideUnhideStory:
+    def _create_view(self, db_session, user, story, hidden=False):
+        view = StoryView(user_id=user.id, story_id=story.id, hidden=hidden)
+        db_session.add(view)
+        db_session.commit()
+        db_session.refresh(view)
+        return view
+
+    def test_hide_story_sets_hidden(self, client, sample_story, test_user, auth_headers, db_session):
+        self._create_view(db_session, test_user, sample_story, hidden=False)
+        resp = client.post(f"/stories/{sample_story.id}/hide", headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+        view = db_session.query(StoryView).filter(
+            StoryView.user_id == test_user.id, StoryView.story_id == sample_story.id
+        ).first()
+        assert view.hidden is True
+
+    def test_hide_story_no_view_still_returns_ok(self, client, sample_story, auth_headers, db_session):
+        resp = client.post(f"/stories/{sample_story.id}/hide", headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+
+    def test_unhide_story_clears_hidden(self, client, sample_story, test_user, auth_headers, db_session):
+        self._create_view(db_session, test_user, sample_story, hidden=True)
+        resp = client.post(f"/stories/{sample_story.id}/unhide", headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+        view = db_session.query(StoryView).filter(
+            StoryView.user_id == test_user.id, StoryView.story_id == sample_story.id
+        ).first()
+        assert view.hidden is False
+
+    def test_unhide_story_no_view_still_returns_ok(self, client, sample_story, auth_headers, db_session):
+        resp = client.post(f"/stories/{sample_story.id}/unhide", headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+
+    def test_hide_requires_auth(self, client, sample_story, db_session):
+        resp = client.post(f"/stories/{sample_story.id}/hide")
+        assert resp.status_code == 401
+
+    def test_unhide_requires_auth(self, client, sample_story, db_session):
+        resp = client.post(f"/stories/{sample_story.id}/unhide")
+        assert resp.status_code == 401
+
+
+class TestListFolders:
+    def test_empty_list(self, client, auth_headers, db_session):
+        resp = client.get("/stories/folders/list", headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_returns_user_folders(self, client, test_user, auth_headers, db_session):
+        db_session.add(StoryFolder(user_id=test_user.id, name="Favorites"))
+        db_session.commit()
+        resp = client.get("/stories/folders/list", headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["name"] == "Favorites"
+        assert data[0]["story_count"] == 0
+
+    def test_story_count_reflects_memberships(self, client, test_user, sample_story, auth_headers, db_session):
+        folder = StoryFolder(user_id=test_user.id, name="Horror")
+        db_session.add(folder)
+        db_session.commit()
+        db_session.refresh(folder)
+        db_session.add(StoryFolderMembership(folder_id=folder.id, story_id=sample_story.id))
+        db_session.commit()
+        resp = client.get("/stories/folders/list", headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json()[0]["story_count"] == 1
+
+    def test_requires_auth(self, client, db_session):
+        resp = client.get("/stories/folders/list")
+        assert resp.status_code == 401
+
+    def test_folders_isolated_per_user(self, client, test_user, auth_headers, db_session):
+        from app.auth import hash_password, create_access_token
+        other = User(username="other", password_hash=hash_password("pass"), is_admin=False)
+        db_session.add(other)
+        db_session.commit()
+        db_session.refresh(other)
+        db_session.add(StoryFolder(user_id=other.id, name="OtherFolder"))
+        db_session.commit()
+        resp = client.get("/stories/folders/list", headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+
+class TestCreateFolder:
+    def test_create_folder(self, client, auth_headers, db_session):
+        resp = client.post("/stories/folders/create", json={"name": "My Folder"}, headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["name"] == "My Folder"
+        assert data["story_count"] == 0
+        assert "id" in data
+
+    def test_create_folder_strips_whitespace(self, client, auth_headers, db_session):
+        resp = client.post("/stories/folders/create", json={"name": "  Spooky  "}, headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json()["name"] == "Spooky"
+
+    def test_create_folder_empty_name_rejected(self, client, auth_headers, db_session):
+        resp = client.post("/stories/folders/create", json={"name": ""}, headers=auth_headers)
+        assert resp.status_code == 400
+
+    def test_create_folder_whitespace_only_name_rejected(self, client, auth_headers, db_session):
+        resp = client.post("/stories/folders/create", json={"name": "   "}, headers=auth_headers)
+        assert resp.status_code == 400
+
+    def test_create_duplicate_folder_name_rejected(self, client, auth_headers, db_session):
+        client.post("/stories/folders/create", json={"name": "Duplicated"}, headers=auth_headers)
+        resp = client.post("/stories/folders/create", json={"name": "Duplicated"}, headers=auth_headers)
+        assert resp.status_code == 409
+
+    def test_same_name_allowed_for_different_users(self, client, auth_headers, db_session):
+        from app.auth import hash_password, create_access_token
+        other = User(username="other2", password_hash=hash_password("pass"), is_admin=False)
+        db_session.add(other)
+        db_session.commit()
+        db_session.refresh(other)
+        other_headers = {"Authorization": f"Bearer {create_access_token(other.id, other.username)}"}
+        resp1 = client.post("/stories/folders/create", json={"name": "SharedName"}, headers=auth_headers)
+        resp2 = client.post("/stories/folders/create", json={"name": "SharedName"}, headers=other_headers)
+        assert resp1.status_code == 200
+        assert resp2.status_code == 200
+
+    def test_create_folder_requires_auth(self, client, db_session):
+        resp = client.post("/stories/folders/create", json={"name": "No Auth"})
+        assert resp.status_code == 401
+
+
+class TestDeleteFolder:
+    def test_delete_folder(self, client, test_user, auth_headers, db_session):
+        folder = StoryFolder(user_id=test_user.id, name="ToDelete")
+        db_session.add(folder)
+        db_session.commit()
+        db_session.refresh(folder)
+        resp = client.delete(f"/stories/folders/{folder.id}", headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+        assert db_session.query(StoryFolder).filter(StoryFolder.id == folder.id).first() is None
+
+    def test_delete_folder_removes_memberships(self, client, test_user, sample_story, auth_headers, db_session):
+        folder = StoryFolder(user_id=test_user.id, name="WithStories")
+        db_session.add(folder)
+        db_session.commit()
+        db_session.refresh(folder)
+        db_session.add(StoryFolderMembership(folder_id=folder.id, story_id=sample_story.id))
+        db_session.commit()
+        client.delete(f"/stories/folders/{folder.id}", headers=auth_headers)
+        assert db_session.query(StoryFolderMembership).filter(
+            StoryFolderMembership.folder_id == folder.id
+        ).count() == 0
+
+    def test_delete_nonexistent_folder_returns_404(self, client, auth_headers, db_session):
+        resp = client.delete("/stories/folders/9999", headers=auth_headers)
+        assert resp.status_code == 404
+
+    def test_delete_another_users_folder_returns_404(self, client, auth_headers, db_session):
+        from app.auth import hash_password
+        other = User(username="other3", password_hash=hash_password("pass"), is_admin=False)
+        db_session.add(other)
+        db_session.commit()
+        db_session.refresh(other)
+        folder = StoryFolder(user_id=other.id, name="OtherFolder")
+        db_session.add(folder)
+        db_session.commit()
+        db_session.refresh(folder)
+        resp = client.delete(f"/stories/folders/{folder.id}", headers=auth_headers)
+        assert resp.status_code == 404
+
+    def test_delete_folder_requires_auth(self, client, test_user, db_session):
+        folder = StoryFolder(user_id=test_user.id, name="NeedsAuth")
+        db_session.add(folder)
+        db_session.commit()
+        db_session.refresh(folder)
+        resp = client.delete(f"/stories/folders/{folder.id}")
+        assert resp.status_code == 401
+
+
+class TestAddStoryToFolder:
+    def test_add_story_to_folder(self, client, test_user, sample_story, auth_headers, db_session):
+        folder = StoryFolder(user_id=test_user.id, name="Reads")
+        db_session.add(folder)
+        db_session.commit()
+        db_session.refresh(folder)
+        resp = client.post(f"/stories/folders/{folder.id}/add",
+                           json={"story_id": sample_story.id}, headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+        assert db_session.query(StoryFolderMembership).filter(
+            StoryFolderMembership.folder_id == folder.id,
+            StoryFolderMembership.story_id == sample_story.id,
+        ).first() is not None
+
+    def test_add_story_already_in_folder_returns_ok(self, client, test_user, sample_story, auth_headers, db_session):
+        folder = StoryFolder(user_id=test_user.id, name="Reads2")
+        db_session.add(folder)
+        db_session.commit()
+        db_session.refresh(folder)
+        db_session.add(StoryFolderMembership(folder_id=folder.id, story_id=sample_story.id))
+        db_session.commit()
+        resp = client.post(f"/stories/folders/{folder.id}/add",
+                           json={"story_id": sample_story.id}, headers=auth_headers)
+        assert resp.status_code == 200
+        assert "already in folder" in resp.json().get("message", "")
+
+    def test_add_story_nonexistent_folder_returns_404(self, client, sample_story, auth_headers, db_session):
+        resp = client.post("/stories/folders/9999/add",
+                           json={"story_id": sample_story.id}, headers=auth_headers)
+        assert resp.status_code == 404
+
+    def test_add_nonexistent_story_returns_404(self, client, test_user, auth_headers, db_session):
+        folder = StoryFolder(user_id=test_user.id, name="Reads3")
+        db_session.add(folder)
+        db_session.commit()
+        db_session.refresh(folder)
+        resp = client.post(f"/stories/folders/{folder.id}/add",
+                           json={"story_id": 9999}, headers=auth_headers)
+        assert resp.status_code == 404
+
+    def test_add_story_to_another_users_folder_returns_404(self, client, sample_story, auth_headers, db_session):
+        from app.auth import hash_password
+        other = User(username="other4", password_hash=hash_password("pass"), is_admin=False)
+        db_session.add(other)
+        db_session.commit()
+        db_session.refresh(other)
+        folder = StoryFolder(user_id=other.id, name="OtherReads")
+        db_session.add(folder)
+        db_session.commit()
+        db_session.refresh(folder)
+        resp = client.post(f"/stories/folders/{folder.id}/add",
+                           json={"story_id": sample_story.id}, headers=auth_headers)
+        assert resp.status_code == 404
+
+    def test_add_story_requires_auth(self, client, test_user, sample_story, db_session):
+        folder = StoryFolder(user_id=test_user.id, name="Reads4")
+        db_session.add(folder)
+        db_session.commit()
+        db_session.refresh(folder)
+        resp = client.post(f"/stories/folders/{folder.id}/add", json={"story_id": sample_story.id})
+        assert resp.status_code == 401
+
+
+class TestRemoveStoryFromFolder:
+    def test_remove_story_from_folder(self, client, test_user, sample_story, auth_headers, db_session):
+        folder = StoryFolder(user_id=test_user.id, name="ToRemove")
+        db_session.add(folder)
+        db_session.commit()
+        db_session.refresh(folder)
+        db_session.add(StoryFolderMembership(folder_id=folder.id, story_id=sample_story.id))
+        db_session.commit()
+        resp = client.delete(f"/stories/folders/{folder.id}/stories/{sample_story.id}",
+                             headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+        assert db_session.query(StoryFolderMembership).filter(
+            StoryFolderMembership.folder_id == folder.id,
+            StoryFolderMembership.story_id == sample_story.id,
+        ).first() is None
+
+    def test_remove_story_nonexistent_folder_returns_404(self, client, sample_story, auth_headers, db_session):
+        resp = client.delete(f"/stories/folders/9999/stories/{sample_story.id}",
+                             headers=auth_headers)
+        assert resp.status_code == 404
+
+    def test_remove_story_from_another_users_folder_returns_404(self, client, sample_story, auth_headers, db_session):
+        from app.auth import hash_password
+        other = User(username="other5", password_hash=hash_password("pass"), is_admin=False)
+        db_session.add(other)
+        db_session.commit()
+        db_session.refresh(other)
+        folder = StoryFolder(user_id=other.id, name="OtherRemove")
+        db_session.add(folder)
+        db_session.commit()
+        db_session.refresh(folder)
+        resp = client.delete(f"/stories/folders/{folder.id}/stories/{sample_story.id}",
+                             headers=auth_headers)
+        assert resp.status_code == 404
+
+    def test_remove_story_requires_auth(self, client, test_user, sample_story, db_session):
+        folder = StoryFolder(user_id=test_user.id, name="ToRemove2")
+        db_session.add(folder)
+        db_session.commit()
+        db_session.refresh(folder)
+        resp = client.delete(f"/stories/folders/{folder.id}/stories/{sample_story.id}")
+        assert resp.status_code == 401
