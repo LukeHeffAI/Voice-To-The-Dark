@@ -3,6 +3,7 @@ import logging
 import re
 from urllib.parse import urlparse, urlunparse
 from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.database import get_db
@@ -379,7 +380,7 @@ def create_folder(req: FolderCreateRequest, user: User = Depends(get_current_use
         raise HTTPException(status_code=400, detail="Folder name cannot be longer than 60 characters")
     existing = db.query(StoryFolder).filter(
         StoryFolder.user_id == user.id,
-        StoryFolder.name == name,
+        func.lower(StoryFolder.name) == name.lower(),
     ).first()
     if existing:
         raise HTTPException(status_code=409, detail="A folder with this name already exists")
