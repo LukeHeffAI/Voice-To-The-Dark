@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ story.title }} — Voice In The Dark{% endblock %}
 {% block styles %}
-        .page-story-detail { padding: 1.25rem; }
+        body { padding: 1.25rem; }
 
         .page-container {
             max-width: 640px;
@@ -250,7 +250,6 @@
         }
 {% endblock %}
 {% block body %}
-    <div class="page-story-detail">
     <div class="page-container">
         <div class="auth-nav">
             {% if user %}
@@ -374,17 +373,12 @@
             <a href="/listen/{{ story.id }}" class="listen-btn">
                 &#9654; Listen Now
             </a>
-            <div style="display:flex; gap:0.75rem; justify-content:center; margin-top:0.75rem;">
-                <button class="btn-secondary" onclick="Playlist.addToEnd({storyId:{{ story.id }},title:{{ story.title|tojson }},author:{{ (story.author or '')|tojson }}}); showToast('Added to queue')">Add to Queue</button>
-                <button class="btn-secondary" onclick="Playlist.addNext({storyId:{{ story.id }},title:{{ story.title|tojson }},author:{{ (story.author or '')|tojson }}}); showToast('Playing next')">Play Next</button>
-            </div>
         </div>
         {% endif %}
         <div class="series-section" id="seriesSection" style="display:none;">
             <div class="series-title">Series Parts</div>
             <ul class="series-list" id="seriesList"></ul>
         </div>
-    </div>
     </div>
 {% endblock %}
 {% block scripts %}
@@ -418,7 +412,7 @@
             if (resp.ok) {
                 status.textContent = 'Script generated! Reloading...';
                 status.className = 'step-status success';
-                setTimeout(function() { VTTDRouter.reload(); }, 800);
+                setTimeout(() => location.reload(), 800);
             } else {
                 throw new Error(data.detail || 'Script generation failed');
             }
@@ -461,7 +455,7 @@
             if (resp.ok) {
                 status.textContent = 'Audio generated! Reloading...';
                 status.className = 'step-status success';
-                setTimeout(function() { VTTDRouter.reload(); }, 800);
+                setTimeout(() => location.reload(), 800);
             } else {
                 throw new Error(data.detail || 'Audio generation failed');
             }
@@ -503,7 +497,7 @@
             if (resp.ok) {
                 status.textContent = 'Audio regenerated! Reloading...';
                 status.className = 'step-status success';
-                setTimeout(function() { VTTDRouter.reload(); }, 800);
+                setTimeout(() => location.reload(), 800);
             } else {
                 throw new Error(data.detail || 'Audio regeneration failed');
             }
