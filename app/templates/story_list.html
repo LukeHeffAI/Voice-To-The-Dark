@@ -125,10 +125,15 @@
             text-decoration: none;
         }
         .empty-state a:hover { text-decoration: underline; }
+
+        .auth-nav {
+            max-width: 640px;
+            margin: 0 auto;
+        }
 {% endblock %}
 
 {% block body %}
-    <div class="auth-nav" style="max-width:640px;margin:0 auto;">
+    <div class="auth-nav">
         {% if user %}
         <span class="username">{{ user.username }}</span>
         <a href="/settings">Settings</a>
