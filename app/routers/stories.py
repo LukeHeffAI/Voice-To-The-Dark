@@ -371,7 +371,7 @@ def list_folders(user: User = Depends(get_current_user), db: Session = Depends(g
 @router.post("/folders/create", response_model=FolderResponse)
 def create_folder(req: FolderCreateRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Create a new folder for the current user."""
-    name = req.name.strip()
+    name = req.name
     if not name:
         raise HTTPException(status_code=400, detail="Folder name cannot be empty")
     existing = db.query(StoryFolder).filter(

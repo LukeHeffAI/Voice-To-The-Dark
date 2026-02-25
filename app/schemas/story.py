@@ -1,5 +1,5 @@
-from pydantic import BaseModel, HttpUrl
-from typing import Optional
+from pydantic import BaseModel, Field, HttpUrl, StringConstraints
+from typing import Annotated, Optional
 from datetime import datetime
 
 
@@ -75,7 +75,7 @@ class DuplicateCheckResponse(BaseModel):
 
 
 class FolderCreateRequest(BaseModel):
-    name: str
+    name: Annotated[str, StringConstraints(min_length=1, max_length=60, strip_whitespace=True)]
 
 
 class FolderResponse(BaseModel):
