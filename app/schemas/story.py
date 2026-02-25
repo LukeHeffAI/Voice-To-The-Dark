@@ -89,4 +89,4 @@ class FolderResponse(BaseModel):
 
 
 class FolderAddStoryRequest(BaseModel):
-    story_id: int
+    story_id: int = Field(gt=0)

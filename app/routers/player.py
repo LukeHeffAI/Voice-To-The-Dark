@@ -53,7 +53,7 @@ def story_list_page(request: Request, db: Session = Depends(get_db), user: User 
         viewed_rows = (
             db.query(StoryView, Story)
             .join(Story, Story.id == StoryView.story_id)
-            .filter(StoryView.user_id == user.id, StoryView.hidden == False)
+            .filter(StoryView.user_id == user.id, StoryView.hidden.is_(False))
             .order_by(StoryView.viewed_at.desc())
             .limit(50)
             .all()

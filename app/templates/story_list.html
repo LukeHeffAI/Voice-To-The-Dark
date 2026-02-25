@@ -398,11 +398,11 @@
                     </div>
                 </a>
                 {% if user %}
-                <button class="card-menu-btn" onclick="toggleDropdown(event, {{ story.id }})" aria-label="Story options">&#8942;</button>
+                <button class="card-menu-btn" role="button" onclick="toggleDropdown(event, {{ story.id }})" aria-label="Story options">Story options</button>
                 <div class="card-dropdown" id="dropdown-{{ story.id }}">
                     <span class="folder-submenu-label">Add to folder</span>
                     {% for f in folders %}
-                    <button class="card-dropdown-item" onclick="addToFolder({{ story.id }}, {{ f.id }}, '{{ f.name }}')">
+                    <button class="card-dropdown-item" onclick="addToFolder({{ story.id }}, {{ f.id }}, {{ f.name|tojson }})">
                         <span class="dropdown-icon">&#9776;</span> {{ f.name }}
                     </button>
                     {% endfor %}
@@ -497,8 +497,12 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ story_id: storyId })
         })
-        .then(r => r.json())
-        .then(() => showToast('Added to ' + folderName));
+        .then(r => {
+            if (!r.ok) return r.json().then(d => { throw new Error(d.detail || 'Error'); });
+            return r.json();
+        })
+        .then(() => showToast('Added to ' + folderName))
+        .catch(err => showToast(err.message));
     };
 
     window.createFolderAndAdd = function(storyId) {
@@ -524,7 +528,7 @@
         .then(folder => {
             closeAllDropdowns();
             showToast('Created "' + folder.name + '" and added story');
-            setTimeout(() => location.reload(), 800);
+            setTimeout(() => location.reload(), 2300);
         })
         .catch(err => showToast(err.message));
     };
