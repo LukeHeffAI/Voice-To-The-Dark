@@ -3,21 +3,10 @@
 {% block title %}Edit Script — {{ story.title }}{% endblock %}
 
 {% block styles %}
-        body {
-            padding: 1rem;
-        }
-
-        .back-link {
-            color: #888;
-            text-decoration: none;
-            font-size: 0.9rem;
-            padding: 0.5rem 0;
-            display: inline-block;
-        }
-        .back-link:hover { color: #ccc; }
+        body { padding: 1.25rem; }
 
         .page-container {
-            max-width: 700px;
+            max-width: 720px;
             margin: 0 auto;
         }
 
@@ -25,60 +14,76 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            padding: 1rem 0 1.5rem;
-            border-bottom: 1px solid #1a1a1a;
-            margin-bottom: 1rem;
+            padding: 1.25rem 0 1.75rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1.25rem;
             gap: 1rem;
             flex-wrap: wrap;
         }
         .page-header h1 {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: #f0f0f0;
+            font-family: var(--serif);
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--text-1);
         }
         .page-header .subtitle {
             font-size: 0.8rem;
-            color: #666;
-            margin-top: 0.2rem;
+            color: var(--text-3);
+            margin-top: 0.25rem;
+            letter-spacing: 0.02em;
         }
 
         .save-btn {
             padding: 0.6rem 1.5rem;
             border: none;
-            border-radius: 8px;
-            background: #c0392b;
+            border-radius: var(--r-sm);
+            background: var(--accent);
             color: #fff;
-            font-size: 0.9rem;
+            font-family: var(--sans);
+            font-size: 0.85rem;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.15s;
+            transition: all 0.25s var(--ease);
             white-space: nowrap;
+            letter-spacing: 0.02em;
         }
-        .save-btn:hover { background: #a93226; }
-        .save-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+        .save-btn:hover {
+            background: var(--accent-hover);
+            box-shadow: var(--accent-glow);
+        }
+        .save-btn:disabled {
+            background: rgba(255,255,255,0.06);
+            color: var(--text-3);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
 
         .save-status {
-            font-size: 0.8rem;
-            color: #666;
+            font-size: 0.78rem;
+            color: var(--text-3);
             text-align: right;
             margin-top: 0.3rem;
         }
         .save-status.error { color: #e07070; }
-        .save-status.success { color: #4caf50; }
+        .save-status.success { color: var(--success); }
 
-        /* ── Characters panel ────────────────────────────── */
+        /* ── Characters panel ──────────────────────────────── */
         .characters-panel {
-            background: #111;
-            border: 1px solid #1a1a1a;
-            border-radius: 10px;
-            padding: 1rem 1.2rem;
-            margin-bottom: 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-md);
+            padding: 1.1rem 1.3rem;
+            margin-bottom: 1.25rem;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
         }
         .characters-panel h2 {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #aaa;
-            margin-bottom: 0.75rem;
+            font-family: var(--serif);
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-2);
+            margin-bottom: 0.85rem;
+            letter-spacing: 0.03em;
         }
         .character-list {
             display: flex;
@@ -86,88 +91,97 @@
             gap: 0.75rem;
         }
         .character-card {
-            background: #0a0a0a;
-            border: 1px solid #1a1a1a;
-            border-radius: 8px;
-            padding: 0.75rem 1rem;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            padding: 0.85rem 1rem;
         }
         .char-card-header {
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            margin-bottom: 0.6rem;
+            margin-bottom: 0.65rem;
         }
         .char-card-name {
-            font-size: 0.85rem;
+            font-family: var(--serif);
+            font-size: 0.95rem;
             font-weight: 600;
         }
-        .char-card-name.narrator { color: #4caf50; }
-        .char-card-name.dialogue { color: #8888cc; }
+        .char-card-name.narrator { color: var(--success); }
+        .char-card-name.dialogue { color: var(--info); }
         .char-card-badge {
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             font-weight: 600;
             text-transform: uppercase;
-            padding: 0.1rem 0.4rem;
+            padding: 0.12rem 0.4rem;
             border-radius: 4px;
-            letter-spacing: 0.03em;
+            letter-spacing: 0.05em;
         }
-        .char-card-badge.narrator { background: #1a2e1a; color: #4caf50; }
-        .char-card-badge.dialogue { background: #1a1a2e; color: #8888cc; }
+        .char-card-badge.narrator {
+            background: var(--success-dim);
+            color: var(--success);
+        }
+        .char-card-badge.dialogue {
+            background: var(--info-dim);
+            color: var(--info);
+        }
         .char-field {
             margin-bottom: 0.5rem;
         }
         .char-field:last-child { margin-bottom: 0; }
         .char-field-label {
-            font-size: 0.7rem;
-            color: #555;
+            font-size: 0.65rem;
+            color: var(--text-3);
             text-transform: uppercase;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.06em;
             margin-bottom: 0.25rem;
         }
         .char-field-input {
             width: 100%;
-            padding: 0.4rem 0.6rem;
-            border: 1px solid #333;
-            border-radius: 6px;
-            background: #111;
-            color: #e0e0e0;
+            padding: 0.45rem 0.65rem;
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            background: var(--surface);
+            color: var(--text-1);
+            font-family: var(--sans);
             font-size: 0.8rem;
-            font-family: inherit;
             outline: none;
-            transition: border-color 0.15s;
+            transition: border-color 0.2s var(--ease);
         }
-        .char-field-input:focus { border-color: #c0392b; }
+        .char-field-input:focus { border-color: var(--border-focus); }
         select.char-field-input {
             cursor: pointer;
             -webkit-appearance: none;
             appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23666'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23555'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
-            background-position: right 0.6rem center;
+            background-position: right 0.65rem center;
             padding-right: 1.8rem;
         }
         .char-voice-hint {
-            font-size: 0.7rem;
-            color: #555;
+            font-size: 0.68rem;
+            color: var(--text-3);
             margin-top: 0.2rem;
             font-style: italic;
         }
 
-        /* ── Segments list ───────────────────────────────── */
+        /* ── Segments list ─────────────────────────────────── */
         .segments-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.85rem;
         }
         .segments-header h2 {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: #ccc;
+            font-family: var(--serif);
+            font-size: 1.05rem;
+            font-weight: 500;
+            color: var(--text-1);
+            letter-spacing: 0.03em;
         }
         .segment-count {
-            font-size: 0.8rem;
-            color: #555;
+            font-size: 0.78rem;
+            color: var(--text-3);
         }
 
         .segment-list {
@@ -177,14 +191,19 @@
         }
 
         .segment-card {
-            background: #111;
-            border: 1px solid #1a1a1a;
-            border-radius: 8px;
-            padding: 0.75rem 1rem;
-            transition: border-color 0.15s;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            padding: 0.85rem 1rem;
+            transition: all 0.2s var(--ease);
+            cursor: pointer;
         }
-        .segment-card:hover { border-color: #2a2a2a; }
-        .segment-card.editing { border-color: #c0392b; }
+        .segment-card:hover { border-color: var(--border-hover); }
+        .segment-card.editing {
+            border-color: var(--border-focus);
+            background: var(--surface-hover);
+            cursor: default;
+        }
 
         .segment-top {
             display: flex;
@@ -193,49 +212,50 @@
             margin-bottom: 0.4rem;
         }
         .segment-type {
-            font-size: 0.7rem;
+            font-size: 0.62rem;
             font-weight: 700;
             text-transform: uppercase;
-            padding: 0.15rem 0.4rem;
+            padding: 0.15rem 0.45rem;
             border-radius: 4px;
-            letter-spacing: 0.03em;
+            letter-spacing: 0.05em;
         }
-        .type-narration { background: #1a2e1a; color: #4caf50; }
-        .type-dialogue { background: #1a1a2e; color: #8888cc; }
-        .type-sfx { background: #2e2e1a; color: #cccc44; }
-        .type-ambient { background: #1a2e2e; color: #44cccc; }
-        .type-pause { background: #1a1a1a; color: #888; }
+        .type-narration { background: var(--success-dim); color: var(--success); }
+        .type-dialogue { background: var(--info-dim); color: var(--info); }
+        .type-sfx { background: var(--warn-dim); color: var(--warn); }
+        .type-ambient { background: var(--ambient-dim); color: var(--ambient); }
+        .type-pause { background: var(--surface); color: var(--text-3); }
 
         .segment-character {
-            font-size: 0.8rem;
-            color: #999;
+            font-size: 0.78rem;
+            color: var(--text-2);
             font-weight: 500;
         }
         .segment-tone {
-            font-size: 0.75rem;
-            color: #665;
+            font-size: 0.72rem;
+            color: var(--text-3);
             font-style: italic;
             margin-left: auto;
         }
         .segment-index {
-            font-size: 0.7rem;
-            color: #444;
+            font-size: 0.68rem;
+            color: var(--text-3);
             margin-left: auto;
+            font-variant-numeric: tabular-nums;
         }
 
         .segment-text {
-            font-size: 0.85rem;
-            color: #ccc;
-            line-height: 1.4;
+            font-size: 0.82rem;
+            color: var(--text-2);
+            line-height: 1.5;
             word-break: break-word;
         }
         .segment-description {
-            font-size: 0.85rem;
-            color: #999;
+            font-size: 0.82rem;
+            color: var(--text-3);
             font-style: italic;
         }
 
-        /* ── Inline edit fields ──────────────────────────── */
+        /* ── Inline edit ───────────────────────────────────── */
         .segment-edit {
             display: none;
             margin-top: 0.5rem;
@@ -248,16 +268,17 @@
         .edit-field {
             width: 100%;
             padding: 0.5rem 0.7rem;
-            border: 1px solid #333;
-            border-radius: 6px;
-            background: #0a0a0a;
-            color: #e0e0e0;
-            font-size: 0.85rem;
-            font-family: inherit;
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            background: rgba(0,0,0,0.2);
+            color: var(--text-1);
+            font-family: var(--sans);
+            font-size: 0.82rem;
             resize: vertical;
             outline: none;
+            transition: border-color 0.2s var(--ease);
         }
-        .edit-field:focus { border-color: #c0392b; }
+        .edit-field:focus { border-color: var(--border-focus); }
 
         textarea.edit-field { min-height: 60px; }
 
@@ -273,25 +294,37 @@
             margin-top: 0.3rem;
         }
         .edit-btn {
-            padding: 0.35rem 0.8rem;
-            border-radius: 6px;
-            font-size: 0.8rem;
+            padding: 0.35rem 0.85rem;
+            border-radius: var(--r-sm);
+            font-family: var(--sans);
+            font-size: 0.78rem;
             cursor: pointer;
             border: none;
-            transition: all 0.15s;
+            transition: all 0.2s var(--ease);
+            font-weight: 500;
         }
-        .edit-btn-save { background: #1a2e1a; color: #4caf50; }
-        .edit-btn-save:hover { background: #2e4a2e; }
-        .edit-btn-cancel { background: #1a1a1a; color: #888; }
-        .edit-btn-cancel:hover { background: #222; }
-        .edit-btn-delete { background: #2e1a1a; color: #e07070; }
-        .edit-btn-delete:hover { background: #4e2a2a; }
+        .edit-btn-save {
+            background: var(--success-dim);
+            color: var(--success);
+        }
+        .edit-btn-save:hover { background: rgba(58,125,92,0.2); }
+        .edit-btn-cancel {
+            background: var(--surface);
+            color: var(--text-2);
+        }
+        .edit-btn-cancel:hover { background: var(--surface-hover); }
+        .edit-btn-delete {
+            background: var(--error-dim);
+            color: #e07070;
+        }
+        .edit-btn-delete:hover { background: rgba(204,68,68,0.18); }
 
         .click-hint {
-            font-size: 0.75rem;
-            color: #444;
+            font-size: 0.72rem;
+            color: var(--text-3);
             text-align: center;
             margin-bottom: 1rem;
+            letter-spacing: 0.03em;
         }
 {% endblock %}
 
@@ -310,13 +343,11 @@
             </div>
         </div>
 
-        <!-- Characters & Voices -->
         <div class="characters-panel">
             <h2>Characters &amp; Voices</h2>
             <div class="character-list" id="characterList"></div>
         </div>
 
-        <!-- Segments -->
         <div class="segments-header">
             <h2>Segments</h2>
             <div class="segment-count" id="segmentCount"></div>
@@ -430,7 +461,6 @@
             const isVoice = seg.type === 'narration' || seg.type === 'dialogue';
             const isPause = seg.type === 'pause';
 
-            // Display view
             let displayHtml = '<div class="segment-display">';
             if (isVoice) {
                 displayHtml += '<div class="segment-text">' + escapeHtml(seg.text || '') + '</div>';
@@ -441,7 +471,6 @@
             }
             displayHtml += '</div>';
 
-            // Edit view
             let editHtml = '<div class="segment-edit">';
             if (isVoice) {
                 editHtml += '<textarea class="edit-field" data-field="text">' + escapeHtml(seg.text || '') + '</textarea>';
@@ -480,7 +509,6 @@
     }
 
     function toggleEdit(card) {
-        // Close other open editors
         document.querySelectorAll('.segment-card.editing').forEach(c => {
             if (c !== card) c.classList.remove('editing');
         });
@@ -554,7 +582,6 @@
         }
     }
 
-    // Warn before leaving with unsaved changes
     window.addEventListener('beforeunload', (e) => {
         if (hasChanges) {
             e.preventDefault();
