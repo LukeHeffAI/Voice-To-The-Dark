@@ -7,7 +7,7 @@ class TestStoryListPage:
     def test_renders_empty(self, client, db_session):
         resp = client.get("/")
         assert resp.status_code == 200
-        assert "Voice To The Dark" in resp.text
+        assert "Voice In The Dark" in resp.text
 
 
 class TestSubmitPage:

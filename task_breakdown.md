@@ -1,6 +1,6 @@
-# Voice To The Dark — Project Plan
+# Voice In The Dark — Project Plan
 
-**Voice To The Dark** transforms horror stories from r/nosleep into dramatically narrated audio productions — complete with multiple character voices, ambient soundscapes, and cinematic sound effects — ready to listen to like a horror podcast.
+**Voice In The Dark** transforms horror stories from r/nosleep into dramatically narrated audio productions — complete with multiple character voices, ambient soundscapes, and cinematic sound effects — ready to listen to like a horror podcast.
 
 ---
 

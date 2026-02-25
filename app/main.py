@@ -102,7 +102,7 @@ def _migrate_db():
 _migrate_db()
 story.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Voice To The Dark", version="0.1.0")
+app = FastAPI(title="Voice In The Dark", version="0.1.0")
 
 # Static files (icons for lock-screen artwork, etc.)
 static_dir = os.path.join(os.path.dirname(__file__), "static")

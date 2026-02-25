@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ─── Voice To The Dark — Deployment Script ────────────────────────
+# ─── Voice In The Dark — Deployment Script ────────────────────────
 # Run this once on your Linux server to set everything up.
 # After that, the app auto-starts on reboot via Docker.
 
 COMPOSE="docker compose"
 
 echo "========================================"
-echo "  Voice To The Dark — Deployment Setup"
+echo "  Voice In The Dark — Deployment Setup"
 echo "========================================"
 echo
 
@@ -52,7 +52,7 @@ echo "Data directories ready (data/db, data/stories, data/sfx_cache)."
 
 # ── 5. Build and start the container ─────────────────────────────
 echo
-echo "Building and starting Voice To The Dark..."
+echo "Building and starting Voice In The Dark..."
 $COMPOSE up -d --build
 
 echo

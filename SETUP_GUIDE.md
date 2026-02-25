@@ -1,4 +1,4 @@
-# Voice To The Dark — Setup Guide
+# Voice In The Dark — Setup Guide
 
 ## Server Setup (Your Linux PC)
 
@@ -82,7 +82,7 @@ This makes it feel like a real app — one tap to open, no URL to remember.
 2. Tap the **menu** button (three horizontal lines, bottom-right)
 3. Tap **"Add page to"**
 4. Tap **"Home screen"**
-5. Name it **"Voice To The Dark"** (or whatever you like)
+5. Name it **"Voice In The Dark"** (or whatever you like)
 6. Tap **Add**
 
 Now there's an icon on her home screen that opens straight to the app.

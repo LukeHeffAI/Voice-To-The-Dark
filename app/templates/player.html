@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ story.title }} — Voice To The Dark{% endblock %}
+{% block title %}{{ story.title }} — Voice In The Dark{% endblock %}
 
 {% block viewport_extra %}, user-scalable=no{% endblock %}
 
@@ -632,7 +632,7 @@
 
         navigator.mediaSession.metadata = new MediaMetadata({
             title: {{ story.title | tojson }},
-            artist: 'Voice To The Dark',
+            artist: 'Voice In The Dark',
             album: 'NoSleep Narrations',
             artwork: [
                 { src: '/static/icon-192.png', sizes: '192x192', type: 'image/png' },
