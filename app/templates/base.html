@@ -149,6 +149,7 @@
         }
         @keyframes fog-settle {
             0%   { opacity: 0; }
+            40%  { opacity: 0.55; transform: translate(0, 3vh) scaleX(1.2); }
             100% { opacity: 1; }
         }
         /* Evaporate — dissolves on departure to Settings */
@@ -157,8 +158,9 @@
             animation: fog-evaporate 3s ease-in forwards;
         }
         @keyframes fog-evaporate {
-            0%   { opacity: 1; }
-            100% { opacity: 0; }
+            0%   { opacity: 1; transform: translate(0, 0) scaleX(1); }
+            40%  { opacity: 0.55; transform: translate(0, 3vh) scaleX(1.2); }
+            100% { opacity: 0; transform: translate(0, 8vh) scaleX(1.25); }
         }
 
         /* ── Shared components ─────────────────────────────── */
