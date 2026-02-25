@@ -6,9 +6,16 @@ from app.schemas.narration import NarrationScript, CharacterProfile, ScriptSegme
 
 logger = logging.getLogger(__name__)
 
-# Claude's output token limit per request. If the story is very long we
-# process it in sections and stitch the scripts together.
-MAX_OUTPUT_TOKENS = 8192
+
+class _TruncatedResponseError(Exception):
+    """Raised when Claude's response is cut off by the max_tokens limit."""
+
+
+# Claude's output token limit per request.  Sonnet supports much larger
+# windows; 16 384 tokens gives long stories enough headroom while still
+# keeping costs reasonable.  If a section *still* gets truncated the
+# caller will automatically re-split and retry.
+MAX_OUTPUT_TOKENS = 20000
 
 SYSTEM_PROMPT = """\
 You are a horror audio drama director. Your job is to transform a written \
@@ -85,7 +92,15 @@ def generate_script(title: str, narration_text: str) -> NarrationScript:
     sections = _split_for_adaptation(narration_text)
 
     if len(sections) == 1:
-        script = _adapt_section(client, title, sections[0])
+        try:
+            script = _adapt_section(client, title, sections[0])
+        except _TruncatedResponseError:
+            logger.info(
+                "Single section truncated for '%s', re-splitting into smaller pieces",
+                title,
+            )
+            sections = _split_for_adaptation(narration_text, max_chars=6000)
+            script = _adapt_long_story(client, title, sections)
     else:
         script = _adapt_long_story(client, title, sections)
 
@@ -115,6 +130,18 @@ def _adapt_section(
         messages=[{"role": "user", "content": user_prompt}],
     )
 
+    # Detect truncated output *before* attempting JSON parse.  When the
+    # response is cut off mid-token the JSON will always be invalid, so
+    # there is no point trying to parse it — signal the caller to retry
+    # with a smaller input section instead.
+    if response.stop_reason == "max_tokens":
+        logger.warning(
+            "Claude response truncated (max_tokens) for '%s'; "
+            "input section may be too long for a single request",
+            title,
+        )
+        raise _TruncatedResponseError(title)
+
     raw_text = response.content[0].text.strip()
     # Strip markdown code fences if present
     if raw_text.startswith("```"):
@@ -139,18 +166,50 @@ def _adapt_long_story(
     sections: list[str],
 ) -> NarrationScript:
     """Process a multi-section story by adapting each section sequentially,
-    carrying character definitions forward for consistency."""
+    carrying character definitions forward for consistency.
 
-    combined_characters = {}
-    all_segments = []
+    If any individual section causes a truncated response, it is
+    automatically split in half and the sub-sections are retried.
+    """
 
-    for i, section in enumerate(sections):
-        logger.info(f"Adapting section {i + 1}/{len(sections)} of '{title}'")
+    MAX_ITERATIONS = 50  # safety limit to prevent runaway splitting
 
-        script = _adapt_section(
-            client, title, section,
-            prior_characters=combined_characters if combined_characters else None,
-        )
+    combined_characters: dict = {}
+    all_segments: list[dict] = []
+
+    # Use a queue so truncated sections can be split and re-inserted.
+    pending = list(sections)
+    processed = 0
+    iterations = 0
+
+    while pending:
+        iterations += 1
+        if iterations > MAX_ITERATIONS:
+            raise ValueError(
+                f"Story '{title}' required too many sections to process "
+                f"(exceeded {MAX_ITERATIONS})"
+            )
+
+        section = pending.pop(0)
+        processed += 1
+        logger.info("Adapting section %d of '%s'", processed, title)
+
+        try:
+            script = _adapt_section(
+                client, title, section,
+                prior_characters=combined_characters if combined_characters else None,
+            )
+        except _TruncatedResponseError:
+            # This section's output exceeded max_tokens.  Split it and
+            # prepend the halves back onto the queue for retry.
+            logger.info(
+                "Section %d of '%s' truncated, splitting further",
+                processed, title,
+            )
+            halves = _split_for_adaptation(section, max_chars=len(section) // 2)
+            pending = halves + pending
+            processed -= 1  # don't count the failed attempt
+            continue
 
         # Merge characters (later sections may introduce new ones)
         combined_characters.update(
@@ -158,7 +217,7 @@ def _adapt_long_story(
         )
 
         # Add a scene transition pause between sections (not before the first)
-        if i > 0 and all_segments:
+        if all_segments:
             all_segments.append({"type": "pause", "duration_ms": 2000})
 
         all_segments.extend([s.model_dump() for s in script.segments])
