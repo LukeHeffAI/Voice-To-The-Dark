@@ -289,7 +289,10 @@
 
     window.removeFromFolder = function(folderId, storyId) {
         fetch('/stories/folders/' + folderId + '/stories/' + storyId, { method: 'DELETE' })
-            .then(r => r.json())
+            .then(r => {
+                if (!r.ok) throw new Error('Server error: ' + r.status);
+                return r.json();
+            })
             .then(() => {
                 const wrapper = document.querySelector('[data-story-id="' + storyId + '"]');
                 if (wrapper) {
@@ -300,14 +303,19 @@
                     setTimeout(() => wrapper.parentElement.remove(), 350);
                 }
                 showToast('Removed from folder');
-            });
+            })
+            .catch(() => showToast('Failed to remove story from folder'));
     };
 
     window.deleteFolder = function(folderId) {
         if (!confirm('Delete this folder? Stories will not be deleted.')) return;
         fetch('/stories/folders/' + folderId, { method: 'DELETE' })
-            .then(r => r.json())
-            .then(() => { window.location.href = '/'; });
+            .then(r => {
+                if (!r.ok) throw new Error('Server error: ' + r.status);
+                return r.json();
+            })
+            .then(() => { window.location.href = '/'; })
+            .catch(() => showToast('Failed to delete folder'));
     };
 })();
 </script>
