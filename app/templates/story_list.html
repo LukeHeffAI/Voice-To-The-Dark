@@ -1,135 +1,134 @@
 {% extends "base.html" %}
 
 {% block styles %}
-        body {
-            padding: 1rem;
-        }
+        body { padding: 1.25rem; }
 
-        .header {
+        .hero {
             text-align: center;
-            padding: 1.5rem 0;
-            border-bottom: 1px solid #1a1a1a;
-            margin-bottom: 1.5rem;
+            padding: 3rem 0 2.5rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2rem;
         }
-        .header h1 {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #c0392b;
+        .hero h1 {
+            font-family: var(--serif);
+            font-weight: 300;
+            font-size: 2.2rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--text-1);
+            line-height: 1.2;
         }
-        .header p {
-            font-size: 0.85rem;
-            color: #666;
-            margin-top: 0.3rem;
+        .hero .tagline {
+            font-family: var(--serif);
+            font-size: 1rem;
+            font-weight: 300;
+            font-style: italic;
+            color: var(--text-3);
+            margin-top: 0.6rem;
+            letter-spacing: 0.06em;
         }
 
         .submit-link {
             display: block;
-            max-width: 600px;
-            margin: 0 auto 1.5rem;
+            max-width: 640px;
+            margin: 0 auto 2rem;
             text-align: center;
-            padding: 0.75rem 1.5rem;
-            border: 1px dashed #333;
-            border-radius: 10px;
-            color: #888;
+            padding: 0.85rem 1.5rem;
+            border: 1px solid var(--border);
+            border-radius: var(--r-lg);
+            color: var(--text-3);
             text-decoration: none;
-            font-size: 0.9rem;
-            transition: all 0.15s;
+            font-size: 0.85rem;
+            font-weight: 500;
+            letter-spacing: 0.04em;
+            transition: all 0.3s var(--ease);
         }
         .submit-link:hover {
-            border-color: #c0392b;
-            color: #c0392b;
-            background: #1a0f0f;
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-dim);
+            box-shadow: var(--accent-glow);
         }
 
         .story-list {
             list-style: none;
-            max-width: 600px;
+            max-width: 640px;
             margin: 0 auto;
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
+            gap: 0.6rem;
         }
 
         .story-card {
-            background: #111;
-            border: 1px solid #1a1a1a;
-            border-radius: 10px;
-            padding: 1rem 1.2rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-md);
+            padding: 1.1rem 1.3rem;
             text-decoration: none;
             color: inherit;
             display: block;
-            transition: border-color 0.15s;
+            transition: all 0.3s var(--ease);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
         }
-        .story-card:hover { border-color: #333; }
+        .story-card:hover {
+            border-color: var(--border-hover);
+            background: var(--surface-hover);
+            transform: translateY(-1px);
+        }
 
         .story-card-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: #f0f0f0;
-            line-height: 1.3;
+            font-family: var(--serif);
+            font-size: 1.15rem;
+            font-weight: 500;
+            color: var(--text-1);
+            line-height: 1.35;
         }
 
         .story-card-meta {
             display: flex;
-            gap: 1rem;
-            margin-top: 0.4rem;
-            font-size: 0.8rem;
-            color: #666;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-3);
+            letter-spacing: 0.02em;
         }
 
-        .badge {
-            display: inline-block;
-            padding: 0.15rem 0.5rem;
-            border-radius: 10px;
-            font-size: 0.7rem;
-            font-weight: 600;
-        }
         .badge-audio {
-            background: #1a2e1a;
-            color: #4caf50;
-            border: 1px solid #2e4a2e;
+            background: var(--success-dim);
+            color: var(--success);
+            border: 1px solid rgba(58,125,92,0.15);
         }
         .badge-script {
-            background: #1a1a2e;
-            color: #8888cc;
-            border: 1px solid #2a2a4e;
+            background: var(--info-dim);
+            color: var(--info);
+            border: 1px solid rgba(104,104,184,0.15);
         }
         .badge-pending {
-            background: #1a1a1a;
-            color: #888;
-            border: 1px solid #2a2a2a;
+            background: var(--surface);
+            color: var(--text-3);
+            border: 1px solid var(--border);
         }
 
         .empty-state {
             text-align: center;
-            padding: 3rem 1rem;
-            color: #555;
+            padding: 4rem 1rem;
+            color: var(--text-3);
         }
-        .empty-state p { margin-top: 0.5rem; font-size: 0.9rem; }
+        .empty-state p {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
         .empty-state a {
-            color: #c0392b;
+            color: var(--accent);
             text-decoration: none;
         }
         .empty-state a:hover { text-decoration: underline; }
-
-        .auth-nav {
-            max-width: 600px;
-            margin: 0 auto;
-            text-align: right;
-            padding: 0.5rem 0;
-            font-size: 0.8rem;
-        }
-        .auth-nav a {
-            color: #666;
-            text-decoration: none;
-            margin-left: 1rem;
-        }
-        .auth-nav a:hover { color: #ccc; }
-        .auth-nav .username { color: #888; }
 {% endblock %}
 
 {% block body %}
-    <div class="auth-nav">
+    <div class="auth-nav" style="max-width:640px;margin:0 auto;">
         {% if user %}
         <span class="username">{{ user.username }}</span>
         <a href="/settings">Settings</a>
@@ -139,9 +138,9 @@
         {% endif %}
     </div>
 
-    <div class="header">
+    <div class="hero">
         <h1>Voice To The Dark</h1>
-        <p>NoSleep horror narrations</p>
+        <p class="tagline">NoSleep horror narrations</p>
     </div>
 
     <a href="/submit" class="submit-link">+ Submit a new story</a>

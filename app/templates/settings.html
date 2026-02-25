@@ -3,71 +3,58 @@
 {% block title %}Settings — Voice To The Dark{% endblock %}
 
 {% block styles %}
-        body {
-            padding: 1rem;
-        }
-
-        .back-link {
-            color: #888;
-            text-decoration: none;
-            font-size: 0.9rem;
-            padding: 0.5rem 0;
-            display: inline-block;
-        }
-        .back-link:hover { color: #ccc; }
+        body { padding: 1.25rem; }
 
         .page-container {
-            max-width: 600px;
+            max-width: 640px;
             margin: 0 auto;
         }
 
         .header {
             text-align: center;
-            padding: 1.5rem 0;
-            border-bottom: 1px solid #1a1a1a;
-            margin-bottom: 1.5rem;
+            padding: 2rem 0 2rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1.75rem;
         }
         .header h1 {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #c0392b;
+            font-family: var(--serif);
+            font-weight: 300;
+            font-size: 1.8rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-1);
         }
         .header p {
-            font-size: 0.85rem;
-            color: #666;
-            margin-top: 0.3rem;
+            font-family: var(--serif);
+            font-size: 0.95rem;
+            font-weight: 300;
+            font-style: italic;
+            color: var(--text-3);
+            margin-top: 0.4rem;
         }
-
-        .auth-nav {
-            text-align: right;
-            padding: 0.5rem 0;
-            font-size: 0.8rem;
-        }
-        .auth-nav a {
-            color: #666;
-            text-decoration: none;
-            margin-left: 1rem;
-        }
-        .auth-nav a:hover { color: #ccc; }
-        .auth-nav .username { color: #888; }
 
         .settings-section {
-            margin-bottom: 2rem;
-            background: #111;
-            border: 1px solid #1a1a1a;
-            border-radius: 10px;
-            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-md);
+            padding: 1.3rem;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
         }
         .settings-section h2 {
-            font-size: 1rem;
-            font-weight: 600;
-            color: #ccc;
-            margin-bottom: 0.75rem;
+            font-family: var(--serif);
+            font-size: 1.05rem;
+            font-weight: 500;
+            color: var(--text-1);
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.03em;
         }
         .settings-section p {
-            font-size: 0.85rem;
-            color: #666;
+            font-size: 0.8rem;
+            color: var(--text-3);
             margin-bottom: 1rem;
+            line-height: 1.5;
         }
 
         .setting-row {
@@ -77,58 +64,47 @@
             margin-bottom: 0.75rem;
         }
         .setting-row label {
-            font-size: 0.9rem;
-            color: #aaa;
-            min-width: 120px;
+            font-size: 0.82rem;
+            color: var(--text-2);
+            min-width: 110px;
+            letter-spacing: 0.01em;
         }
 
         select, input[type="file"] {
             padding: 0.5rem 0.75rem;
-            border: 1px solid #333;
-            border-radius: 8px;
-            background: #0a0a0a;
-            color: #e0e0e0;
-            font-size: 0.9rem;
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            background: rgba(0,0,0,0.2);
+            color: var(--text-1);
+            font-family: var(--sans);
+            font-size: 0.85rem;
             outline: none;
+            transition: border-color 0.2s var(--ease);
         }
-        select:focus { border-color: #c0392b; }
+        select:focus { border-color: var(--border-focus); }
 
         .save-btn, .upload-btn {
-            padding: 0.6rem 1.2rem;
+            padding: 0.55rem 1.2rem;
             border: none;
-            border-radius: 8px;
-            background: #c0392b;
+            border-radius: var(--r-sm);
+            background: var(--accent);
             color: #fff;
-            font-size: 0.9rem;
+            font-family: var(--sans);
+            font-size: 0.82rem;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.15s;
+            transition: all 0.25s var(--ease);
+            letter-spacing: 0.02em;
         }
-        .save-btn:hover, .upload-btn:hover { background: #a93226; }
+        .save-btn:hover, .upload-btn:hover {
+            background: var(--accent-hover);
+            box-shadow: var(--accent-glow);
+        }
         .save-btn:disabled, .upload-btn:disabled {
-            background: #333;
-            color: #666;
+            background: rgba(255,255,255,0.06);
+            color: var(--text-3);
             cursor: not-allowed;
-        }
-
-        .form-message {
-            margin-top: 0.75rem;
-            padding: 0.6rem 0.9rem;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            display: none;
-        }
-        .form-message.error {
-            display: block;
-            background: #2e1a1a;
-            border: 1px solid #4e2a2a;
-            color: #e07070;
-        }
-        .form-message.success {
-            display: block;
-            background: #1a2e1a;
-            border: 1px solid #2e4a2e;
-            color: #70e070;
+            box-shadow: none;
         }
 
         .cache-status {
@@ -137,16 +113,19 @@
         .cache-status-item {
             display: flex;
             justify-content: space-between;
-            padding: 0.4rem 0;
-            border-bottom: 1px solid #1a1a1a;
-            font-size: 0.85rem;
+            padding: 0.45rem 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.82rem;
         }
         .cache-status-item:last-child { border-bottom: none; }
-        .cache-status-label { color: #aaa; }
-        .cache-status-value { color: #666; }
-        .cache-status-value.fresh { color: #70e070; }
-        .cache-status-value.stale { color: #e0a030; }
-        .cache-status-value.missing { color: #555; }
+        .cache-status-label { color: var(--text-2); }
+        .cache-status-value {
+            color: var(--text-3);
+            font-variant-numeric: tabular-nums;
+        }
+        .cache-status-value.fresh { color: var(--success); }
+        .cache-status-value.stale { color: var(--warn); }
+        .cache-status-value.missing { color: var(--text-3); }
 
         .upload-area {
             margin-top: 1rem;
@@ -163,7 +142,15 @@
             display: inline-block;
         }
         .file-input-wrapper input[type="file"] {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
+        }
+
+        .settings-section code {
+            background: rgba(255,255,255,0.06);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.78rem;
+            color: var(--text-2);
         }
 {% endblock %}
 
@@ -183,7 +170,6 @@
             <p>Configure Reddit caching and other options</p>
         </div>
 
-        <!-- Reddit Cache TTL Setting -->
         <div class="settings-section">
             <h2>Reddit Refresh Interval</h2>
             <p>How often to re-fetch top stories from Reddit. Cached data is served between refreshes.</p>
@@ -200,7 +186,6 @@
             <div class="form-message" id="ttlMessage"></div>
         </div>
 
-        <!-- Cache Status -->
         <div class="settings-section">
             <h2>Cache Status</h2>
             <p>Shows when each timeframe was last cached from Reddit.</p>
@@ -221,7 +206,6 @@
             </div>
         </div>
 
-        <!-- Manual Reddit JSON Upload -->
         <div class="settings-section">
             <h2>Manual Reddit Data Upload</h2>
             <p>
@@ -255,7 +239,6 @@
 
 {% block scripts %}
     <script>
-    // ── Cache age display ───────────────────────────────
     const cacheInfo = {{ cache_info | tojson }};
     const now = Date.now() / 1000;
 
@@ -279,7 +262,6 @@
         }
     }
 
-    // ── Save TTL ────────────────────────────────────────
     async function saveTtl() {
         const btn = document.getElementById('saveTtlBtn');
         const msg = document.getElementById('ttlMessage');
@@ -308,7 +290,6 @@
         btn.textContent = 'Save';
     }
 
-    // ── Upload JSON ─────────────────────────────────────
     async function uploadJson() {
         const btn = document.getElementById('uploadBtn');
         const msg = document.getElementById('uploadMessage');
@@ -336,7 +317,6 @@
             const data = await resp.json();
             if (resp.ok) {
                 showMsg(msg, 'Uploaded ' + data.posts_count + ' posts for ' + timeframe + '.', 'success');
-                // Update cache status display
                 const statusEl = document.getElementById('cacheAge_' + timeframe);
                 if (statusEl) {
                     statusEl.textContent = 'just now';
