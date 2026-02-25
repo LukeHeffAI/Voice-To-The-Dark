@@ -358,16 +358,18 @@ def unhide_story(story_id: int, user: User = Depends(get_current_user), db: Sess
 @router.get("/folders/list", response_model=list[FolderResponse])
 def list_folders(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """List all folders for the current user."""
-    folders = db.query(StoryFolder).filter(
-        StoryFolder.user_id == user.id
-    ).order_by(StoryFolder.name).all()
-    result = []
-    for f in folders:
-        count = db.query(StoryFolderMembership).filter(
-            StoryFolderMembership.folder_id == f.id
-        ).count()
-        result.append(FolderResponse(id=f.id, name=f.name, story_count=count, created_at=f.created_at))
-    return result
+    rows = (
+        db.query(StoryFolder, func.count(StoryFolderMembership.story_id).label("story_count"))
+        .outerjoin(StoryFolderMembership, StoryFolderMembership.folder_id == StoryFolder.id)
+        .filter(StoryFolder.user_id == user.id)
+        .group_by(StoryFolder.id)
+        .order_by(StoryFolder.name)
+        .all()
+    )
+    return [
+        FolderResponse(id=f.id, name=f.name, story_count=count, created_at=f.created_at)
+        for f, count in rows
+    ]
 
 
 @router.post("/folders/create", response_model=FolderResponse)
