@@ -497,8 +497,12 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ story_id: storyId })
         })
-        .then(r => r.json())
-        .then(() => showToast('Added to ' + folderName));
+        .then(r => {
+            if (!r.ok) return r.json().then(d => { throw new Error(d.detail || 'Error'); });
+            return r.json();
+        })
+        .then(() => showToast('Added to ' + folderName))
+        .catch(err => showToast(err.message));
     };
 
     window.createFolderAndAdd = function(storyId) {
