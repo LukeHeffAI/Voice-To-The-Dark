@@ -9,6 +9,7 @@ class StorySubmitRequest(BaseModel):
 
 class ManualStorySubmitRequest(BaseModel):
     title: Optional[str] = None
+    author: Optional[str] = None
     text_content: Optional[str] = None
     reddit_url: Optional[str] = None
 
