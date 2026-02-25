@@ -225,6 +225,46 @@ def script_editor_page(request: Request, story_id: int, db: Session = Depends(ge
     })
 
 
+@router.get("/read/{story_id}", response_class=HTMLResponse)
+def reader_page(request: Request, story_id: int, db: Session = Depends(get_db), user: User | None = Depends(get_optional_user)):
+    """Serve the in-app story reader page."""
+    story = db.query(Story).filter(Story.id == story_id).first()
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    if not story.text_content:
+        raise HTTPException(status_code=404, detail="No story text available")
+
+    _record_story_view(db, user, story_id)
+
+    source_text = story.text_content or ""
+    word_count = len(source_text.split()) if source_text else 0
+    # ~230 words per minute for average reading speed
+    read_minutes = round(word_count / 230) if word_count else 0
+
+    # Split text into paragraphs, preserving section breaks
+    import re
+    raw_paragraphs = re.split(r'\n\s*\n', source_text.strip())
+    paragraphs = []
+    for p in raw_paragraphs:
+        text = p.strip()
+        if not text:
+            continue
+        # Detect horizontal-rule-style separators
+        if re.match(r'^[\-\*_\s]{3,}$', text):
+            paragraphs.append('---')
+        else:
+            paragraphs.append(text)
+
+    return templates.TemplateResponse("reader.html", {
+        "request": request,
+        "story": story,
+        "paragraphs": paragraphs,
+        "word_count": word_count,
+        "read_minutes": read_minutes,
+        "user": user,
+    })
+
+
 @router.get("/listen/{story_id}", response_class=HTMLResponse)
 def player_page(request: Request, story_id: int, db: Session = Depends(get_db), user: User | None = Depends(get_optional_user)):
     """Serve the audio player page for a specific story."""
