@@ -151,12 +151,21 @@
         .char-field-input:focus { border-color: var(--border-focus); }
         select.char-field-input {
             cursor: pointer;
+            color-scheme: dark;
             -webkit-appearance: none;
             appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23555'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238a8a8a'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-position: right 0.65rem center;
             padding-right: 1.8rem;
+        }
+        select.char-field-input option,
+        select.char-field-input optgroup {
+            background-color: var(--bg);
+            color: var(--text-1);
+        }
+        select.char-field-input optgroup {
+            color: var(--text-2);
         }
         .char-voice-hint {
             font-size: 0.68rem;
