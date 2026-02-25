@@ -354,23 +354,71 @@ def get_series_parts(story_id: int, db: Session = Depends(get_db)):
     if not parts:
         return []
 
-    # Enrich parts with story_id for those already submitted
-    existing = {
-        row.reddit_url: row.id
-        for row in db.query(Story.id, Story.reddit_url).filter(
-            Story.reddit_url.isnot(None)
-        ).all()
-    }
+    # Build a minimal set of candidate URLs from the discovered parts
+    candidate_urls = set()
     for part in parts:
-        part_url = (part.get("url") or "").rstrip("/")
-        # Check with and without trailing slash since URLs may vary
+        raw_url = (part.get("url") or "").strip()
+        if not raw_url:
+            continue
+        base_url = raw_url.rstrip("/")
+        if not base_url:
+            continue
+        candidate_urls.add(base_url)
+        candidate_urls.add(base_url + "/")
+        # Also add www/non-www host variant to catch host differences
+        try:
+            parsed = urlparse(raw_url)
+            netloc = parsed.netloc.lower()
+            if netloc.startswith("www."):
+                alt_netloc = netloc[4:]
+            else:
+                alt_netloc = "www." + netloc
+            alt_url = parsed._replace(netloc=alt_netloc).geturl().rstrip("/")
+            candidate_urls.add(alt_url)
+            candidate_urls.add(alt_url + "/")
+        except Exception:
+            pass
+
+    if candidate_urls:
+        existing = {
+            row.reddit_url: row.id
+            for row in db.query(Story.id, Story.reddit_url).filter(
+                Story.reddit_url.in_(candidate_urls)
+            ).all()
+        }
+    else:
+        existing = {}
+
+    # Build a canonical URL lookup to handle host variants (e.g., www.reddit.com vs reddit.com)
+    canonical_existing = {}
+    for db_url, db_id in existing.items():
+        if not db_url:
+            continue
+        parsed = urlparse(db_url)
+        netloc = parsed.netloc.lower()
+        if netloc.startswith("www."):
+            netloc = netloc[4:]
+        path = parsed.path.rstrip("/")
+        key = (netloc, path)
+        if key not in canonical_existing:
+            canonical_existing[key] = db_id
+
+    for part in parts:
+        raw_part_url = part.get("url") or ""
+        part_url = raw_part_url.rstrip("/")
+        # First try exact match with and without trailing slash
         matched_id = existing.get(part_url) or existing.get(part_url + "/")
-        # Also try matching with normalized host variants
-        if not matched_id:
-            for db_url, db_id in existing.items():
-                if db_url and db_url.rstrip("/") == part_url:
-                    matched_id = db_id
-                    break
+
+        # If no exact match, try canonical host/path matching for host variants
+        if not matched_id and raw_part_url:
+            parsed_part = urlparse(raw_part_url)
+            netloc = parsed_part.netloc.lower()
+            if netloc.startswith("www."):
+                netloc = netloc[4:]
+            path = parsed_part.path.rstrip("/")
+            key = (netloc, path)
+            matched_id = canonical_existing.get(key)
+
         part["story_id"] = matched_id
 
     return parts
