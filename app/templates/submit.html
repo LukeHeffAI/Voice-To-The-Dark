@@ -529,6 +529,7 @@
     let currentFilter = 'alltime';
     let storyCache = {};
     let urlFetchTimer = null;
+    let urlFetchController = null;
     let urlLocked = false;
     const isLoggedIn = {{ 'true' if user else 'false' }};
 
@@ -583,12 +584,22 @@
     }
 
     async function fetchPreview(url) {
+        // Abort any in-flight request for a previous URL
+        if (urlFetchController) {
+            urlFetchController.abort();
+        }
+        urlFetchController = new AbortController();
+        const signal = urlFetchController.signal;
+
         urlStatus.textContent = 'Fetching story details...';
         urlStatus.className = 'url-status fetching';
 
         try {
-            const resp = await fetch('/stories/fetch-preview?reddit_url=' + encodeURIComponent(url));
+            const resp = await fetch('/stories/fetch-preview?reddit_url=' + encodeURIComponent(url), { signal });
             const data = await resp.json();
+
+            // Ignore response if the user has since changed the URL
+            if (manualUrl.value.trim() !== url) return;
 
             if (!resp.ok) {
                 urlStatus.textContent = data.detail || 'Could not fetch story.';
@@ -606,6 +617,7 @@
             urlStatus.textContent = 'Story details loaded.';
             urlStatus.className = 'url-status success';
         } catch (err) {
+            if (err.name === 'AbortError') return;
             urlStatus.textContent = 'Network error fetching preview.';
             urlStatus.className = 'url-status error';
         }
