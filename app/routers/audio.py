@@ -15,9 +15,109 @@ from app.models.story import User
 from app.deps import get_current_user
 from app.rate_limit import rate_limit
 
+from urllib.parse import urlparse
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _collect_series_characters(story: Story, db: Session) -> dict | None:
+    """Merge character definitions from earlier parts of the same series.
+
+    Returns a dict of ``{name: {voice_profile: ...}}`` suitable for passing
+    as *prior_characters* to :func:`generate_script`, or ``None`` if there
+    are no prior characters to inherit.
+
+    Parts are ordered by ``created_utc`` from their ``series_json`` entries
+    so that the latest character definitions take precedence.
+    """
+    if not story.series_json:
+        return None
+
+    try:
+        series_parts = json.loads(story.series_json)
+    except (json.JSONDecodeError, TypeError):
+        return None
+
+    # Find the current story's created_utc in the series
+    current_url = (story.reddit_url or "").rstrip("/")
+    current_created = None
+    for part in series_parts:
+        part_url = (part.get("url") or "").rstrip("/")
+        pa = urlparse(current_url)
+        pb = urlparse(part_url)
+        na = pa.netloc.lower().removeprefix("www.")
+        nb = pb.netloc.lower().removeprefix("www.")
+        if na == nb and pa.path.rstrip("/") == pb.path.rstrip("/"):
+            current_created = part.get("created_utc", 0)
+            break
+
+    if current_created is None:
+        return None
+
+    # Collect URLs of earlier parts (by created_utc)
+    earlier_urls = []
+    for part in series_parts:
+        if part.get("created_utc", 0) < current_created:
+            url = (part.get("url") or "").strip()
+            if url:
+                earlier_urls.append(url)
+
+    if not earlier_urls:
+        return None
+
+    # Query the DB for those stories that have scripts
+    # Build candidate URL set with host variants
+    candidate_urls = set()
+    for url in earlier_urls:
+        base = url.rstrip("/")
+        candidate_urls.add(base)
+        candidate_urls.add(base + "/")
+        try:
+            parsed = urlparse(url)
+            netloc = parsed.netloc.lower()
+            alt = netloc[4:] if netloc.startswith("www.") else "www." + netloc
+            alt_url = parsed._replace(netloc=alt).geturl().rstrip("/")
+            candidate_urls.add(alt_url)
+            candidate_urls.add(alt_url + "/")
+        except Exception:
+            pass
+
+    earlier_stories = (
+        db.query(Story)
+        .filter(Story.reddit_url.in_(candidate_urls), Story.script_json.isnot(None))
+        .all()
+    )
+
+    if not earlier_stories:
+        return None
+
+    # Build a URL→created_utc lookup from series_parts for sorting
+    url_to_created = {}
+    for part in series_parts:
+        pu = (part.get("url") or "").rstrip("/")
+        p = urlparse(pu)
+        key = (p.netloc.lower().removeprefix("www."), p.path.rstrip("/"))
+        url_to_created[key] = part.get("created_utc", 0)
+
+    def _sort_key(s: Story) -> float:
+        p = urlparse((s.reddit_url or "").rstrip("/"))
+        key = (p.netloc.lower().removeprefix("www."), p.path.rstrip("/"))
+        return url_to_created.get(key, 0)
+
+    earlier_stories.sort(key=_sort_key)
+
+    # Merge character definitions (later parts override earlier)
+    merged: dict = {}
+    for s in earlier_stories:
+        try:
+            script = NarrationScript(**json.loads(s.script_json))
+            merged.update({k: v.model_dump() for k, v in script.characters.items()})
+        except Exception:
+            continue
+
+    return merged if merged else None
 
 
 class GenerateAudioRequest(BaseModel):
@@ -85,8 +185,11 @@ def generate_script_route(req: GenerateScriptRequest, _rl=Depends(rate_limit(10,
     if not text:
         raise HTTPException(status_code=400, detail="Story has no text to adapt")
 
+    # Inherit character definitions from earlier parts of the same series
+    prior_characters = _collect_series_characters(story, db)
+
     try:
-        script = generate_script(story.title, text)
+        script = generate_script(story.title, text, prior_characters=prior_characters)
     except Exception as exc:
         logger.exception("Script generation failed for story %s", req.story_id)
         raise HTTPException(

@@ -203,6 +203,17 @@
             color: var(--text-2);
             margin-bottom: 0.6rem;
             letter-spacing: 0.03em;
+            display: flex;
+            align-items: baseline;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+        .series-stats {
+            font-family: var(--sans);
+            font-size: 0.78rem;
+            font-weight: 400;
+            color: var(--text-3);
+            letter-spacing: 0;
         }
         .series-list {
             list-style: none;
@@ -534,18 +545,33 @@
         try {
             const resp = await fetch('/stories/' + storyId + '/series-parts');
             if (!resp.ok) return;
-            const parts = await resp.json();
+            const data = await resp.json();
+            const parts = data.parts || [];
             if (!parts || parts.length < 2) return;
             const section = document.getElementById('seriesSection');
             const list = document.getElementById('seriesList');
             section.style.display = 'block';
+            // Show series-level stats next to the heading
+            if (data.series_word_count > 0) {
+                const titleEl = section.querySelector('.series-title');
+                const statsSpan = document.createElement('span');
+                statsSpan.className = 'series-stats';
+                statsSpan.textContent =
+                    data.series_word_count.toLocaleString() + ' words' +
+                    ' \u00b7 ~' + data.series_est_minutes + ' min listen' +
+                    (data.submitted_count < data.total_count
+                        ? ' (' + data.submitted_count + ' of ' + data.total_count + ' parts)'
+                        : '');
+                titleEl.appendChild(statsSpan);
+            }
             const currentUrl = JSON.parse('{{ story.reddit_url | tojson if story.reddit_url else "null" }}');
-            for (const part of parts) {
+            for (let idx = 0; idx < parts.length; idx++) {
+                const part = parts[idx];
                 const li = document.createElement('li');
                 const isCurrent = currentUrl && part.url && (
                     currentUrl.replace(/\/$/, '') === part.url.replace(/\/$/, '')
                 );
-                const partNum = part.part_number || '?';
+                const partNum = idx + 1;
                 const partTitle = part.title || 'Part ' + partNum;
                 if (isCurrent) {
                     li.innerHTML =

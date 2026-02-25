@@ -20,7 +20,7 @@ from app.schemas.story import (
     FolderResponse,
     FolderAddStoryRequest,
 )
-from app.services.reddit import fetch_multi_part_story, fetch_story_text, fetch_post_metadata, find_series_parts
+from app.services.reddit import fetch_story_text, fetch_post_metadata, find_series_parts
 from app.services.hashing import hash_content
 from app.services.text_cleaner import clean_for_narration
 from app.models.story import User
@@ -68,6 +68,73 @@ def _validate_and_normalize_reddit_url(url: str) -> str:
     return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
 
 
+def _auto_submit_series_parts(
+    series_parts: list[dict],
+    submitted_url: str,
+    author: str | None,
+    series_json_str: str,
+    part_count: int,
+    db: Session,
+) -> None:
+    """Create Story records for all other parts in a series (best-effort).
+
+    Skips any parts whose URL matches *submitted_url* (already created by
+    the caller) or that already exist in the database.
+    """
+    from urllib.parse import urlparse
+
+    def _urls_equivalent(a: str, b: str) -> bool:
+        pa, pb = urlparse(a), urlparse(b)
+        na = pa.netloc.lower().removeprefix("www.")
+        nb = pb.netloc.lower().removeprefix("www.")
+        return na == nb and pa.path.rstrip("/") == pb.path.rstrip("/")
+
+    for part in series_parts:
+        part_url = (part.get("url") or "").strip()
+        if not part_url:
+            continue
+        if _urls_equivalent(part_url, submitted_url):
+            continue
+
+        # Skip if already in the DB
+        existing = db.query(Story.id).filter(Story.reddit_url == part_url).first()
+        if existing:
+            continue
+
+        try:
+            part_text = fetch_story_text(part_url)
+        except Exception:
+            logger.debug("Failed to fetch series part %s", part_url)
+            continue
+
+        if not part_text or not part_text.strip():
+            continue
+
+        content_digest = hash_content(part_text)
+        dup = db.query(Story.id).filter(Story.content_hash == content_digest).first()
+        if dup:
+            continue
+
+        narration = clean_for_narration(part_text)
+        story = Story(
+            title=part.get("title", "Unknown"),
+            author=author or None,
+            reddit_url=part_url,
+            text_content=part_text,
+            narration_text=narration,
+            content_hash=content_digest,
+            part_count=part_count,
+            series_json=series_json_str,
+        )
+        db.add(story)
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.warning("Failed to auto-submit some series parts")
+
+
 @router.post("/submit", response_model=StoryResponse)
 def submit_story(req: StorySubmitRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Fetch a story from a NoSleep URL and store it.
@@ -93,19 +160,15 @@ def submit_story(req: StorySubmitRequest, user: User = Depends(get_current_user)
         logger.error(f"Failed to fetch Reddit submission: {e}")
         raise HTTPException(status_code=400, detail=f"Could not fetch Reddit post: {e}")
 
-    # Fetch full text (multi-part aware)
+    # Fetch single post text only (no multi-part concatenation)
     try:
-        text = fetch_multi_part_story(reddit_url)
+        text = fetch_story_text(reddit_url)
     except Exception as e:
         logger.error(f"Failed to fetch story text: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to extract story text: {e}")
 
     if not text or not text.strip():
         raise HTTPException(status_code=400, detail="Story has no text content")
-
-    # Count parts by separator
-    parts = text.split("\n\n---\n\n")
-    part_count = len(parts)
 
     # Return existing story if content matches (same story, different URL)
     content_digest = hash_content(text)
@@ -123,6 +186,9 @@ def submit_story(req: StorySubmitRequest, user: User = Depends(get_current_user)
         except Exception:
             pass
 
+    part_count = len(series_parts) if series_parts else 1
+    series_json_str = json.dumps(series_parts) if series_parts else None
+
     story = Story(
         title=title,
         author=author or None,
@@ -131,11 +197,15 @@ def submit_story(req: StorySubmitRequest, user: User = Depends(get_current_user)
         narration_text=narration,
         content_hash=content_digest,
         part_count=part_count,
-        series_json=json.dumps(series_parts) if series_parts else None,
+        series_json=series_json_str,
     )
     db.add(story)
     db.commit()
     db.refresh(story)
+
+    # Auto-submit other series parts as individual stories (best-effort)
+    if series_parts:
+        _auto_submit_series_parts(series_parts, reddit_url, author, series_json_str, part_count, db)
 
     return story
 
@@ -179,7 +249,7 @@ def submit_story_manual(req: ManualStorySubmitRequest, user: User = Depends(get_
 
         if not text:
             try:
-                text = fetch_multi_part_story(url)
+                text = fetch_story_text(url)
             except Exception as e:
                 logger.error(f"Failed to fetch story text: {e}")
                 raise HTTPException(status_code=500, detail=f"Failed to extract story text: {e}")
@@ -195,10 +265,6 @@ def submit_story_manual(req: ManualStorySubmitRequest, user: User = Depends(get_
     if duplicate:
         return duplicate
 
-    # Count parts by separator
-    parts = text.split("\n\n---\n\n")
-    part_count = len(parts)
-
     narration = clean_for_narration(text)
 
     # Discover series parts from author's page (best-effort)
@@ -209,6 +275,9 @@ def submit_story_manual(req: ManualStorySubmitRequest, user: User = Depends(get_
         except Exception:
             pass
 
+    part_count = len(series_parts) if series_parts else 1
+    series_json_str = json.dumps(series_parts) if series_parts else None
+
     story = Story(
         title=title,
         author=author or None,
@@ -217,11 +286,15 @@ def submit_story_manual(req: ManualStorySubmitRequest, user: User = Depends(get_
         narration_text=narration,
         content_hash=content_digest,
         part_count=part_count,
-        series_json=json.dumps(series_parts) if series_parts else None,
+        series_json=series_json_str,
     )
     db.add(story)
     db.commit()
     db.refresh(story)
+
+    # Auto-submit other series parts as individual stories (best-effort)
+    if series_parts and url:
+        _auto_submit_series_parts(series_parts, url, author, series_json_str, part_count, db)
 
     return story
 
@@ -485,7 +558,11 @@ def get_series_parts(story_id: int, db: Session = Depends(get_db)):
             pass
 
     if not parts:
-        return []
+        return {"parts": [], "series_word_count": 0, "series_est_minutes": 0,
+                "submitted_count": 0, "total_count": 0}
+
+    # Sort parts by post date (oldest first) for consistent ordering
+    parts.sort(key=lambda p: p.get("created_utc", 0))
 
     # Build a minimal set of candidate URLs from the discovered parts
     candidate_urls = set()
@@ -554,7 +631,23 @@ def get_series_parts(story_id: int, db: Session = Depends(get_db)):
 
         part["story_id"] = matched_id
 
-    return parts
+    # Compute series-level word count from all submitted parts
+    submitted_ids = [p["story_id"] for p in parts if p.get("story_id")]
+    series_word_count = 0
+    if submitted_ids:
+        for row in db.query(Story.narration_text, Story.text_content).filter(
+            Story.id.in_(submitted_ids)
+        ).all():
+            source = row.narration_text or row.text_content or ""
+            series_word_count += len(source.split())
+
+    return {
+        "parts": parts,
+        "series_word_count": series_word_count,
+        "series_est_minutes": round(series_word_count / 150) if series_word_count else 0,
+        "submitted_count": len(submitted_ids),
+        "total_count": len(parts),
+    }
 
 
 @router.get("/{story_id}", response_model=StoryResponse)

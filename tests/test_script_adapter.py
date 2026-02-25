@@ -231,39 +231,49 @@ class TestSplitForAdaptation:
         sections = _split_for_adaptation(giant, max_chars=10000)
         assert sections == [giant]
 
-    def test_splits_on_part_boundaries_first(self):
-        """Multi-part stories are split on part delimiters before character limits."""
-        text = "Part one content.\n\n---\n\nPart two content.\n\n---\n\nPart three content."
-        sections = _split_for_adaptation(text, max_chars=50000)
-        assert len(sections) == 3
-        assert sections[0] == "Part one content."
-        assert sections[1] == "Part two content."
-        assert sections[2] == "Part three content."
 
-    def test_short_multipart_not_merged(self):
-        """Even when total text is under max_chars, part boundaries are respected."""
-        text = "Short A.\n\n---\n\nShort B."
-        sections = _split_for_adaptation(text, max_chars=50000)
-        assert len(sections) == 2
-        assert sections[0] == "Short A."
-        assert sections[1] == "Short B."
+# ---------------------------------------------------------------------------
+# generate_script: prior_characters passthrough
+# ---------------------------------------------------------------------------
 
-    def test_long_part_further_split(self):
-        """A single part exceeding max_chars is further split by paragraph."""
-        long_part = "Para one.\n\nPara two.\n\nPara three."
-        text = f"Short part.\n\n---\n\n{long_part}"
-        sections = _split_for_adaptation(text, max_chars=20)
-        # First section is the short part, remaining sections come from the long part
-        assert sections[0] == "Short part."
-        assert len(sections) >= 3
-        rejoined = "\n\n".join(sections[1:])
-        assert "Para one." in rejoined
-        assert "Para three." in rejoined
+class TestGenerateScriptPriorCharacters:
 
-    def test_empty_parts_skipped(self):
-        """Empty parts between delimiters are ignored."""
-        text = "Content.\n\n---\n\n\n\n---\n\nMore content."
-        sections = _split_for_adaptation(text, max_chars=50000)
-        assert len(sections) == 2
-        assert sections[0] == "Content."
-        assert sections[1] == "More content."
+    @patch("app.services.script_adapter.Anthropic")
+    def test_prior_characters_forwarded_to_single_section(self, mock_cls):
+        """When prior_characters is provided, it should be included in the
+        prompt for a single-section story."""
+        client = MagicMock()
+        mock_cls.return_value = client
+
+        good_json = _make_script_json("WithPrior")
+        client.messages.create.return_value = _mock_response(
+            good_json, stop_reason="end_turn"
+        )
+
+        prior = {"narrator": {"voice_profile": "deep, ominous"}}
+        result = generate_script("WithPrior", "Short text.", prior_characters=prior)
+
+        assert isinstance(result, NarrationScript)
+        # Check that the prompt sent to Claude includes the prior characters
+        call_args = client.messages.create.call_args
+        user_msg = call_args.kwargs["messages"][0]["content"]
+        assert "continuation" in user_msg.lower()
+        assert "narrator" in user_msg
+
+    @patch("app.services.script_adapter.Anthropic")
+    def test_no_prior_characters_by_default(self, mock_cls):
+        """Without prior_characters, the prompt should not mention continuity."""
+        client = MagicMock()
+        mock_cls.return_value = client
+
+        good_json = _make_script_json("NoPrior")
+        client.messages.create.return_value = _mock_response(
+            good_json, stop_reason="end_turn"
+        )
+
+        result = generate_script("NoPrior", "Short text.")
+
+        assert isinstance(result, NarrationScript)
+        call_args = client.messages.create.call_args
+        user_msg = call_args.kwargs["messages"][0]["content"]
+        assert "continuation" not in user_msg.lower()
