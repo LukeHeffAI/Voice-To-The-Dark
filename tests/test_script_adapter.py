@@ -230,3 +230,50 @@ class TestSplitForAdaptation:
         giant = "A" * 50000
         sections = _split_for_adaptation(giant, max_chars=10000)
         assert sections == [giant]
+
+
+# ---------------------------------------------------------------------------
+# generate_script: prior_characters passthrough
+# ---------------------------------------------------------------------------
+
+class TestGenerateScriptPriorCharacters:
+
+    @patch("app.services.script_adapter.Anthropic")
+    def test_prior_characters_forwarded_to_single_section(self, mock_cls):
+        """When prior_characters is provided, it should be included in the
+        prompt for a single-section story."""
+        client = MagicMock()
+        mock_cls.return_value = client
+
+        good_json = _make_script_json("WithPrior")
+        client.messages.create.return_value = _mock_response(
+            good_json, stop_reason="end_turn"
+        )
+
+        prior = {"narrator": {"voice_profile": "deep, ominous"}}
+        result = generate_script("WithPrior", "Short text.", prior_characters=prior)
+
+        assert isinstance(result, NarrationScript)
+        # Check that the prompt sent to Claude includes the prior characters
+        call_args = client.messages.create.call_args
+        user_msg = call_args.kwargs["messages"][0]["content"]
+        assert "continuation" in user_msg.lower()
+        assert "narrator" in user_msg
+
+    @patch("app.services.script_adapter.Anthropic")
+    def test_no_prior_characters_by_default(self, mock_cls):
+        """Without prior_characters, the prompt should not mention continuity."""
+        client = MagicMock()
+        mock_cls.return_value = client
+
+        good_json = _make_script_json("NoPrior")
+        client.messages.create.return_value = _mock_response(
+            good_json, stop_reason="end_turn"
+        )
+
+        result = generate_script("NoPrior", "Short text.")
+
+        assert isinstance(result, NarrationScript)
+        call_args = client.messages.create.call_args
+        user_msg = call_args.kwargs["messages"][0]["content"]
+        assert "continuation" not in user_msg.lower()

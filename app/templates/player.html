@@ -695,7 +695,8 @@
         try {
             const resp = await fetch('/stories/' + storyId + '/series-parts');
             if (!resp.ok) return;
-            const parts = await resp.json();
+            const data = await resp.json();
+            const parts = data.parts || [];
             if (!parts || parts.length < 2) return;
 
             const section = document.getElementById('seriesSection');
@@ -703,12 +704,13 @@
             section.style.display = 'block';
 
             const currentUrl = {{ story.reddit_url | tojson }};
-            for (const part of parts) {
+            for (let idx = 0; idx < parts.length; idx++) {
+                const part = parts[idx];
                 const li = document.createElement('li');
                 const isCurrent = currentUrl && part.url && (
                     currentUrl.replace(/\/$/, '') === part.url.replace(/\/$/, '')
                 );
-                const partNum = part.part_number || '?';
+                const partNum = idx + 1;
                 const partTitle = part.title || 'Part ' + partNum;
 
                 if (isCurrent) {
@@ -717,6 +719,12 @@
                             '<span class="series-part-num">' + partNum + '</span>' +
                             '<span>' + escapeHtml(partTitle) + ' (current)</span>' +
                         '</div>';
+                } else if (part.story_id) {
+                    li.innerHTML =
+                        '<a class="series-part" href="/story/' + part.story_id + '">' +
+                            '<span class="series-part-num">' + partNum + '</span>' +
+                            '<span>' + escapeHtml(partTitle) + '</span>' +
+                        '</a>';
                 } else {
                     const href = '/submit#url=' + encodeURIComponent(part.url);
                     li.innerHTML =

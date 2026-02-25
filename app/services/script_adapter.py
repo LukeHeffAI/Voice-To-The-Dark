@@ -80,12 +80,20 @@ Output ONLY the JSON object, no commentary before or after it.\
 """
 
 
-def generate_script(title: str, narration_text: str) -> NarrationScript:
+def generate_script(
+    title: str,
+    narration_text: str,
+    prior_characters: dict | None = None,
+) -> NarrationScript:
     """Use Claude to transform cleaned story text into a dramatic narration script.
 
     For stories that exceed a comfortable processing length, the text is split
     into sections and processed sequentially so that character assignments and
     tone stay consistent across the whole story.
+
+    *prior_characters*, when provided, seeds the first section with character
+    definitions from earlier parts of a series so that voices stay consistent
+    across separately-generated parts.
     """
     client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
@@ -93,16 +101,16 @@ def generate_script(title: str, narration_text: str) -> NarrationScript:
 
     if len(sections) == 1:
         try:
-            script = _adapt_section(client, title, sections[0])
+            script = _adapt_section(client, title, sections[0], prior_characters=prior_characters)
         except _TruncatedResponseError:
             logger.info(
                 "Single section truncated for '%s', re-splitting into smaller pieces",
                 title,
             )
             sections = _split_for_adaptation(narration_text, max_chars=6000)
-            script = _adapt_long_story(client, title, sections)
+            script = _adapt_long_story(client, title, sections, prior_characters=prior_characters)
     else:
-        script = _adapt_long_story(client, title, sections)
+        script = _adapt_long_story(client, title, sections, prior_characters=prior_characters)
 
     return script
 
@@ -164,17 +172,21 @@ def _adapt_long_story(
     client: Anthropic,
     title: str,
     sections: list[str],
+    prior_characters: dict | None = None,
 ) -> NarrationScript:
     """Process a multi-section story by adapting each section sequentially,
     carrying character definitions forward for consistency.
 
     If any individual section causes a truncated response, it is
     automatically split in half and the sub-sections are retried.
+
+    *prior_characters*, when provided, seeds the character map so the first
+    section already knows about characters from earlier series parts.
     """
 
     MAX_ITERATIONS = 50  # safety limit to prevent runaway splitting
 
-    combined_characters: dict = {}
+    combined_characters: dict = dict(prior_characters) if prior_characters else {}
     all_segments: list[dict] = []
 
     # Use a queue so truncated sections can be split and re-inserted.
@@ -236,15 +248,15 @@ def _adapt_long_story(
 def _split_for_adaptation(text: str, max_chars: int = 12000) -> list[str]:
     """Split long text into sections for sequential adaptation.
 
-    Splits on paragraph boundaries (double newlines) and keeps each section
-    under max_chars. This ensures Claude has enough output headroom to produce
-    a detailed script for each section.
+    Splits on paragraph boundaries, keeping each section under *max_chars*
+    where possible.  Single paragraphs that exceed the limit are kept
+    intact (they cannot be split further without breaking sentences).
     """
     if len(text) <= max_chars:
         return [text]
 
     paragraphs = text.split("\n\n")
-    sections = []
+    sections: list[str] = []
     current = ""
 
     for para in paragraphs:
@@ -259,4 +271,4 @@ def _split_for_adaptation(text: str, max_chars: int = 12000) -> list[str]:
     if current:
         sections.append(current)
 
-    return sections
+    return sections if sections else [text]

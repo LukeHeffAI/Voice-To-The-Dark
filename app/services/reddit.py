@@ -115,6 +115,7 @@ def _fetch_post_data(post_url: str) -> dict:
         "id": post.get("id", ""),
         "link_flair_text": post.get("link_flair_text"),
         "permalink": post.get("permalink", ""),
+        "created_utc": post.get("created_utc", 0),
     }
 
 
@@ -226,8 +227,9 @@ def find_series_parts(author: str, title: str) -> List[Dict]:
     """Search an author's top submissions for posts that look like parts of
     the same series as *title*.
 
-    Returns a list of dicts sorted by detected part number:
-        [{"title": str, "url": str, "id": str, "part_number": int|None}, ...]
+    Returns a list of dicts sorted by ``created_utc`` (oldest first):
+        [{"title": str, "url": str, "id": str, "part_number": int|None,
+          "created_utc": float}, ...]
     """
     if not author:
         return []
@@ -265,10 +267,11 @@ def find_series_parts(author: str, title: str) -> List[Dict]:
             "url": f"https://reddit.com{post.get('permalink', '')}",
             "id": post.get("id", ""),
             "part_number": part_num,
+            "created_utc": post.get("created_utc", 0),
         })
 
-    # Sort by part number (None last)
-    results.sort(key=lambda r: (r["part_number"] is None, r["part_number"] or 0))
+    # Sort by post date (oldest first) — more reliable than title-derived part numbers
+    results.sort(key=lambda r: r["created_utc"])
 
     return results
 

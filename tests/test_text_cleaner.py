@@ -222,3 +222,5 @@ Next: https://reddit.com/r/nosleep/comments/nextpart"""
     def test_plain_text_unchanged(self):
         text = "A simple story with no markdown or artifacts."
         assert clean_for_narration(text) == text
+
+
