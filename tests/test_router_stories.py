@@ -236,6 +236,44 @@ class TestManualSubmitStory:
         })
         assert resp.status_code == 401
 
+    def test_manual_submit_author_persisted(self, client, auth_headers, db_session):
+        """Author provided in a pure manual (no-URL) submission is stored on the story."""
+        resp = client.post("/stories/submit-manual", json={
+            "title": "Authored Story",
+            "text_content": "Content for the authored story goes here.",
+            "author": "test_author",
+        }, headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["author"] == "test_author"
+
+    @patch("app.routers.stories.fetch_post_metadata")
+    @patch("app.routers.stories.fetch_multi_part_story")
+    def test_manual_submit_url_author_from_request(self, mock_fetch, mock_metadata, client, auth_headers, db_session):
+        """When author is supplied alongside a URL, the request author takes precedence over Reddit metadata."""
+        mock_metadata.return_value = {"title": "Reddit Title", "author": "reddit_author"}
+        mock_fetch.return_value = "Full story text fetched from Reddit."
+
+        resp = client.post("/stories/submit-manual", json={
+            "reddit_url": "https://www.reddit.com/r/nosleep/comments/xyz/my_url_story/",
+            "author": "override_author",
+        }, headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json()["author"] == "override_author"
+
+    @patch("app.routers.stories.fetch_post_metadata")
+    @patch("app.routers.stories.fetch_multi_part_story")
+    def test_manual_submit_url_author_fallback_from_reddit(self, mock_fetch, mock_metadata, client, auth_headers, db_session):
+        """When author is omitted and a URL is provided, the author falls back to Reddit metadata."""
+        mock_metadata.return_value = {"title": "Reddit Title", "author": "reddit_author"}
+        mock_fetch.return_value = "Full story text fetched from Reddit."
+
+        resp = client.post("/stories/submit-manual", json={
+            "reddit_url": "https://www.reddit.com/r/nosleep/comments/xyz/my_url_story/",
+        }, headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json()["author"] == "reddit_author"
+
 
 class TestFetchPreview:
     @patch("app.routers.stories.fetch_post_metadata")
