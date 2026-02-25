@@ -89,7 +89,9 @@
             pointer-events: none;
             z-index: 2;
             overflow: hidden;
+            opacity: 0; /* JS adds .settle / .visible / .evaporate */
         }
+        .fog.visible { opacity: 1; }
         .fog::before,
         .fog::after {
             content: '';
@@ -97,51 +99,66 @@
             inset: -50%;
             width: 200%;
             height: 200%;
+            filter: blur(50px);
+            will-change: transform;
         }
         .fog::before {
             background:
-                radial-gradient(ellipse at 25% 50%, rgba(180,180,200,0.135) 0%, transparent 50%),
-                radial-gradient(ellipse at 75% 25%, rgba(160,155,175,0.105) 0%, transparent 45%),
-                radial-gradient(ellipse at 50% 85%, rgba(150,150,170,0.075) 0%, transparent 40%);
-            animation: fog-drift-1 40s ease-in-out infinite;
+                radial-gradient(ellipse at 25% 50%, rgba(180,180,200,0.125) 0%, transparent 50%),
+                radial-gradient(ellipse at 75% 25%, rgba(160,155,175,0.085) 0%, transparent 45%),
+                radial-gradient(ellipse at 50% 85%, rgba(150,150,170,0.055) 0%, transparent 40%);
+            animation: fog-drift-1 7s linear infinite;
         }
         .fog::after {
             background:
-                radial-gradient(ellipse at 65% 65%, rgba(170,165,185,0.12) 0%, transparent 55%),
-                radial-gradient(ellipse at 15% 35%, rgba(185,180,200,0.09) 0%, transparent 40%);
-            animation: fog-drift-2 32s ease-in-out infinite;
+                radial-gradient(ellipse at 65% 65%, rgba(170,165,185,0.10) 0%, transparent 55%),
+                radial-gradient(ellipse at 15% 35%, rgba(185,180,200,0.07) 0%, transparent 40%);
+            animation: fog-drift-2 11s linear infinite;
         }
         @keyframes fog-drift-1 {
             0%   { transform: translate(0, 0) scale(1) rotate(0deg); }
-            25%  { transform: translate(3%, -2%) scale(1.05) rotate(3deg); }
-            50%  { transform: translate(1%, 1%) scale(1.03) rotate(-2deg); }
-            75%  { transform: translate(-2%, 3%) scale(1.02) rotate(4deg); }
+            9%   { transform: translate(3vw, -2vh) scale(1.02) rotate(1.2deg); }
+            18%  { transform: translate(6vw, -4vh) scale(1.04) rotate(2.4deg); }
+            27%  { transform: translate(8vw, -5vh) scale(1.05) rotate(3deg); }
+            36%  { transform: translate(6vw, -2vh) scale(1.045) rotate(1.5deg); }
+            45%  { transform: translate(4vw, 1vh) scale(1.04) rotate(-0.5deg); }
+            55%  { transform: translate(2vw, 3vh) scale(1.03) rotate(-2deg); }
+            64%  { transform: translate(-1vw, 5vh) scale(1.025) rotate(0.5deg); }
+            73%  { transform: translate(-4vw, 7vh) scale(1.022) rotate(2.8deg); }
+            82%  { transform: translate(-5vw, 8vh) scale(1.02) rotate(4deg); }
+            91%  { transform: translate(-3vw, 4vh) scale(1.01) rotate(2deg); }
             100% { transform: translate(0, 0) scale(1) rotate(0deg); }
         }
         @keyframes fog-drift-2 {
             0%   { transform: translate(0, 0) scale(1.03) rotate(0deg); }
-            25%  { transform: translate(-3%, 2%) scale(0.97) rotate(-4deg); }
-            50%  { transform: translate(-1%, -1%) scale(1.01) rotate(3deg); }
-            75%  { transform: translate(4%, -1%) scale(1.06) rotate(-3deg); }
+            9%   { transform: translate(-3vw, 2vh) scale(1.005) rotate(-1.6deg); }
+            18%  { transform: translate(-6vw, 4vh) scale(0.98) rotate(-3.2deg); }
+            27%  { transform: translate(-8vw, 5vh) scale(0.97) rotate(-4deg); }
+            36%  { transform: translate(-6vw, 2.5vh) scale(0.98) rotate(-1.5deg); }
+            45%  { transform: translate(-4vw, 0vh) scale(0.995) rotate(1deg); }
+            55%  { transform: translate(-2vw, -3vh) scale(1.01) rotate(3deg); }
+            64%  { transform: translate(3vw, -3vh) scale(1.03) rotate(1deg); }
+            73%  { transform: translate(7vw, -3vh) scale(1.05) rotate(-1deg); }
+            82%  { transform: translate(10vw, -3vh) scale(1.06) rotate(-3deg); }
+            91%  { transform: translate(5vw, -1.5vh) scale(1.045) rotate(-1.5deg); }
             100% { transform: translate(0, 0) scale(1.03) rotate(0deg); }
         }
-        /* Settle variant — fog descends and materialises on page load */
+        /* Settle — materialises on arrival */
         .fog.settle {
-            animation: fog-settle 3.5s ease-in forwards;
+            animation: fog-settle 3s ease-out forwards;
         }
         @keyframes fog-settle {
-            0%   { opacity: 0; filter: blur(12px); transform: translateY(-15%); }
-            40%  { opacity: 0.4; filter: blur(4px); transform: translateY(-7.5%); }
-            100% { opacity: 1; filter: blur(0px); transform: translateY(0); }
+            0%   { opacity: 0; }
+            100% { opacity: 1; }
         }
-        /* Evaporate variant — fog rises and dissolves */
+        /* Evaporate — dissolves on departure to Settings */
         .fog.evaporate {
-            animation: fog-evaporate 3.5s ease-out forwards;
+            opacity: 1;
+            animation: fog-evaporate 3s ease-in forwards;
         }
         @keyframes fog-evaporate {
-            0%   { opacity: 1; filter: blur(0px); }
-            60%  { opacity: 0.4; filter: blur(4px); }
-            100% { opacity: 0; filter: blur(12px); transform: translateY(-15%); }
+            0%   { opacity: 1; }
+            100% { opacity: 0; }
         }
 
         /* ── Shared components ─────────────────────────────── */
@@ -322,6 +339,28 @@
     {% block head_extra %}{% endblock %}
 </head>
 <body>
+    <div class="fog" id="global-fog" aria-hidden="true"></div>
+    <script>
+    (function () {
+        var fog = document.getElementById('global-fog');
+        if (!fog) return;
+        var onSettings   = window.location.pathname.startsWith('/settings');
+        var prevSettings = sessionStorage.getItem('fog-prev-settings') === '1';
+        var everSettled  = sessionStorage.getItem('fog-settled')       === '1';
+        if (onSettings) {
+            sessionStorage.setItem('fog-prev-settings', '1');
+            fog.classList.add('evaporate');
+        } else {
+            sessionStorage.setItem('fog-prev-settings', '0');
+            if (!everSettled || prevSettings) {
+                fog.classList.add('settle');
+                sessionStorage.setItem('fog-settled', '1');
+            } else {
+                fog.classList.add('visible');
+            }
+        }
+    })();
+    </script>
     {% block body %}{% endblock %}
     {% block scripts %}{% endblock %}
     <script>
