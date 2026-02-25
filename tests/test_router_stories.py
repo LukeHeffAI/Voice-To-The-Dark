@@ -237,6 +237,52 @@ class TestManualSubmitStory:
         assert resp.status_code == 401
 
 
+class TestFetchPreview:
+    @patch("app.routers.stories.fetch_post_metadata")
+    @patch("app.routers.stories.fetch_story_text")
+    def test_returns_first_part_only(self, mock_text, mock_metadata, client, auth_headers, db_session):
+        """Preview fetches only the first part's text, not the full multi-part chain."""
+        mock_metadata.return_value = {"title": "Scary Title", "author": "ghost"}
+        mock_text.return_value = "Part one text."
+
+        resp = client.get("/stories/fetch-preview", params={
+            "reddit_url": "https://www.reddit.com/r/nosleep/comments/abc/scary_title/"
+        }, headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["title"] == "Scary Title"
+        assert data["author"] == "ghost"
+        assert data["text"] == "Part one text."
+        mock_text.assert_called_once()
+
+    def test_requires_auth(self, client, db_session):
+        resp = client.get("/stories/fetch-preview", params={
+            "reddit_url": "https://www.reddit.com/r/nosleep/comments/abc/story/"
+        })
+        assert resp.status_code == 401
+
+    def test_rate_limited_after_30_requests(self, client, auth_headers, db_session):
+        """31st request within 60 seconds returns 429."""
+        with patch("app.routers.stories.fetch_post_metadata") as mock_meta, \
+             patch("app.routers.stories.fetch_story_text") as mock_text:
+            mock_meta.return_value = {"title": "T", "author": "A"}
+            mock_text.return_value = "text"
+            url = "https://www.reddit.com/r/nosleep/comments/abc/story/"
+            for _ in range(30):
+                resp = client.get("/stories/fetch-preview", params={"reddit_url": url},
+                                  headers=auth_headers)
+                assert resp.status_code == 200
+            resp = client.get("/stories/fetch-preview", params={"reddit_url": url},
+                              headers=auth_headers)
+            assert resp.status_code == 429
+
+    def test_rejects_non_reddit_url(self, client, auth_headers, db_session):
+        resp = client.get("/stories/fetch-preview", params={
+            "reddit_url": "https://evil.com/r/nosleep/comments/abc/story/"
+        }, headers=auth_headers)
+        assert resp.status_code == 400
+
+
 class TestPlaybackState:
     def test_save_playback_position(self, client, sample_story, auth_headers, db_session):
         resp = client.post("/stories/playback", json={
