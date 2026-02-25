@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, Float, DateTime, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Text, Boolean, Float, DateTime, UniqueConstraint, ForeignKey
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -28,8 +28,8 @@ class PlaybackState(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, nullable=False, index=True)
-    story_id = Column(Integer, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    story_id = Column(Integer, ForeignKey('stories.id', ondelete='CASCADE'), nullable=False, index=True)
     position_seconds = Column(Float, default=0.0)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -42,8 +42,8 @@ class StoryView(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, nullable=False, index=True)
-    story_id = Column(Integer, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    story_id = Column(Integer, ForeignKey('stories.id', ondelete='CASCADE'), nullable=False, index=True)
     viewed_at = Column(DateTime, server_default=func.now())
     hidden = Column(Boolean, default=False)
 
@@ -56,7 +56,7 @@ class StoryFolder(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     name = Column(String, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
@@ -69,8 +69,8 @@ class StoryFolderMembership(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    folder_id = Column(Integer, nullable=False, index=True)
-    story_id = Column(Integer, nullable=False, index=True)
+    folder_id = Column(Integer, ForeignKey('story_folders.id', ondelete='CASCADE'), nullable=False, index=True)
+    story_id = Column(Integer, ForeignKey('stories.id', ondelete='CASCADE'), nullable=False, index=True)
     added_at = Column(DateTime, server_default=func.now())
 
 
