@@ -402,7 +402,7 @@
                 <div class="card-dropdown" id="dropdown-{{ story.id }}">
                     <span class="folder-submenu-label">Add to folder</span>
                     {% for f in folders %}
-                    <button class="card-dropdown-item" onclick="addToFolder({{ story.id }}, {{ f.id }}, '{{ f.name }}')">
+                    <button class="card-dropdown-item" onclick="addToFolder({{ story.id }}, {{ f.id }}, {{ f.name|tojson }})">
                         <span class="dropdown-icon">&#9776;</span> {{ f.name }}
                     </button>
                     {% endfor %}
