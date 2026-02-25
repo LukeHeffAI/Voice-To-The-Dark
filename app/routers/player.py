@@ -252,21 +252,6 @@ def player_page(request: Request, story_id: int, db: Session = Depends(get_db), 
     })
 
 
-@router.get("/story-info/{story_id}")
-def story_info(story_id: int, db: Session = Depends(get_db)):
-    """Lightweight JSON endpoint returning basic story metadata."""
-    story = db.query(Story).filter(Story.id == story_id).first()
-    if not story:
-        raise HTTPException(status_code=404, detail="Story not found")
-    return {
-        "id": story.id,
-        "title": story.title,
-        "author": story.author,
-        "part_count": story.part_count,
-        "has_audio": bool(story.audio_file_path),
-    }
-
-
 @router.get("/stream/{story_id}")
 def stream_audio(request: Request, story_id: int, db: Session = Depends(get_db)):
     """Stream the audio file for a story with HTTP Range request support.
