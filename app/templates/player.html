@@ -5,14 +5,14 @@
 {% block viewport_extra %}, user-scalable=no{% endblock %}
 
 {% block styles %}
-        body {
+        .page-player {
             display: flex;
             flex-direction: column;
             align-items: center;
             padding: 1.25rem;
         }
 
-        .back-link { align-self: flex-start; }
+        .page-player .back-link { align-self: flex-start; }
 
         .player-container {
             width: 100%;
@@ -74,7 +74,6 @@
             60%  { height: var(--h4); opacity: 0.9; }
             80%  { height: var(--h5, var(--h2)); opacity: 0.7; }
         }
-        /* Glitch flicker on select bars */
         .eq-bar:nth-child(4),
         .eq-bar:nth-child(9) {
             animation:
@@ -87,7 +86,6 @@
             94%  { filter: brightness(0.3); }
             95%  { filter: brightness(1.8); opacity: 1; }
         }
-        /* Noise/static texture overlay */
         .eq-viz::after {
             content: '';
             position: absolute;
@@ -180,7 +178,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 2.5rem;
+            gap: 1.5rem;
         }
         .control-btn {
             background: none;
@@ -193,6 +191,15 @@
             -webkit-tap-highlight-color: transparent;
         }
         .control-btn:hover { color: var(--text-1); }
+        .control-btn.small { font-size: 0.95rem; }
+        .control-btn.repeat-active { color: var(--accent); }
+        .control-btn .repeat-one-dot {
+            display: none;
+            font-size: 0.55rem;
+            vertical-align: super;
+            font-weight: 700;
+        }
+        .control-btn.repeat-one .repeat-one-dot { display: inline; }
         .play-btn {
             width: 68px;
             height: 68px;
@@ -397,351 +404,395 @@
             min-width: 1.5rem;
             text-align: center;
         }
+
+        /* ── Up Next section ─────────────────────────────── */
+        .up-next-section {
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+        .up-next-title {
+            font-family: var(--serif);
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-2);
+            margin-bottom: 0.6rem;
+            letter-spacing: 0.04em;
+        }
+        .up-next-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+        .up-next-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.5rem 0.85rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            cursor: pointer;
+            transition: all 0.2s var(--ease);
+        }
+        .up-next-item:hover {
+            border-color: var(--border-hover);
+            background: var(--surface-hover);
+        }
+        .up-next-item-title {
+            font-size: 0.82rem;
+            color: var(--text-1);
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .up-next-item-author {
+            font-size: 0.7rem;
+            color: var(--text-3);
+            flex-shrink: 0;
+        }
 {% endblock %}
 
 {% block body %}
-    <div class="fog settle" aria-hidden="true"></div>
-    <a href="/story/{{ story.id }}" class="back-link">&larr; Story details</a>
+    <div class="page-player">
+        <a href="/" class="back-link">&larr; All stories</a>
 
-    <div class="player-container">
-        <div class="artwork">
-            <div class="eq-viz" aria-hidden="true">
-                <div class="eq-bar" style="--d:1.2s;--h1:18%;--h2:68%;--h3:35%;--h4:82%;--h5:50%"></div>
-                <div class="eq-bar" style="--d:0.85s;--h1:55%;--h2:22%;--h3:78%;--h4:15%;--h5:60%"></div>
-                <div class="eq-bar" style="--d:1.4s;--h1:38%;--h2:88%;--h3:20%;--h4:65%;--h5:42%"></div>
-                <div class="eq-bar" style="--d:0.65s;--h1:72%;--h2:30%;--h3:92%;--h4:48%;--h5:80%"></div>
-                <div class="eq-bar" style="--d:1.1s;--h1:48%;--h2:95%;--h3:28%;--h4:72%;--h5:35%"></div>
-                <div class="eq-bar" style="--d:0.75s;--h1:82%;--h2:42%;--h3:68%;--h4:22%;--h5:55%"></div>
-                <div class="eq-bar" style="--d:1.3s;--h1:28%;--h2:78%;--h3:52%;--h4:88%;--h5:18%"></div>
-                <div class="eq-bar" style="--d:0.55s;--h1:62%;--h2:18%;--h3:82%;--h4:38%;--h5:72%"></div>
-                <div class="eq-bar" style="--d:0.95s;--h1:42%;--h2:72%;--h3:15%;--h4:58%;--h5:85%"></div>
-                <div class="eq-bar" style="--d:0.7s;--h1:52%;--h2:12%;--h3:72%;--h4:32%;--h5:65%"></div>
-                <div class="eq-bar" style="--d:1.15s;--h1:22%;--h2:62%;--h3:42%;--h4:85%;--h5:28%"></div>
+        <div class="player-container">
+            <div class="artwork">
+                <div class="eq-viz" aria-hidden="true">
+                    <div class="eq-bar" style="--d:1.2s;--h1:18%;--h2:68%;--h3:35%;--h4:82%;--h5:50%"></div>
+                    <div class="eq-bar" style="--d:0.85s;--h1:55%;--h2:22%;--h3:78%;--h4:15%;--h5:60%"></div>
+                    <div class="eq-bar" style="--d:1.4s;--h1:38%;--h2:88%;--h3:20%;--h4:65%;--h5:42%"></div>
+                    <div class="eq-bar" style="--d:0.65s;--h1:72%;--h2:30%;--h3:92%;--h4:48%;--h5:80%"></div>
+                    <div class="eq-bar" style="--d:1.1s;--h1:48%;--h2:95%;--h3:28%;--h4:72%;--h5:35%"></div>
+                    <div class="eq-bar" style="--d:0.75s;--h1:82%;--h2:42%;--h3:68%;--h4:22%;--h5:55%"></div>
+                    <div class="eq-bar" style="--d:1.3s;--h1:28%;--h2:78%;--h3:52%;--h4:88%;--h5:18%"></div>
+                    <div class="eq-bar" style="--d:0.55s;--h1:62%;--h2:18%;--h3:82%;--h4:38%;--h5:72%"></div>
+                    <div class="eq-bar" style="--d:0.95s;--h1:42%;--h2:72%;--h3:15%;--h4:58%;--h5:85%"></div>
+                    <div class="eq-bar" style="--d:0.7s;--h1:52%;--h2:12%;--h3:72%;--h4:32%;--h5:65%"></div>
+                    <div class="eq-bar" style="--d:1.15s;--h1:22%;--h2:62%;--h3:42%;--h4:85%;--h5:28%"></div>
+                </div>
             </div>
-        </div>
 
-        <div class="story-info">
-            <div class="story-title">{{ story.title }}</div>
-            <div class="story-meta">
-                {% if story.author %}by u/{{ story.author }} &middot; {% endif %}{{ story.part_count }} part{{ 's' if story.part_count != 1 else '' }}
+            <div class="story-info">
+                <div class="story-title">{{ story.title }}</div>
+                <div class="story-meta">
+                    {% if story.author %}by u/{{ story.author }} &middot; {% endif %}{{ story.part_count }} part{{ 's' if story.part_count != 1 else '' }}
+                </div>
             </div>
-        </div>
 
-        {% if resume_position > 0 %}
-        <div class="resume-banner" id="resumeBanner" onclick="resumePlayback()">
-            Resume from {{ '%d:%02d' % (resume_position // 60, resume_position % 60) }}
-        </div>
-        {% endif %}
-
-        <div class="progress-container">
-            <input type="range" class="progress-bar" id="progressBar" value="0" min="0" max="100" step="0.1">
-            <div class="time-display">
-                <span id="currentTime">0:00</span>
-                <span id="duration">0:00</span>
+            <div class="progress-container">
+                <input type="range" class="progress-bar" id="progressBar" value="0" min="0" max="100" step="0.1">
+                <div class="time-display">
+                    <span id="currentTime">0:00</span>
+                    <span id="duration">0:00</span>
+                </div>
             </div>
-        </div>
 
-        <div class="controls">
-            <button class="control-btn" onclick="skip(-30)" title="Back 30s">&#9664;&#9664; 30</button>
-            <button class="control-btn play-btn" id="playBtn" onclick="togglePlay()">&#9654;</button>
-            <button class="control-btn" onclick="skip(30)" title="Forward 30s">30 &#9654;&#9654;</button>
-        </div>
-
-        <div class="speed-control">
-            <span class="speed-label">Speed</span>
-            <input type="range" class="speed-slider" id="speedSlider" min="0.5" max="3" step="0.05" value="1">
-            <div class="speed-input-wrap">
-                <input type="number" class="speed-input" id="speedInput" min="0.5" max="3" step="0.05" value="1.00">
-                <span class="speed-suffix">x</span>
+            <div class="controls">
+                <button class="control-btn small" id="repeatBtn" title="Repeat: Off">&#128257;<span class="repeat-one-dot">1</span></button>
+                <button class="control-btn small" id="prevBtn" title="Previous">&#9664;&#9664;</button>
+                <button class="control-btn" id="skipBackBtn" title="Back 30s">&#9664;&#9664; 30</button>
+                <button class="control-btn play-btn" id="playBtn">&#9654;</button>
+                <button class="control-btn" id="skipFwdBtn" title="Forward 30s">30 &#9654;&#9654;</button>
+                <button class="control-btn small" id="nextBtn" title="Next">&#9654;&#9654;</button>
+                <button class="control-btn small" id="queueBtn" title="Queue">&#9776;</button>
             </div>
-        </div>
 
-        <div class="secondary-actions">
-            <a href="/story/{{ story.id }}" class="btn-secondary">Script &amp; Settings</a>
-            <a href="/download/{{ story.id }}" class="btn-secondary">Download MP3</a>
-        </div>
+            <div class="speed-control">
+                <span class="speed-label">Speed</span>
+                <input type="range" class="speed-slider" id="speedSlider" min="0.5" max="3" step="0.05" value="1">
+                <div class="speed-input-wrap">
+                    <input type="number" class="speed-input" id="speedInput" min="0.5" max="3" step="0.05" value="1.00">
+                    <span class="speed-suffix">x</span>
+                </div>
+            </div>
 
-        <div class="series-section" id="seriesSection" style="display:none;">
-            <div class="series-title">Series Parts</div>
-            <ul class="series-list" id="seriesList"></ul>
-        </div>
+            <div class="secondary-actions">
+                <a href="/story/{{ story.id }}" class="btn-secondary">Script &amp; Settings</a>
+                <a href="/download/{{ story.id }}" class="btn-secondary" data-no-router>Download MP3</a>
+            </div>
 
-        <div class="status" id="status"></div>
+            <div class="up-next-section" id="upNextSection" style="display:none;">
+                <div class="up-next-title">Up Next</div>
+                <ul class="up-next-list" id="upNextList"></ul>
+            </div>
 
-        <div class="browser-tip" id="androidTip" style="display:none;">
-            <button class="browser-tip-dismiss" onclick="dismissTip('android')">&times;</button>
-            <strong>Listening with screen locked?</strong> In Samsung Internet, enable
-            <em>Settings &rarr; Useful Features &rarr; Background Play</em>.
-            On any Android browser, set the browser to <em>Unrestricted</em> battery mode
-            in your phone's app settings.
-        </div>
-        <div class="browser-tip" id="iosTip" style="display:none;">
-            <button class="browser-tip-dismiss" onclick="dismissTip('ios')">&times;</button>
-            <strong>For the best experience on iPhone:</strong> Tap the share button
-            and choose <em>Add to Home Screen</em>. This gives you lock-screen controls
-            and background playback without Safari's toolbar.
+            <div class="series-section" id="seriesSection" style="display:none;">
+                <div class="series-title">Series Parts</div>
+                <ul class="series-list" id="seriesList"></ul>
+            </div>
+
+            <div class="status" id="status"></div>
+
+            <div class="browser-tip" id="androidTip" style="display:none;">
+                <button class="browser-tip-dismiss" onclick="dismissTip('android')">&times;</button>
+                <strong>Listening with screen locked?</strong> In Samsung Internet, enable
+                <em>Settings &rarr; Useful Features &rarr; Background Play</em>.
+                On any Android browser, set the browser to <em>Unrestricted</em> battery mode
+                in your phone's app settings.
+            </div>
+            <div class="browser-tip" id="iosTip" style="display:none;">
+                <button class="browser-tip-dismiss" onclick="dismissTip('ios')">&times;</button>
+                <strong>For the best experience on iPhone:</strong> Tap the share button
+                and choose <em>Add to Home Screen</em>. This gives you lock-screen controls
+                and background playback without Safari's toolbar.
+            </div>
         </div>
     </div>
-
-    <audio id="audio" preload="metadata" playsinline src="/stream/{{ story.id }}"></audio>
 {% endblock %}
 
 {% block scripts %}
     <script>
-    const audio = document.getElementById('audio');
-    const playBtn = document.getElementById('playBtn');
-    const progressBar = document.getElementById('progressBar');
-    const currentTimeEl = document.getElementById('currentTime');
-    const durationEl = document.getElementById('duration');
-    const statusEl = document.getElementById('status');
-    const speedSlider = document.getElementById('speedSlider');
-    const speedInput = document.getElementById('speedInput');
-    const storyId = {{ story.id }};
-    const resumePosition = {{ resume_position }};
-
-    let isSeeking = false;
-    let saveTimer = null;
-
-    function setPlaybackSpeed(rate) {
-        rate = Math.max(0.5, Math.min(3, parseFloat(rate) || 1));
-        rate = Math.round(rate * 20) / 20;
-        audio.playbackRate = rate;
-        speedSlider.value = rate;
-        speedInput.value = rate.toFixed(2);
-        localStorage.setItem('vttd_playback_speed', rate);
-        updatePositionState();
-    }
-
-    speedSlider.addEventListener('input', () => {
-        setPlaybackSpeed(speedSlider.value);
-    });
-
-    speedInput.addEventListener('change', () => {
-        setPlaybackSpeed(speedInput.value);
-    });
-
-    speedInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.target.blur();
-        }
-    });
-
     (function() {
-        const saved = parseFloat(localStorage.getItem('vttd_playback_speed'));
-        if (saved && saved >= 0.5 && saved <= 3) {
-            setPlaybackSpeed(saved);
+        var storyId = {{ story.id }};
+        var storyTitle = {{ story.title | tojson }};
+        var storyAuthor = {{ (story.author or '') | tojson }};
+
+        var playBtn = document.getElementById('playBtn');
+        var progressBar = document.getElementById('progressBar');
+        var currentTimeEl = document.getElementById('currentTime');
+        var durationEl = document.getElementById('duration');
+        var speedSlider = document.getElementById('speedSlider');
+        var speedInput = document.getElementById('speedInput');
+        var repeatBtn = document.getElementById('repeatBtn');
+        var prevBtn = document.getElementById('prevBtn');
+        var nextBtn = document.getElementById('nextBtn');
+        var skipBackBtn = document.getElementById('skipBackBtn');
+        var skipFwdBtn = document.getElementById('skipFwdBtn');
+        var queueBtn = document.getElementById('queueBtn');
+        var isSeeking = false;
+
+        // Ensure this track is in the playlist
+        Playlist.ensureCurrent({ storyId: storyId, title: storyTitle, author: storyAuthor });
+
+        // Load track if not already playing this one
+        if (PlayerCore.storyId !== storyId) {
+            PlayerCore.loadTrack(storyId, storyTitle, storyAuthor, { autoplay: false });
         }
-    })();
 
-    function togglePlay() {
-        if (audio.paused) {
-            audio.play().catch(err => {
-                statusEl.textContent = 'Tap to play';
-            });
-        } else {
-            audio.pause();
+        // ── Helpers ────────────────────────────────────────
+        function formatTime(seconds) {
+            if (!seconds || !isFinite(seconds)) return '0:00';
+            var m = Math.floor(seconds / 60);
+            var s = Math.floor(seconds % 60);
+            return m + ':' + (s < 10 ? '0' : '') + s;
         }
-    }
 
-    function skip(seconds) {
-        audio.currentTime = Math.max(0, Math.min(audio.currentTime + seconds, audio.duration || 0));
-        updatePositionState();
-    }
+        // ── Wire controls to PlayerCore ────────────────────
+        playBtn.addEventListener('click', function() { PlayerCore.togglePlay(); });
+        skipBackBtn.addEventListener('click', function() { PlayerCore.skip(-30); });
+        skipFwdBtn.addEventListener('click', function() { PlayerCore.skip(30); });
+        prevBtn.addEventListener('click', function() { Playlist.prev(); });
+        nextBtn.addEventListener('click', function() { Playlist.next(); });
+        repeatBtn.addEventListener('click', function() { Playlist.toggleRepeat(); });
 
-    function resumePlayback() {
-        audio.currentTime = resumePosition;
-        audio.play().catch(() => {});
-        const banner = document.getElementById('resumeBanner');
-        if (banner) banner.style.display = 'none';
-    }
-
-    function formatTime(seconds) {
-        if (!seconds || !isFinite(seconds)) return '0:00';
-        const m = Math.floor(seconds / 60);
-        const s = Math.floor(seconds % 60);
-        return m + ':' + (s < 10 ? '0' : '') + s;
-    }
-
-    audio.addEventListener('play', () => {
-        playBtn.innerHTML = '&#10074;&#10074;';
-        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
-        setupMediaSession();
-    });
-
-    audio.addEventListener('pause', () => {
-        playBtn.innerHTML = '&#9654;';
-        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
-        savePosition();
-    });
-
-    audio.addEventListener('timeupdate', () => {
-        if (isSeeking) return;
-        const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
-        progressBar.value = pct;
-        currentTimeEl.textContent = formatTime(audio.currentTime);
-        updatePositionState();
-    });
-
-    audio.addEventListener('loadedmetadata', () => {
-        durationEl.textContent = formatTime(audio.duration);
-        progressBar.max = 100;
-        updatePositionState();
-    });
-
-    audio.addEventListener('ended', () => {
-        playBtn.innerHTML = '&#9654;';
-        savePosition();
-    });
-
-    progressBar.addEventListener('input', () => {
-        isSeeking = true;
-        const time = (progressBar.value / 100) * (audio.duration || 0);
-        currentTimeEl.textContent = formatTime(time);
-    });
-
-    progressBar.addEventListener('change', () => {
-        const time = (progressBar.value / 100) * (audio.duration || 0);
-        audio.currentTime = time;
-        isSeeking = false;
-        updatePositionState();
-    });
-
-    function savePosition() {
-        if (!audio.currentTime || audio.currentTime < 1) return;
-        const body = JSON.stringify({
-            story_id: storyId,
-            position_seconds: Math.floor(audio.currentTime)
-        });
-        navigator.sendBeacon('/stories/playback', new Blob([body], { type: 'application/json' }));
-    }
-
-    audio.addEventListener('playing', () => {
-        clearInterval(saveTimer);
-        saveTimer = setInterval(savePosition, 15000);
-    });
-    audio.addEventListener('pause', () => clearInterval(saveTimer));
-    audio.addEventListener('ended', () => clearInterval(saveTimer));
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') savePosition();
-    });
-    window.addEventListener('beforeunload', savePosition);
-
-    function setupMediaSession() {
-        if (!('mediaSession' in navigator)) return;
-
-        navigator.mediaSession.metadata = new MediaMetadata({
-            title: {{ story.title | tojson }},
-            artist: 'Voice In The Dark',
-            album: 'NoSleep Narrations',
-            artwork: [
-                { src: '/static/icon-192.png', sizes: '192x192', type: 'image/png' },
-                { src: '/static/icon-512.png', sizes: '512x512', type: 'image/png' },
-            ]
+        // Queue button opens the drawer
+        queueBtn.addEventListener('click', function() {
+            var drawer = document.getElementById('playlist-drawer');
+            var backdrop = document.getElementById('drawer-backdrop');
+            if (drawer && backdrop) {
+                var isOpen = drawer.classList.contains('open');
+                drawer.classList.toggle('open', !isOpen);
+                backdrop.classList.toggle('open', !isOpen);
+            }
         });
 
-        const handlers = [
-            ['play', () => audio.play()],
-            ['pause', () => audio.pause()],
-            ['seekbackward', (d) => skip(-(d.seekOffset || 15))],
-            ['seekforward', (d) => skip(d.seekOffset || 15)],
-            ['seekto', (d) => {
-                if (d.fastSeek && 'fastSeek' in audio) audio.fastSeek(d.seekTime);
-                else audio.currentTime = d.seekTime;
-                updatePositionState();
-            }],
-            ['stop', () => { audio.pause(); audio.currentTime = 0; savePosition(); }],
-        ];
-        for (const [action, handler] of handlers) {
-            try { navigator.mediaSession.setActionHandler(action, handler); }
-            catch (e) {}
+        // ── Speed control ──────────────────────────────────
+        function setSpeed(rate) {
+            PlayerCore.setPlaybackSpeed(rate);
+            speedSlider.value = PlayerCore.audio.playbackRate;
+            speedInput.value = PlayerCore.audio.playbackRate.toFixed(2);
         }
-    }
 
-    (function() {
-        var ua = navigator.userAgent || '';
-        var isIOS = /iPhone|iPad|iPod/.test(ua);
-        var isAndroid = /Android/i.test(ua);
-        var isStandalone = window.navigator.standalone === true
-            || window.matchMedia('(display-mode: standalone)').matches;
+        speedSlider.addEventListener('input', function() { setSpeed(speedSlider.value); });
+        speedInput.addEventListener('change', function() { setSpeed(speedInput.value); });
+        speedInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') e.target.blur();
+        });
 
-        if (isIOS && !isStandalone && !localStorage.getItem('vttd_tip_ios_dismissed')) {
-            var tip = document.getElementById('iosTip');
-            if (tip) tip.style.display = 'block';
-        } else if (isAndroid && !localStorage.getItem('vttd_tip_android_dismissed')) {
-            var tip = document.getElementById('androidTip');
-            if (tip) tip.style.display = 'block';
+        // Restore saved speed display
+        var savedSpeed = parseFloat(localStorage.getItem('vttd_playback_speed'));
+        if (savedSpeed && savedSpeed >= 0.5 && savedSpeed <= 3) {
+            speedSlider.value = savedSpeed;
+            speedInput.value = savedSpeed.toFixed(2);
         }
+
+        // ── Progress bar ───────────────────────────────────
+        progressBar.addEventListener('input', function() {
+            isSeeking = true;
+            var time = (progressBar.value / 100) * (PlayerCore.audio.duration || 0);
+            currentTimeEl.textContent = formatTime(time);
+        });
+
+        progressBar.addEventListener('change', function() {
+            var time = (progressBar.value / 100) * (PlayerCore.audio.duration || 0);
+            PlayerCore.seek(time);
+            isSeeking = false;
+        });
+
+        // ── PlayerCore events ──────────────────────────────
+        function onTimeUpdate(data) {
+            if (isSeeking) return;
+            var pct = data.duration ? (data.currentTime / data.duration) * 100 : 0;
+            progressBar.value = pct;
+            currentTimeEl.textContent = formatTime(data.currentTime);
+        }
+
+        function onPlay() { playBtn.innerHTML = '&#10074;&#10074;'; }
+        function onPause() { playBtn.innerHTML = '&#9654;'; }
+        function onMeta(data) { durationEl.textContent = formatTime(data.duration); }
+
+        function onTrackChange(data) {
+            // If another track started (e.g., via next/prev), navigate to its player page
+            if (data && data.storyId && data.storyId !== storyId) {
+                VTTDRouter.navigate('/listen/' + data.storyId);
+            }
+        }
+
+        PlayerCore.on('timeupdate', onTimeUpdate);
+        PlayerCore.on('play', onPlay);
+        PlayerCore.on('pause', onPause);
+        PlayerCore.on('loadedmetadata', onMeta);
+        PlayerCore.on('trackchange', onTrackChange);
+
+        // Sync initial state
+        if (!PlayerCore.audio.paused) onPlay();
+        if (PlayerCore.audio.duration) onMeta({ duration: PlayerCore.audio.duration });
+
+        // ── Repeat button state ────────────────────────────
+        function updateRepeatBtn(mode) {
+            repeatBtn.classList.remove('repeat-active', 'repeat-one');
+            if (mode === 'all') {
+                repeatBtn.classList.add('repeat-active');
+                repeatBtn.title = 'Repeat: All';
+            } else if (mode === 'one') {
+                repeatBtn.classList.add('repeat-active', 'repeat-one');
+                repeatBtn.title = 'Repeat: One';
+            } else {
+                repeatBtn.title = 'Repeat: Off';
+            }
+        }
+        Playlist.on('repeatchange', updateRepeatBtn);
+        updateRepeatBtn(Playlist.getRepeatMode());
+
+        // ── Up Next section ────────────────────────────────
+        function renderUpNext() {
+            var items = Playlist.getItems();
+            var currentIdx = Playlist.getCurrentIndex();
+            var section = document.getElementById('upNextSection');
+            var list = document.getElementById('upNextList');
+            if (!section || !list) return;
+
+            var upcoming = [];
+            for (var i = currentIdx + 1; i < items.length && upcoming.length < 5; i++) {
+                upcoming.push(items[i]);
+            }
+
+            if (upcoming.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+            list.innerHTML = '';
+            for (var j = 0; j < upcoming.length; j++) {
+                var track = upcoming[j];
+                var li = document.createElement('li');
+                li.className = 'up-next-item';
+                li.innerHTML =
+                    '<span class="up-next-item-title">' + escapeHtml(track.title || 'Untitled') + '</span>' +
+                    '<span class="up-next-item-author">' + (track.author ? 'u/' + escapeHtml(track.author) : '') + '</span>';
+                (function(idx) {
+                    li.addEventListener('click', function() { Playlist.playAt(idx); });
+                })(currentIdx + 1 + j);
+                list.appendChild(li);
+            }
+        }
+        Playlist.on('queuechange', renderUpNext);
+        renderUpNext();
+
+        // ── Series parts (same as before) ──────────────────
+        (async function loadSeriesParts() {
+            try {
+                var resp = await fetch('/stories/' + storyId + '/series-parts');
+                if (!resp.ok) return;
+                var data = await resp.json();
+                var parts = data.parts || [];
+                if (!parts || parts.length < 2) return;
+
+                var section = document.getElementById('seriesSection');
+                var list = document.getElementById('seriesList');
+                section.style.display = 'block';
+
+                var currentUrl = {{ story.reddit_url | tojson if story.reddit_url else 'null' }};
+                for (var idx = 0; idx < parts.length; idx++) {
+                    var part = parts[idx];
+                    var li = document.createElement('li');
+                    var isCurrent = currentUrl && part.url && (
+                        currentUrl.replace(/\/$/, '') === part.url.replace(/\/$/, '')
+                    );
+                    var partNum = idx + 1;
+                    var partTitle = part.title || 'Part ' + partNum;
+
+                    if (isCurrent) {
+                        li.innerHTML =
+                            '<div class="series-part current">' +
+                                '<span class="series-part-num">' + partNum + '</span>' +
+                                '<span>' + escapeHtml(partTitle) + ' (current)</span>' +
+                            '</div>';
+                    } else if (part.story_id) {
+                        li.innerHTML =
+                            '<a class="series-part" href="/listen/' + part.story_id + '">' +
+                                '<span class="series-part-num">' + partNum + '</span>' +
+                                '<span>' + escapeHtml(partTitle) + '</span>' +
+                            '</a>';
+                    } else {
+                        var href = '/submit#url=' + encodeURIComponent(part.url);
+                        li.innerHTML =
+                            '<a class="series-part" href="' + href + '">' +
+                                '<span class="series-part-num">' + partNum + '</span>' +
+                                '<span>' + escapeHtml(partTitle) + '</span>' +
+                            '</a>';
+                    }
+                    list.appendChild(li);
+                }
+            } catch(e) {}
+        })();
+
+        // ── Browser tips ───────────────────────────────────
+        (function() {
+            var ua = navigator.userAgent || '';
+            var isIOS = /iPhone|iPad|iPod/.test(ua);
+            var isAndroid = /Android/i.test(ua);
+            var isStandalone = window.navigator.standalone === true
+                || window.matchMedia('(display-mode: standalone)').matches;
+
+            if (isIOS && !isStandalone && !localStorage.getItem('vttd_tip_ios_dismissed')) {
+                var tip = document.getElementById('iosTip');
+                if (tip) tip.style.display = 'block';
+            } else if (isAndroid && !localStorage.getItem('vttd_tip_android_dismissed')) {
+                var tip = document.getElementById('androidTip');
+                if (tip) tip.style.display = 'block';
+            }
+        })();
+
+        // ── Cleanup on SPA navigation away ─────────────────
+        function cleanup() {
+            PlayerCore.off('timeupdate', onTimeUpdate);
+            PlayerCore.off('play', onPlay);
+            PlayerCore.off('pause', onPause);
+            PlayerCore.off('loadedmetadata', onMeta);
+            PlayerCore.off('trackchange', onTrackChange);
+        }
+        window.addEventListener('page:unload', cleanup, { once: true });
     })();
 
     function dismissTip(platform) {
         localStorage.setItem('vttd_tip_' + platform + '_dismissed', '1');
         var tip = document.getElementById(platform + 'Tip');
         if (tip) tip.style.display = 'none';
-    }
-
-    function updatePositionState() {
-        if (!('mediaSession' in navigator) || !isFinite(audio.duration) || audio.duration <= 0) return;
-        try {
-            navigator.mediaSession.setPositionState({
-                duration: audio.duration,
-                playbackRate: audio.playbackRate,
-                position: audio.currentTime,
-            });
-        } catch(e) {}
-    }
-
-    (async function loadSeriesParts() {
-        try {
-            const resp = await fetch('/stories/' + storyId + '/series-parts');
-            if (!resp.ok) return;
-            const data = await resp.json();
-            const parts = data.parts || [];
-            if (!parts || parts.length < 2) return;
-
-            const section = document.getElementById('seriesSection');
-            const list = document.getElementById('seriesList');
-            section.style.display = 'block';
-
-            const currentUrl = {{ story.reddit_url | tojson }};
-            for (let idx = 0; idx < parts.length; idx++) {
-                const part = parts[idx];
-                const li = document.createElement('li');
-                const isCurrent = currentUrl && part.url && (
-                    currentUrl.replace(/\/$/, '') === part.url.replace(/\/$/, '')
-                );
-                const partNum = idx + 1;
-                const partTitle = part.title || 'Part ' + partNum;
-
-                if (isCurrent) {
-                    li.innerHTML =
-                        '<div class="series-part current">' +
-                            '<span class="series-part-num">' + partNum + '</span>' +
-                            '<span>' + escapeHtml(partTitle) + ' (current)</span>' +
-                        '</div>';
-                } else if (part.story_id) {
-                    li.innerHTML =
-                        '<a class="series-part" href="/story/' + part.story_id + '">' +
-                            '<span class="series-part-num">' + partNum + '</span>' +
-                            '<span>' + escapeHtml(partTitle) + '</span>' +
-                        '</a>';
-                } else {
-                    const href = '/submit#url=' + encodeURIComponent(part.url);
-                    li.innerHTML =
-                        '<a class="series-part" href="' + href + '">' +
-                            '<span class="series-part-num">' + partNum + '</span>' +
-                            '<span>' + escapeHtml(partTitle) + '</span>' +
-                        '</a>';
-                }
-                list.appendChild(li);
-            }
-        } catch(e) {}
-    })();
-
-    function escapeHtml(text) {
-        const d = document.createElement('div');
-        d.textContent = text;
-        return d.innerHTML;
     }
     </script>
 {% endblock %}
