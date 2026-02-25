@@ -20,6 +20,7 @@ from app.services.hashing import hash_content
 from app.services.text_cleaner import clean_for_narration
 from app.models.story import User
 from app.deps import get_current_user, get_optional_user
+from app.rate_limit import rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -273,11 +274,13 @@ def top_nosleep_posts(timeframe: str = "alltime", limit: int = 50, db: Session =
 
 
 @router.get("/fetch-preview")
-def fetch_preview(reddit_url: str, user: User = Depends(get_current_user)):
-    """Fetch title and text from a Reddit URL without creating a story.
+def fetch_preview(reddit_url: str, _rl=Depends(rate_limit(30, 60)), user: User = Depends(get_current_user)):
+    """Fetch title and first-part text from a Reddit URL without creating a story.
 
     Used by the manual entry pop-out to auto-populate fields once
-    a valid URL is entered.
+    a valid URL is entered.  Only the first post's text is fetched
+    (not the full multi-part chain) to keep preview requests cheap.
+    Rate-limited to 30 requests per minute per user.
     """
     if not reddit_url or not reddit_url.strip():
         raise HTTPException(status_code=400, detail="URL is required")
@@ -293,7 +296,7 @@ def fetch_preview(reddit_url: str, user: User = Depends(get_current_user)):
         raise HTTPException(status_code=400, detail=f"Could not fetch Reddit post: {e}")
 
     try:
-        text = fetch_multi_part_story(reddit_url)
+        text = fetch_story_text(reddit_url)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to extract story text: {e}")
 
