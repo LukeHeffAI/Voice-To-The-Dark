@@ -571,11 +571,18 @@
                 titleEl.appendChild(statsSpan);
             }
             const currentUrl = JSON.parse('{{ story.reddit_url | tojson if story.reddit_url else "null" }}');
+            function canonicalPath(url) {
+                try {
+                    const u = new URL(url);
+                    return u.hostname.replace(/^www\./, '') + u.pathname.replace(/\/$/, '');
+                } catch { return (url || '').replace(/\/$/, ''); }
+            }
+            const currentKey = currentUrl ? canonicalPath(currentUrl) : null;
             for (let idx = 0; idx < parts.length; idx++) {
                 const part = parts[idx];
                 const li = document.createElement('li');
-                const isCurrent = currentUrl && part.url && (
-                    currentUrl.replace(/\/$/, '') === part.url.replace(/\/$/, '')
+                const isCurrent = currentKey && part.url && (
+                    currentKey === canonicalPath(part.url)
                 );
                 const partNum = idx + 1;
                 const partTitle = part.title || 'Part ' + partNum;

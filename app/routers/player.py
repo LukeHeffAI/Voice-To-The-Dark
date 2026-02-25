@@ -123,6 +123,32 @@ def story_detail_page(request: Request, story_id: int, db: Session = Depends(get
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
 
+    # ── Auto-fix old concatenated stories ─────────────────────────
+    # Stories created before the per-part migration have all parts
+    # concatenated in text_content (joined with "\n\n---\n\n"), giving
+    # wildly inflated word counts.  Re-fetch the single post's text.
+    if (story.reddit_url
+        and story.text_content
+        and "\n\n---\n\n" in story.text_content):
+        try:
+            from app.services.reddit import fetch_story_text
+            from app.services.text_cleaner import clean_for_narration
+            from app.services.hashing import hash_content
+            fresh_text = fetch_story_text(story.reddit_url)
+            if fresh_text and fresh_text.strip():
+                story.text_content = fresh_text
+                story.narration_text = clean_for_narration(fresh_text)
+                story.content_hash = hash_content(fresh_text)
+                # Script and audio were generated from the concatenated text;
+                # they must be cleared so they can be regenerated from the
+                # correct single-part text.
+                story.script_json = None
+                story.audio_file_path = None
+                db.commit()
+                db.refresh(story)
+        except Exception:
+            logger.debug("Auto-refetch failed for story %s", story_id)
+
     _record_story_view(db, user, story_id)
 
     # Build a 2-4 sentence teaser from the narration text

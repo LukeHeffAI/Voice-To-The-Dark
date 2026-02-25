@@ -707,6 +707,43 @@
                 (function(idx) {
                     li.addEventListener('click', function() { Playlist.playAt(idx); });
                 })(currentIdx + 1 + j);
+            const currentUrl = {{ story.reddit_url | tojson }};
+            function canonicalPath(url) {
+                try {
+                    const u = new URL(url);
+                    return u.hostname.replace(/^www\./, '') + u.pathname.replace(/\/$/, '');
+                } catch { return (url || '').replace(/\/$/, ''); }
+            }
+            const currentKey = currentUrl ? canonicalPath(currentUrl) : null;
+            for (let idx = 0; idx < parts.length; idx++) {
+                const part = parts[idx];
+                const li = document.createElement('li');
+                const isCurrent = currentKey && part.url && (
+                    currentKey === canonicalPath(part.url)
+                );
+                const partNum = idx + 1;
+                const partTitle = part.title || 'Part ' + partNum;
+
+                if (isCurrent) {
+                    li.innerHTML =
+                        '<div class="series-part current">' +
+                            '<span class="series-part-num">' + partNum + '</span>' +
+                            '<span>' + escapeHtml(partTitle) + ' (current)</span>' +
+                        '</div>';
+                } else if (part.story_id) {
+                    li.innerHTML =
+                        '<a class="series-part" href="/story/' + part.story_id + '">' +
+                            '<span class="series-part-num">' + partNum + '</span>' +
+                            '<span>' + escapeHtml(partTitle) + '</span>' +
+                        '</a>';
+                } else {
+                    const href = '/submit#url=' + encodeURIComponent(part.url);
+                    li.innerHTML =
+                        '<a class="series-part" href="' + href + '">' +
+                            '<span class="series-part-num">' + partNum + '</span>' +
+                            '<span>' + escapeHtml(partTitle) + '</span>' +
+                        '</a>';
+                }
                 list.appendChild(li);
             }
         }
