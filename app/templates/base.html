@@ -103,23 +103,27 @@
                 radial-gradient(ellipse at 25% 50%, rgba(180,180,200,0.045) 0%, transparent 50%),
                 radial-gradient(ellipse at 75% 25%, rgba(160,155,175,0.035) 0%, transparent 45%),
                 radial-gradient(ellipse at 50% 85%, rgba(150,150,170,0.025) 0%, transparent 40%);
-            animation: fog-drift-1 40s ease-in-out infinite alternate;
+            animation: fog-drift-1 40s ease-in-out infinite;
         }
         .fog::after {
             background:
                 radial-gradient(ellipse at 65% 65%, rgba(170,165,185,0.04) 0%, transparent 55%),
                 radial-gradient(ellipse at 15% 35%, rgba(185,180,200,0.03) 0%, transparent 40%);
-            animation: fog-drift-2 32s ease-in-out infinite alternate-reverse;
+            animation: fog-drift-2 32s ease-in-out infinite;
         }
         @keyframes fog-drift-1 {
-            0%   { transform: translate(0, 0) scale(1); }
-            50%  { transform: translate(3%, -2%) scale(1.05); }
-            100% { transform: translate(-2%, 3%) scale(1.02); }
+            0%   { transform: translate(0, 0) scale(1) rotate(0deg); }
+            25%  { transform: translate(3%, -2%) scale(1.05) rotate(3deg); }
+            50%  { transform: translate(1%, 1%) scale(1.03) rotate(-2deg); }
+            75%  { transform: translate(-2%, 3%) scale(1.02) rotate(4deg); }
+            100% { transform: translate(0, 0) scale(1) rotate(0deg); }
         }
         @keyframes fog-drift-2 {
-            0%   { transform: translate(0, 0) scale(1.03); }
-            50%  { transform: translate(-3%, 2%) scale(0.97); }
-            100% { transform: translate(4%, -1%) scale(1.06); }
+            0%   { transform: translate(0, 0) scale(1.03) rotate(0deg); }
+            25%  { transform: translate(-3%, 2%) scale(0.97) rotate(-4deg); }
+            50%  { transform: translate(-1%, -1%) scale(1.01) rotate(3deg); }
+            75%  { transform: translate(4%, -1%) scale(1.06) rotate(-3deg); }
+            100% { transform: translate(0, 0) scale(1.03) rotate(0deg); }
         }
         /* Evaporate variant — fog rises and dissolves */
         .fog.evaporate {
