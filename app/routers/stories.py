@@ -159,21 +159,24 @@ def submit_story_manual(req: ManualStorySubmitRequest, user: User = Depends(get_
         if existing:
             return existing
 
-    # If a URL was provided, fetch title and text from Reddit
-    if url:
+    # If a URL was provided, fetch any missing title/text from Reddit
+    if url and (not title or not text):
         try:
             metadata = fetch_post_metadata(url)
-            title = metadata["title"]
-            author = metadata.get("author", "")
+            if not title:
+                title = metadata["title"]
+            if author is None:
+                author = metadata.get("author", "")
         except Exception as e:
             logger.error(f"Failed to fetch Reddit submission: {e}")
             raise HTTPException(status_code=400, detail=f"Could not fetch Reddit post: {e}")
 
-        try:
-            text = fetch_multi_part_story(url)
-        except Exception as e:
-            logger.error(f"Failed to fetch story text: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to extract story text: {e}")
+        if not text:
+            try:
+                text = fetch_multi_part_story(url)
+            except Exception as e:
+                logger.error(f"Failed to fetch story text: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to extract story text: {e}")
 
     if not text:
         raise HTTPException(status_code=400, detail="Story text cannot be empty")
