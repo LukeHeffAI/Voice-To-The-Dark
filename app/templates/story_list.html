@@ -408,7 +408,7 @@
                     </div>
                 </a>
                 {% if user %}
-                <button class="card-menu-btn" role="button" onclick="toggleDropdown(event, {{ story.id }})" aria-label="Story options">Story options</button>
+                <button class="card-menu-btn" role="button" onclick="toggleDropdown(event, {{ story.id }})" aria-label="Story options">&#8942;</button>
                 <div class="card-dropdown" id="dropdown-{{ story.id }}">
                     <span class="folder-submenu-label">Add to folder</span>
                     {% for f in folders %}
