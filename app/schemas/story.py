@@ -1,4 +1,4 @@
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl
 from typing import Optional
 from datetime import datetime
 
@@ -89,4 +89,4 @@ class FolderResponse(BaseModel):
 
 
 class FolderAddStoryRequest(BaseModel):
-    story_id: int
+    story_id: int = Field(gt=0)
