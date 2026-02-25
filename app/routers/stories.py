@@ -4,6 +4,7 @@ import re
 from urllib.parse import urlparse, urlunparse
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from app.database import get_db
 from app.models.story import Story, PlaybackState, StoryView, StoryFolder, StoryFolderMembership
 from app.schemas.story import (
@@ -382,7 +383,11 @@ def create_folder(req: FolderCreateRequest, user: User = Depends(get_current_use
         raise HTTPException(status_code=409, detail="A folder with this name already exists")
     folder = StoryFolder(user_id=user.id, name=name)
     db.add(folder)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="A folder with this name already exists")
     db.refresh(folder)
     return FolderResponse(id=folder.id, name=folder.name, story_count=0, created_at=folder.created_at)
 
