@@ -1,5 +1,7 @@
 import json
 import logging
+import re
+from urllib.parse import urlparse, urlunparse
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -18,10 +20,47 @@ from app.services.hashing import hash_content
 from app.services.text_cleaner import clean_for_narration
 from app.models.story import User
 from app.deps import get_current_user, get_optional_user
+from app.rate_limit import rate_limit
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# ── Reddit URL validation ─────────────────────────────────────────
+
+_ALLOWED_REDDIT_HOSTS = frozenset({"reddit.com", "www.reddit.com", "old.reddit.com"})
+_NOSLEEP_PATH_RE = re.compile(r"^/r/nosleep/comments/[a-zA-Z0-9_]+", re.IGNORECASE)
+
+
+def _validate_and_normalize_reddit_url(url: str) -> str:
+    """Validate that *url* points to a r/nosleep post and return a normalized form.
+
+    Raises HTTPException(400) for any URL that:
+    - is not http/https
+    - does not originate from reddit.com / www.reddit.com / old.reddit.com
+    - does not match the /r/nosleep/comments/<id> path pattern
+
+    Query strings and fragments are stripped so that share-link variants
+    (e.g. ``?utm_source=…``) do not create duplicate entries or cause
+    ``_reddit_get`` to append ``.json`` to a non-path segment.
+    """
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid URL")
+
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(status_code=400, detail="Invalid URL: scheme must be http or https")
+
+    if parsed.netloc.lower() not in _ALLOWED_REDDIT_HOSTS:
+        raise HTTPException(status_code=400, detail="Invalid URL: host must be reddit.com or www.reddit.com")
+
+    if not _NOSLEEP_PATH_RE.match(parsed.path):
+        raise HTTPException(status_code=400, detail="Invalid URL: must link to a r/nosleep post (/r/nosleep/comments/…)")
+
+    # Normalize: drop query string and fragment to prevent duplicates and
+    # to avoid breaking the Reddit .json fetch helper.
+    return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
 
 
 @router.post("/submit", response_model=StoryResponse)
@@ -32,14 +71,17 @@ def submit_story(req: StorySubmitRequest, user: User = Depends(get_current_user)
     record so the user is seamlessly directed to the story detail page.
     """
 
+    # Validate and normalize the Reddit URL (prevents SSRF; strips query/fragment)
+    reddit_url = _validate_and_normalize_reddit_url(req.reddit_url)
+
     # Return existing story if this URL was already submitted
-    existing = db.query(Story).filter(Story.reddit_url == req.reddit_url).first()
+    existing = db.query(Story).filter(Story.reddit_url == reddit_url).first()
     if existing:
         return existing
 
     # Fetch post metadata (title, author, etc.) via Reddit .json endpoint
     try:
-        metadata = fetch_post_metadata(req.reddit_url)
+        metadata = fetch_post_metadata(reddit_url)
         title = metadata["title"]
         author = metadata.get("author", "")
     except Exception as e:
@@ -48,7 +90,7 @@ def submit_story(req: StorySubmitRequest, user: User = Depends(get_current_user)
 
     # Fetch full text (multi-part aware)
     try:
-        text = fetch_multi_part_story(req.reddit_url)
+        text = fetch_multi_part_story(reddit_url)
     except Exception as e:
         logger.error(f"Failed to fetch story text: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to extract story text: {e}")
@@ -79,7 +121,7 @@ def submit_story(req: StorySubmitRequest, user: User = Depends(get_current_user)
     story = Story(
         title=title,
         author=author or None,
-        reddit_url=req.reddit_url,
+        reddit_url=reddit_url,
         text_content=text,
         narration_text=narration,
         content_hash=content_digest,
@@ -95,43 +137,82 @@ def submit_story(req: StorySubmitRequest, user: User = Depends(get_current_user)
 
 @router.post("/submit-manual", response_model=StoryResponse)
 def submit_story_manual(req: ManualStorySubmitRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Manually submit a story by pasting the title and text directly.
+    """Submit a story via manual entry.
 
-    Bypasses the Reddit API entirely. Useful when Reddit API keys are
-    unavailable or when the story source is not on Reddit.
+    All fields are optional:
+    - If a reddit_url is provided, the title and text will be fetched from
+      Reddit (any user-supplied title/text is ignored in that case).
+    - If no URL is given, at least a title and text_content must be provided.
     """
 
-    if not req.text_content or not req.text_content.strip():
-        raise HTTPException(status_code=400, detail="Story text cannot be empty")
+    title = (req.title or "").strip()
+    text = (req.text_content or "").strip()
+    url = (req.reddit_url or "").strip() or None
+    author = None
 
-    if not req.title or not req.title.strip():
-        raise HTTPException(status_code=400, detail="Story title cannot be empty")
+    # Validate and normalize the Reddit URL when provided (prevents SSRF; strips query/fragment)
+    if url:
+        url = _validate_and_normalize_reddit_url(url)
 
-    # Check for duplicate by URL if a reddit_url was provided
-    if req.reddit_url:
-        existing = db.query(Story).filter(Story.reddit_url == req.reddit_url).first()
+    # Check for duplicate by URL first
+    if url:
+        existing = db.query(Story).filter(Story.reddit_url == url).first()
         if existing:
             return existing
 
+    # If a URL was provided, fetch any missing title/text from Reddit
+    if url and (not title or not text):
+        try:
+            metadata = fetch_post_metadata(url)
+            if not title:
+                title = metadata["title"]
+            if author is None:
+                author = metadata.get("author", "")
+        except Exception as e:
+            logger.error(f"Failed to fetch Reddit submission: {e}")
+            raise HTTPException(status_code=400, detail=f"Could not fetch Reddit post: {e}")
+
+        if not text:
+            try:
+                text = fetch_multi_part_story(url)
+            except Exception as e:
+                logger.error(f"Failed to fetch story text: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to extract story text: {e}")
+
+    if not text:
+        raise HTTPException(status_code=400, detail="Story text cannot be empty")
+    if not title:
+        raise HTTPException(status_code=400, detail="Story title cannot be empty")
+
     # Check for duplicate by content hash
-    content_digest = hash_content(req.text_content)
+    content_digest = hash_content(text)
     duplicate = db.query(Story).filter(Story.content_hash == content_digest).first()
     if duplicate:
         return duplicate
 
     # Count parts by separator
-    parts = req.text_content.split("\n\n---\n\n")
+    parts = text.split("\n\n---\n\n")
     part_count = len(parts)
 
-    narration = clean_for_narration(req.text_content)
+    narration = clean_for_narration(text)
+
+    # Discover series parts from author's page (best-effort)
+    series_parts = []
+    if author:
+        try:
+            series_parts = find_series_parts(author, title)
+        except Exception:
+            pass
 
     story = Story(
-        title=req.title.strip(),
-        reddit_url=req.reddit_url or None,
-        text_content=req.text_content,
+        title=title,
+        author=author or None,
+        reddit_url=url,
+        text_content=text,
         narration_text=narration,
         content_hash=content_digest,
         part_count=part_count,
+        series_json=json.dumps(series_parts) if series_parts else None,
     )
     db.add(story)
     db.commit()
@@ -190,6 +271,36 @@ def top_nosleep_posts(timeframe: str = "alltime", limit: int = 50, db: Session =
         post["already_submitted"] = post["url"] in existing_urls
 
     return posts
+
+
+@router.get("/fetch-preview")
+def fetch_preview(reddit_url: str, _rl=Depends(rate_limit(30, 60)), user: User = Depends(get_current_user)):
+    """Fetch title and first-part text from a Reddit URL without creating a story.
+
+    Used by the manual entry pop-out to auto-populate fields once
+    a valid URL is entered.  Only the first post's text is fetched
+    (not the full multi-part chain) to keep preview requests cheap.
+    Rate-limited to 30 requests per minute per user.
+    """
+    if not reddit_url or not reddit_url.strip():
+        raise HTTPException(status_code=400, detail="URL is required")
+
+    # Validate and normalize (prevents SSRF; strips query/fragment)
+    reddit_url = _validate_and_normalize_reddit_url(reddit_url.strip())
+
+    try:
+        metadata = fetch_post_metadata(reddit_url)
+        title = metadata.get("title", "")
+        author = metadata.get("author", "")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not fetch Reddit post: {e}")
+
+    try:
+        text = fetch_story_text(reddit_url)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to extract story text: {e}")
+
+    return {"title": title, "author": author, "text": text or ""}
 
 
 @router.get("/check-duplicate/", response_model=DuplicateCheckResponse)

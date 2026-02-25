@@ -33,140 +33,18 @@
             margin-top: 0.4rem;
         }
 
-        /* ── Mode tabs ─────────────────────────────────────── */
-        .mode-tabs {
+        /* ── Browse section (primary) ─────────────────────── */
+        .browse-header {
             display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1.25rem;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.35rem;
         }
-        .mode-tab {
-            padding: 0.5rem 1.1rem;
-            border: 1px solid var(--border);
-            border-radius: var(--r-sm);
-            background: transparent;
-            color: var(--text-3);
-            font-family: var(--sans);
-            font-size: 0.82rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.25s var(--ease);
-            letter-spacing: 0.02em;
-        }
-        .mode-tab:hover {
-            border-color: var(--border-hover);
-            color: var(--text-2);
-        }
-        .mode-tab.active {
-            border-color: rgba(160,32,32,0.3);
-            color: var(--accent);
-            background: var(--accent-dim);
-        }
-
-        /* ── Forms ─────────────────────────────────────────── */
-        .submit-section {
-            margin-bottom: 2rem;
-        }
-        .submit-section h2 {
-            font-family: var(--serif);
-            font-size: 1.05rem;
-            font-weight: 500;
-            color: var(--text-1);
-            margin-bottom: 0.85rem;
-            letter-spacing: 0.03em;
-        }
-        .url-form {
-            display: flex;
-            gap: 0.5rem;
-        }
-        .url-input, .manual-input {
-            flex: 1;
-            padding: 0.75rem 1rem;
-            border: 1px solid var(--border);
-            border-radius: var(--r-sm);
-            background: var(--surface);
-            color: var(--text-1);
-            font-family: var(--sans);
-            font-size: 0.9rem;
-            outline: none;
-            transition: all 0.25s var(--ease);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-        }
-        .url-input:focus, .manual-input:focus {
-            border-color: var(--border-focus);
-            background: var(--surface-hover);
-        }
-        .url-input::placeholder, .manual-input::placeholder { color: var(--text-3); }
-
-        .manual-textarea {
-            width: 100%;
-            min-height: 200px;
-            padding: 0.75rem 1rem;
-            border: 1px solid var(--border);
-            border-radius: var(--r-sm);
-            background: var(--surface);
-            color: var(--text-1);
-            font-family: var(--sans);
-            font-size: 0.9rem;
-            outline: none;
-            transition: all 0.25s var(--ease);
-            resize: vertical;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-        }
-        .manual-textarea:focus {
-            border-color: var(--border-focus);
-            background: var(--surface-hover);
-        }
-        .manual-textarea::placeholder { color: var(--text-3); }
-
-        .manual-form {
-            display: flex;
-            flex-direction: column;
-            gap: 0.85rem;
-        }
-        .manual-form label {
-            font-size: 0.72rem;
-            color: var(--text-3);
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-        }
-
-        .submit-btn {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: var(--r-sm);
-            background: var(--accent);
-            color: #fff;
-            font-family: var(--sans);
-            font-size: 0.88rem;
-            font-weight: 600;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.25s var(--ease);
-            letter-spacing: 0.02em;
-        }
-        .submit-btn:hover {
-            background: var(--accent-hover);
-            box-shadow: var(--accent-glow);
-        }
-        .submit-btn:disabled {
-            background: rgba(255,255,255,0.06);
-            color: var(--text-3);
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-
-        /* ── Browse section ────────────────────────────────── */
-        .browse-section {
-            margin-top: 1rem;
-        }
-        .browse-section h2 {
+        .browse-header h2 {
             font-family: var(--serif);
             font-size: 1.1rem;
             font-weight: 500;
             color: var(--text-1);
-            margin-bottom: 0.35rem;
             letter-spacing: 0.03em;
         }
         .browse-section .subtitle {
@@ -174,6 +52,26 @@
             color: var(--text-3);
             margin-bottom: 1rem;
             letter-spacing: 0.01em;
+        }
+
+        .manual-entry-btn {
+            padding: 0.42rem 0.9rem;
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            background: transparent;
+            color: var(--text-3);
+            font-family: var(--sans);
+            font-size: 0.78rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s var(--ease);
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
+        .manual-entry-btn:hover {
+            border-color: var(--border-hover);
+            color: var(--text-2);
+            background: var(--surface);
         }
 
         .top-stories-list {
@@ -194,14 +92,16 @@
             justify-content: space-between;
             align-items: flex-start;
             gap: 0.75rem;
+            text-decoration: none;
         }
         .top-story-item:hover {
             border-color: var(--border-hover);
             background: var(--surface-hover);
         }
-        .top-story-item.selected {
+        .top-story-item.submitting {
             border-color: rgba(160,32,32,0.3);
             background: var(--accent-dim);
+            pointer-events: none;
         }
 
         .top-story-info {
@@ -248,6 +148,17 @@
             white-space: nowrap;
             padding-top: 0.1rem;
             font-variant-numeric: tabular-nums;
+        }
+        .top-story-spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 0.4rem;
+            vertical-align: middle;
         }
 
         .loading-spinner {
@@ -327,6 +238,196 @@
             background: var(--accent-hover);
             box-shadow: var(--accent-glow);
         }
+
+        /* ── Manual entry pop-out ─────────────────────────── */
+        .popout-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 5000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s var(--ease), visibility 0.25s;
+        }
+        .popout-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        .popout-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: min(460px, 92vw);
+            background: var(--bg);
+            border-left: 1px solid var(--border);
+            z-index: 5001;
+            transform: translateX(100%);
+            transition: transform 0.3s var(--ease);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .popout-overlay.open .popout-panel {
+            transform: translateX(0);
+        }
+        .popout-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .popout-header h3 {
+            font-family: var(--serif);
+            font-size: 1.15rem;
+            font-weight: 500;
+            color: var(--text-1);
+            letter-spacing: 0.03em;
+        }
+        .popout-close {
+            width: 32px;
+            height: 32px;
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            background: transparent;
+            color: var(--text-3);
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s var(--ease);
+        }
+        .popout-close:hover {
+            border-color: var(--border-hover);
+            color: var(--text-1);
+        }
+        .popout-body {
+            padding: 1.5rem;
+            flex: 1;
+        }
+
+        .manual-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .manual-form .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+        .manual-form label {
+            font-size: 0.72rem;
+            color: var(--text-3);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .manual-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            background: var(--surface);
+            color: var(--text-1);
+            font-family: var(--sans);
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.25s var(--ease);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .manual-input:focus {
+            border-color: var(--border-focus);
+            background: var(--surface-hover);
+        }
+        .manual-input::placeholder { color: var(--text-3); }
+        .manual-input:read-only {
+            color: var(--text-2);
+            background: rgba(255,255,255,0.015);
+            cursor: default;
+        }
+        .manual-input:read-only:focus {
+            border-color: var(--border);
+            background: rgba(255,255,255,0.015);
+        }
+
+        .manual-textarea {
+            width: 100%;
+            min-height: 180px;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            background: var(--surface);
+            color: var(--text-1);
+            font-family: var(--sans);
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.25s var(--ease);
+            resize: vertical;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .manual-textarea:focus {
+            border-color: var(--border-focus);
+            background: var(--surface-hover);
+        }
+        .manual-textarea::placeholder { color: var(--text-3); }
+        .manual-textarea:read-only {
+            color: var(--text-2);
+            background: rgba(255,255,255,0.015);
+            cursor: default;
+        }
+        .manual-textarea:read-only:focus {
+            border-color: var(--border);
+            background: rgba(255,255,255,0.015);
+        }
+
+        .url-status {
+            font-size: 0.75rem;
+            margin-top: 0.2rem;
+            min-height: 1.1em;
+            transition: color 0.2s var(--ease);
+        }
+        .url-status.fetching { color: var(--text-3); }
+        .url-status.success { color: var(--success); }
+        .url-status.error { color: #e07070; }
+
+        .submit-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: var(--r-sm);
+            background: var(--accent);
+            color: #fff;
+            font-family: var(--sans);
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.25s var(--ease);
+            letter-spacing: 0.02em;
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+        .submit-btn:hover {
+            background: var(--accent-hover);
+            box-shadow: var(--accent-glow);
+        }
+        .submit-btn:disabled {
+            background: rgba(255,255,255,0.06);
+            color: var(--text-3);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .popout-hint {
+            font-size: 0.73rem;
+            color: var(--text-3);
+            line-height: 1.5;
+            margin-bottom: 1.25rem;
+            font-style: italic;
+        }
 {% endblock %}
 
 {% block body %}
@@ -346,51 +447,10 @@
 
         <div class="header">
             <h1>Submit a Story</h1>
-            <p>Paste a NoSleep URL or pick from the best</p>
+            <p>Pick from the best of r/nosleep</p>
         </div>
 
-        {% if user %}
-        <div class="submit-section">
-            <div class="mode-tabs">
-                <button class="mode-tab active" id="tabReddit" onclick="setMode('reddit')">Reddit URL</button>
-                <button class="mode-tab" id="tabManual" onclick="setMode('manual')">Manual Entry</button>
-            </div>
-
-            <div id="redditMode">
-                <div class="url-form">
-                    <input type="text" class="url-input" id="urlInput"
-                           placeholder="https://reddit.com/r/nosleep/comments/..."
-                           autocomplete="off" autocapitalize="off" spellcheck="false">
-                    <button class="submit-btn" id="submitBtn" onclick="submitStory()">Submit</button>
-                </div>
-            </div>
-
-            <div id="manualMode" style="display:none;">
-                <div class="manual-form">
-                    <div>
-                        <label for="manualTitle">Story Title</label>
-                        <input type="text" class="manual-input" id="manualTitle"
-                               placeholder="e.g. I Found Something in My Basement"
-                               autocomplete="off" spellcheck="false">
-                    </div>
-                    <div>
-                        <label for="manualText">Story Text</label>
-                        <textarea class="manual-textarea" id="manualText"
-                                  placeholder="Paste the full story text here..."></textarea>
-                    </div>
-                    <div>
-                        <label for="manualUrl">Source URL (optional)</label>
-                        <input type="text" class="manual-input" id="manualUrl"
-                               placeholder="https://reddit.com/r/nosleep/comments/..."
-                               autocomplete="off" spellcheck="false">
-                    </div>
-                    <button class="submit-btn" id="manualSubmitBtn" onclick="submitManualStory()">Submit</button>
-                </div>
-            </div>
-
-            <div class="form-message" id="formMessage"></div>
-        </div>
-        {% else %}
+        {% if not user %}
         <div class="login-prompt">
             <p>Sign in to submit stories and generate narrations</p>
             <a href="/login?next=/submit">Sign In</a>
@@ -398,8 +458,13 @@
         {% endif %}
 
         <div class="browse-section">
-            <h2>Best of r/nosleep</h2>
-            <p class="subtitle">Tap a story to fill in its URL, then hit Submit</p>
+            <div class="browse-header">
+                <h2>Best of r/nosleep</h2>
+                {% if user %}
+                <button class="manual-entry-btn" onclick="openManualEntry()">+ Manual Entry</button>
+                {% endif %}
+            </div>
+            <p class="subtitle">Tap a story to begin</p>
 
             <div class="filter-bar">
                 <button class="filter-btn active" data-filter="alltime" onclick="setFilter(this)">All Time</button>
@@ -412,54 +477,182 @@
                 <div class="loading-spinner" id="loadingSpinner">Loading top stories...</div>
                 <ul class="top-stories-list" id="topStoriesList" style="display:none;"></ul>
             </div>
+
+            <div class="form-message" id="formMessage"></div>
+        </div>
+    </div>
+
+    <!-- Manual entry pop-out panel -->
+    <div class="popout-overlay" id="popoutOverlay" onclick="closeManualEntry(event)">
+        <div class="popout-panel" onclick="event.stopPropagation()">
+            <div class="popout-header">
+                <h3>Manual Entry</h3>
+                <button class="popout-close" onclick="closeManualEntry()">&times;</button>
+            </div>
+            <div class="popout-body">
+                <p class="popout-hint">
+                    All fields are optional. Paste a Reddit URL to auto-fill the title and text.
+                </p>
+                <div class="manual-form">
+                    <div class="field-group">
+                        <label for="manualUrl">Reddit URL</label>
+                        <input type="text" class="manual-input" id="manualUrl"
+                               placeholder="https://reddit.com/r/nosleep/comments/..."
+                               autocomplete="off" spellcheck="false">
+                        <div class="url-status" id="urlStatus"></div>
+                    </div>
+                    <div class="field-group">
+                        <label for="manualTitle">Story Title</label>
+                        <input type="text" class="manual-input" id="manualTitle"
+                               placeholder="e.g. I Found Something in My Basement"
+                               autocomplete="off" spellcheck="false">
+                    </div>
+                    <div class="field-group">
+                        <label for="manualText">Story Text</label>
+                        <textarea class="manual-textarea" id="manualText"
+                                  placeholder="Paste the full story text here..."></textarea>
+                    </div>
+                    <div class="form-message" id="manualFormMessage" aria-live="polite"></div>
+                    <button class="submit-btn" id="manualSubmitBtn" onclick="submitManualStory()">Submit</button>
+                </div>
+            </div>
         </div>
     </div>
 {% endblock %}
 
 {% block scripts %}
     <script>
-    const urlInput = document.getElementById('urlInput');
-    const submitBtn = document.getElementById('submitBtn');
     const formMessage = document.getElementById('formMessage');
     const topStoriesList = document.getElementById('topStoriesList');
     const loadingSpinner = document.getElementById('loadingSpinner');
+    const popoutOverlay = document.getElementById('popoutOverlay');
 
     let currentFilter = 'alltime';
     let storyCache = {};
-    let currentMode = 'reddit';
+    let urlFetchTimer = null;
+    let urlFetchController = null;
+    let urlLocked = false;
+    const isLoggedIn = {{ 'true' if user else 'false' }};
 
-    function setMode(mode) {
-        currentMode = mode;
-        const redditMode = document.getElementById('redditMode');
-        const manualMode = document.getElementById('manualMode');
-        const tabReddit = document.getElementById('tabReddit');
-        const tabManual = document.getElementById('tabManual');
+    /* ── Manual entry pop-out ─────────────────────────── */
 
-        if (mode === 'reddit') {
-            redditMode.style.display = 'block';
-            manualMode.style.display = 'none';
-            tabReddit.classList.add('active');
-            tabManual.classList.remove('active');
-        } else {
-            redditMode.style.display = 'none';
-            manualMode.style.display = 'block';
-            tabReddit.classList.remove('active');
-            tabManual.classList.add('active');
-        }
-        hideMessage();
+    function openManualEntry() {
+        popoutOverlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
     }
 
-    async function submitManualStory() {
-        const title = document.getElementById('manualTitle').value.trim();
-        const text = document.getElementById('manualText').value.trim();
-        const url = document.getElementById('manualUrl').value.trim() || null;
+    function closeManualEntry(e) {
+        if (e && e.target !== popoutOverlay) return;
+        popoutOverlay.classList.remove('open');
+        document.body.style.overflow = '';
+    }
 
-        if (!title) {
-            showMessage('Please enter a story title.', 'error');
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && popoutOverlay.classList.contains('open')) {
+            closeManualEntry();
+        }
+    });
+
+    /* ── URL auto-fetch ───────────────────────────────── */
+
+    const manualUrl = document.getElementById('manualUrl');
+    const manualTitle = document.getElementById('manualTitle');
+    const manualText = document.getElementById('manualText');
+    const urlStatus = document.getElementById('urlStatus');
+
+    if (manualUrl) {
+        manualUrl.addEventListener('input', () => {
+            if (urlFetchTimer) clearTimeout(urlFetchTimer);
+
+            const url = manualUrl.value.trim();
+
+            // If URL is cleared, unlock the fields
+            if (!url) {
+                unlockFields();
+                return;
+            }
+
+            // Only auto-fetch for valid-looking Reddit URLs
+            if (!url.match(/reddit\.com\/r\/nosleep\/comments\//i)) {
+                urlStatus.textContent = '';
+                urlStatus.className = 'url-status';
+                return;
+            }
+
+            // Debounce: wait for user to stop typing
+            urlFetchTimer = setTimeout(() => fetchPreview(url), 600);
+        });
+    }
+
+    async function fetchPreview(url) {
+        // Abort any in-flight request for a previous URL
+        if (urlFetchController) {
+            urlFetchController.abort();
+        }
+        urlFetchController = new AbortController();
+        const signal = urlFetchController.signal;
+
+        urlStatus.textContent = 'Fetching story details...';
+        urlStatus.className = 'url-status fetching';
+
+        try {
+            const resp = await fetch('/stories/fetch-preview?reddit_url=' + encodeURIComponent(url), { signal });
+            const data = await resp.json();
+
+            // Ignore response if the user has since changed the URL
+            if (manualUrl.value.trim() !== url) return;
+
+            if (!resp.ok) {
+                urlStatus.textContent = data.detail || 'Could not fetch story.';
+                urlStatus.className = 'url-status error';
+                return;
+            }
+
+            // Populate and lock the fields
+            manualTitle.value = data.title || '';
+            manualText.value = data.text || '';
+            manualTitle.readOnly = true;
+            manualText.readOnly = true;
+            urlLocked = true;
+
+            urlStatus.textContent = 'Story details loaded.';
+            urlStatus.className = 'url-status success';
+        } catch (err) {
+            if (err.name === 'AbortError') return;
+            urlStatus.textContent = 'Network error fetching preview.';
+            urlStatus.className = 'url-status error';
+        }
+    }
+
+    function unlockFields() {
+        const wasLocked = urlLocked;
+        manualTitle.readOnly = false;
+        manualText.readOnly = false;
+        urlLocked = false;
+        urlStatus.textContent = '';
+        urlStatus.className = 'url-status';
+
+        // Only clear if they were auto-populated (i.e. locked)
+        if (wasLocked) {
+            manualTitle.value = '';
+            manualText.value = '';
+        }
+    }
+
+    /* ── Manual submit ────────────────────────────────── */
+
+    async function submitManualStory() {
+        const title = manualTitle.value.trim();
+        const text = manualText.value.trim();
+        const url = manualUrl.value.trim() || null;
+
+        // At least a URL or (title + text) must be provided
+        if (!url && !title && !text) {
+            showMessage('Enter a URL, or provide a title and story text.', 'error');
             return;
         }
-        if (!text) {
-            showMessage('Please paste the story text.', 'error');
+        if (!url && (!title || !text)) {
+            showMessage('Without a URL, both title and story text are required.', 'error');
             return;
         }
 
@@ -469,8 +662,10 @@
         hideMessage();
 
         try {
-            const body = { title: title, text_content: text };
+            const body = {};
             if (url) body.reddit_url = url;
+            if (title) body.title = title;
+            if (text) body.text_content = text;
 
             const resp = await fetch('/stories/submit-manual', {
                 method: 'POST',
@@ -481,7 +676,6 @@
             const data = await resp.json();
 
             if (resp.ok) {
-                showMessage('Loading story...', 'success');
                 window.location.href = '/story/' + data.id;
             } else if (resp.status === 401) {
                 window.location.href = '/login?next=/submit';
@@ -497,53 +691,7 @@
         }
     }
 
-    async function submitStory() {
-        const url = urlInput.value.trim();
-        if (!url) {
-            showMessage('Please enter a Reddit URL.', 'error');
-            return;
-        }
-
-        if (!url.match(/reddit\.com\/r\/nosleep\/comments\//i)) {
-            showMessage('Please enter a valid r/nosleep URL.', 'error');
-            return;
-        }
-
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Submitting...';
-        hideMessage();
-
-        try {
-            const resp = await fetch('/stories/submit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reddit_url: url }),
-            });
-
-            const data = await resp.json();
-
-            if (resp.ok) {
-                showMessage('Loading story...', 'success');
-                window.location.href = '/story/' + data.id;
-            } else if (resp.status === 401) {
-                window.location.href = '/login?next=/submit';
-            } else {
-                showMessage(data.detail || 'Submission failed.', 'error');
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Submit';
-            }
-        } catch (err) {
-            showMessage('Network error. Please try again.', 'error');
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Submit';
-        }
-    }
-
-    if (urlInput) {
-        urlInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') submitStory();
-        });
-    }
+    /* ── Top stories (Best Of) ────────────────────────── */
 
     async function loadTopStories(timeframe) {
         if (storyCache[timeframe]) {
@@ -597,16 +745,48 @@
                     (metaHtml ? '<div class="top-story-meta">' + metaHtml + '</div>' : '') +
                 '</div>' +
                 '<div class="top-story-score">' + scoreText + ' pts</div>';
-            li.onclick = () => selectTopStory(story.url, li);
+            li.onclick = () => submitTopStory(story.url, li);
             topStoriesList.appendChild(li);
         }
     }
 
-    function selectTopStory(url, element) {
-        if (urlInput) urlInput.value = url;
-        document.querySelectorAll('.top-story-item').forEach(el => el.classList.remove('selected'));
-        element.classList.add('selected');
+    async function submitTopStory(url, element) {
+        if (!isLoggedIn) {
+            window.location.href = '/login?next=/submit';
+            return;
+        }
+
+        // Visual feedback
+        document.querySelectorAll('.top-story-item').forEach(el => el.classList.remove('submitting'));
+        element.classList.add('submitting');
+        const scoreEl = element.querySelector('.top-story-score');
+        const origScore = scoreEl.innerHTML;
+        scoreEl.innerHTML = '<span class="top-story-spinner"></span>';
         hideMessage();
+
+        try {
+            const resp = await fetch('/stories/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reddit_url: url }),
+            });
+
+            const data = await resp.json();
+
+            if (resp.ok) {
+                window.location.href = '/story/' + data.id;
+            } else if (resp.status === 401) {
+                window.location.href = '/login?next=/submit';
+            } else {
+                showMessage(data.detail || 'Failed to submit story.', 'error');
+                element.classList.remove('submitting');
+                scoreEl.innerHTML = origScore;
+            }
+        } catch (err) {
+            showMessage('Network error. Please try again.', 'error');
+            element.classList.remove('submitting');
+            scoreEl.innerHTML = origScore;
+        }
     }
 
     function setFilter(btn) {
@@ -615,6 +795,8 @@
         currentFilter = btn.dataset.filter;
         loadTopStories(currentFilter);
     }
+
+    /* ── Helpers ───────────────────────────────────────── */
 
     function showMessage(html, type) {
         if (!formMessage) return;

@@ -8,8 +8,8 @@ class StorySubmitRequest(BaseModel):
 
 
 class ManualStorySubmitRequest(BaseModel):
-    title: str
-    text_content: str
+    title: Optional[str] = None
+    text_content: Optional[str] = None
     reddit_url: Optional[str] = None
 
 
