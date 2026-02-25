@@ -374,6 +374,8 @@ def create_folder(req: FolderCreateRequest, user: User = Depends(get_current_use
     name = req.name.strip()
     if not name:
         raise HTTPException(status_code=400, detail="Folder name cannot be empty")
+    if len(name) > 60:
+        raise HTTPException(status_code=400, detail="Folder name cannot be longer than 60 characters")
     existing = db.query(StoryFolder).filter(
         StoryFolder.user_id == user.id,
         StoryFolder.name == name,
