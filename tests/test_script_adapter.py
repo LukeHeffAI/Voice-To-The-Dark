@@ -230,3 +230,40 @@ class TestSplitForAdaptation:
         giant = "A" * 50000
         sections = _split_for_adaptation(giant, max_chars=10000)
         assert sections == [giant]
+
+    def test_splits_on_part_boundaries_first(self):
+        """Multi-part stories are split on part delimiters before character limits."""
+        text = "Part one content.\n\n---\n\nPart two content.\n\n---\n\nPart three content."
+        sections = _split_for_adaptation(text, max_chars=50000)
+        assert len(sections) == 3
+        assert sections[0] == "Part one content."
+        assert sections[1] == "Part two content."
+        assert sections[2] == "Part three content."
+
+    def test_short_multipart_not_merged(self):
+        """Even when total text is under max_chars, part boundaries are respected."""
+        text = "Short A.\n\n---\n\nShort B."
+        sections = _split_for_adaptation(text, max_chars=50000)
+        assert len(sections) == 2
+        assert sections[0] == "Short A."
+        assert sections[1] == "Short B."
+
+    def test_long_part_further_split(self):
+        """A single part exceeding max_chars is further split by paragraph."""
+        long_part = "Para one.\n\nPara two.\n\nPara three."
+        text = f"Short part.\n\n---\n\n{long_part}"
+        sections = _split_for_adaptation(text, max_chars=20)
+        # First section is the short part, remaining sections come from the long part
+        assert sections[0] == "Short part."
+        assert len(sections) >= 3
+        rejoined = "\n\n".join(sections[1:])
+        assert "Para one." in rejoined
+        assert "Para three." in rejoined
+
+    def test_empty_parts_skipped(self):
+        """Empty parts between delimiters are ignored."""
+        text = "Content.\n\n---\n\n\n\n---\n\nMore content."
+        sections = _split_for_adaptation(text, max_chars=50000)
+        assert len(sections) == 2
+        assert sections[0] == "Content."
+        assert sections[1] == "More content."

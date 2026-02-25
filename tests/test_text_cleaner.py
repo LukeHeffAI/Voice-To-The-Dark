@@ -222,3 +222,58 @@ Next: https://reddit.com/r/nosleep/comments/nextpart"""
     def test_plain_text_unchanged(self):
         text = "A simple story with no markdown or artifacts."
         assert clean_for_narration(text) == text
+
+
+class TestMultiPartPreservation:
+    """Verify that multi-part story boundaries survive the cleaning pipeline."""
+
+    def test_preserves_part_delimiters(self):
+        text = "Part one story text.\n\n---\n\nPart two story text."
+        result = clean_for_narration(text)
+        assert "\n\n---\n\n" in result
+        assert "Part one story text." in result
+        assert "Part two story text." in result
+
+    def test_three_parts_preserved(self):
+        text = "Part one.\n\n---\n\nPart two.\n\n---\n\nPart three."
+        result = clean_for_narration(text)
+        parts = result.split("\n\n---\n\n")
+        assert len(parts) == 3
+        assert "Part one." in parts[0]
+        assert "Part two." in parts[1]
+        assert "Part three." in parts[2]
+
+    def test_parts_cleaned_independently(self):
+        """Markdown and meta-text within each part are cleaned independently."""
+        text = (
+            "**Bold** text in part one.\n\nEdit: typo fix.\n\n---\n\n"
+            "Part two has *italic* text.\nTW: scary content"
+        )
+        result = clean_for_narration(text)
+        parts = result.split("\n\n---\n\n")
+        assert len(parts) == 2
+        assert "**" not in parts[0]
+        assert "Bold" in parts[0]
+        assert "Edit:" not in parts[0]
+        assert "*" not in parts[1]
+        assert "italic" in parts[1]
+        assert "TW:" not in parts[1]
+
+    def test_empty_parts_filtered(self):
+        """Parts that become empty after cleaning are dropped."""
+        text = (
+            "Real story content.\n\n---\n\n"
+            "[Part 1](https://reddit.com/abc) | [Part 2](https://reddit.com/def)\n"
+            "Next: https://reddit.com/r/nosleep/comments/nextpart"
+        )
+        result = clean_for_narration(text)
+        assert "---" not in result
+        assert "Real story content." in result
+
+    def test_single_newline_hr_still_stripped(self):
+        """A within-part horizontal rule (single-newline context) is still removed."""
+        text = "Scene one.\n---\nScene two."
+        result = clean_for_narration(text)
+        assert "---" not in result
+        assert "Scene one." in result
+        assert "Scene two." in result

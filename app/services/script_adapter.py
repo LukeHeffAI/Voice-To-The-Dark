@@ -236,27 +236,35 @@ def _adapt_long_story(
 def _split_for_adaptation(text: str, max_chars: int = 12000) -> list[str]:
     """Split long text into sections for sequential adaptation.
 
-    Splits on paragraph boundaries (double newlines) and keeps each section
-    under max_chars. This ensures Claude has enough output headroom to produce
-    a detailed script for each section.
+    Multi-part stories (delimited by ``\\n\\n---\\n\\n``) are split on part
+    boundaries first so that each story part is adapted individually.  Parts
+    that still exceed *max_chars* are further split on paragraph boundaries.
     """
-    if len(text) <= max_chars:
-        return [text]
+    from app.services.text_cleaner import PART_DELIMITER
 
-    paragraphs = text.split("\n\n")
-    sections = []
-    current = ""
+    # Split on story-part boundaries first.
+    story_parts = text.split(PART_DELIMITER)
 
-    for para in paragraphs:
-        candidate = f"{current}\n\n{para}".strip() if current else para
-        if len(candidate) <= max_chars:
-            current = candidate
+    sections: list[str] = []
+    for part in story_parts:
+        part = part.strip()
+        if not part:
+            continue
+        if len(part) <= max_chars:
+            sections.append(part)
         else:
+            # Further split this part on paragraph boundaries.
+            paragraphs = part.split("\n\n")
+            current = ""
+            for para in paragraphs:
+                candidate = f"{current}\n\n{para}".strip() if current else para
+                if len(candidate) <= max_chars:
+                    current = candidate
+                else:
+                    if current:
+                        sections.append(current)
+                    current = para
             if current:
                 sections.append(current)
-            current = para
 
-    if current:
-        sections.append(current)
-
-    return sections
+    return sections if sections else [text]

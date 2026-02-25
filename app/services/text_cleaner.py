@@ -1,12 +1,29 @@
 import re
 
+# Delimiter used by reddit.py to join multi-part stories.  We must split on
+# this *before* cleaning so that the part boundaries survive the markdown
+# stripping step (which removes plain ``---`` horizontal rules).
+PART_DELIMITER = "\n\n---\n\n"
+
 
 def clean_for_narration(text: str) -> str:
     """Transform Reddit-formatted story text into clean prose ready for TTS.
 
     Strips markdown, meta-text, navigation boilerplate, and other artifacts
     that would sound wrong when read aloud by a text-to-speech engine.
+
+    Multi-part stories (joined with ``\\n\\n---\\n\\n``) are cleaned
+    per-part so that part boundaries are preserved in the output.
     """
+    parts = text.split(PART_DELIMITER)
+    cleaned_parts = [_clean_single_part(part) for part in parts]
+    # Drop parts that became empty after cleaning (e.g. navigation-only blocks)
+    cleaned_parts = [p for p in cleaned_parts if p]
+    return PART_DELIMITER.join(cleaned_parts)
+
+
+def _clean_single_part(text: str) -> str:
+    """Run the full cleaning pipeline on a single story part."""
     text = _remove_navigation_blocks(text)
     text = _remove_meta_lines(text)
     text = _convert_markdown_to_prose(text)
