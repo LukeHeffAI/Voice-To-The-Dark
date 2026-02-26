@@ -435,8 +435,8 @@
             card.className = 'character-card';
             card.innerHTML =
                 '<div class="char-card-header">' +
-                    '<span class="char-card-name ' + roleClass + '">' + escapeHtml(key) + '</span>' +
-                    '<span class="char-card-badge ' + roleClass + '">' + roleLabel + '</span>' +
+                    '<span class="char-card-name ' + roleClass.replace(/_/g, ' ') + '">' + escapeHtml(key) + '</span>' +
+                    '<span class="char-card-badge ' + roleClass.replace(/_/g, ' ') + '">' + roleLabel + '</span>' +
                 '</div>' +
                 '<div class="char-field">' +
                     '<div class="char-field-label">Voice profile</div>' +
