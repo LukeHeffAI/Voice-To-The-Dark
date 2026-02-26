@@ -46,7 +46,14 @@ def _get_voice_notes(db: Session) -> dict[str, str]:
         notes = json.loads(raw)
     except (json.JSONDecodeError, TypeError):
         notes = {}
-    return notes
+    # Ensure we always return a dict[str, str]
+    if not isinstance(notes, dict):
+        return {}
+    sanitized: dict[str, str] = {}
+    for key, value in notes.items():
+        if isinstance(key, str) and isinstance(value, str):
+            sanitized[key] = value
+    return sanitized
 
 
 @router.get("/", response_class=HTMLResponse)
