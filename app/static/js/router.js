@@ -85,6 +85,28 @@
                     liveStyles.textContent = newStyles.textContent;
                 }
 
+                // Extract and execute page-specific scripts.
+                // NOTE: We intentionally use innerHTML here because #page-scripts contains
+                // <script> tags that must be preserved so executeScripts() can execute them.
+                // The fetched HTML comes from the same origin (see fetch() options and redirect
+                // check above), is served over HTTPS in production, and is subject to the
+                // application's server-side sanitization and CSP. As a result, #page-scripts
+                // is treated as trusted, first-party content in this deployment context.
+                // NOTE: Unlike #page-styles which holds plain text inside a single <style> tag
+                // (updated via textContent), #page-scripts holds one or more <script> tags whose
+                // structure must be preserved, so innerHTML is required here.
+                var newScripts = doc.getElementById('page-scripts');
+                var liveScripts = document.getElementById('page-scripts');
+                if (newScripts && liveScripts) {
+                    // Replace the old container entirely so that any closures and event
+                    // listeners associated with it can be garbage-collected instead of
+                    // accumulating across navigations.
+                    var newLiveScripts = liveScripts.cloneNode(false); // keep id/attributes, drop children
+                    newLiveScripts.innerHTML = newScripts.innerHTML;
+                    liveScripts.parentNode.replaceChild(newLiveScripts, liveScripts);
+                    executeScripts(newLiveScripts);
+                }
+
                 // Update title
                 var newTitle = doc.querySelector('title');
                 if (newTitle) {
