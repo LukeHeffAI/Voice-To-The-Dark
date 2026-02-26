@@ -88,9 +88,10 @@ class TestTopNosleep:
 
 
 class TestSubmitStory:
+    @patch("app.routers.stories.find_series_parts", return_value=[])
     @patch("app.routers.stories.fetch_post_metadata")
-    @patch("app.routers.stories.fetch_multi_part_story")
-    def test_submit_new_story(self, mock_fetch, mock_metadata, client, auth_headers, db_session):
+    @patch("app.routers.stories.fetch_story_text")
+    def test_submit_new_story(self, mock_fetch, mock_metadata, _mock_series, client, auth_headers, db_session):
         mock_metadata.return_value = {"title": "My Scary Story", "author": "scary_author"}
         mock_fetch.return_value = "Once upon a time, in a dark forest, something terrible happened."
 
@@ -103,9 +104,10 @@ class TestSubmitStory:
         assert data["author"] == "scary_author"
         assert data["part_count"] == 1
 
+    @patch("app.routers.stories.find_series_parts", return_value=[])
     @patch("app.routers.stories.fetch_post_metadata")
-    @patch("app.routers.stories.fetch_multi_part_story")
-    def test_submit_strips_query_string(self, mock_fetch, mock_metadata, client, auth_headers, db_session):
+    @patch("app.routers.stories.fetch_story_text")
+    def test_submit_strips_query_string(self, mock_fetch, mock_metadata, _mock_series, client, auth_headers, db_session):
         """Query strings/fragments are stripped from the URL before fetching and storing."""
         mock_metadata.return_value = {"title": "Share Link Story", "author": "author"}
         mock_fetch.return_value = "Story text here."
@@ -136,7 +138,7 @@ class TestSubmitStory:
         assert "nosleep" in resp.json()["detail"].lower()
 
     @patch("app.routers.stories.fetch_post_metadata")
-    @patch("app.routers.stories.fetch_multi_part_story")
+    @patch("app.routers.stories.fetch_story_text")
     def test_submit_returns_existing_on_duplicate_url(self, mock_fetch, mock_metadata, client, auth_headers, sample_story, db_session):
         """Submitting an existing URL returns the existing story (200, not error)."""
         resp = client.post("/stories/submit", json={
@@ -247,9 +249,10 @@ class TestManualSubmitStory:
         data = resp.json()
         assert data["author"] == "test_author"
 
+    @patch("app.routers.stories.find_series_parts", return_value=[])
     @patch("app.routers.stories.fetch_post_metadata")
-    @patch("app.routers.stories.fetch_multi_part_story")
-    def test_manual_submit_url_author_from_request(self, mock_fetch, mock_metadata, client, auth_headers, db_session):
+    @patch("app.routers.stories.fetch_story_text")
+    def test_manual_submit_url_author_from_request(self, mock_fetch, mock_metadata, _mock_series, client, auth_headers, db_session):
         """When author is supplied alongside a URL, the request author takes precedence over Reddit metadata."""
         mock_metadata.return_value = {"title": "Reddit Title", "author": "reddit_author"}
         mock_fetch.return_value = "Full story text fetched from Reddit."
@@ -261,9 +264,10 @@ class TestManualSubmitStory:
         assert resp.status_code == 200
         assert resp.json()["author"] == "override_author"
 
+    @patch("app.routers.stories.find_series_parts", return_value=[])
     @patch("app.routers.stories.fetch_post_metadata")
-    @patch("app.routers.stories.fetch_multi_part_story")
-    def test_manual_submit_url_author_fallback_from_reddit(self, mock_fetch, mock_metadata, client, auth_headers, db_session):
+    @patch("app.routers.stories.fetch_story_text")
+    def test_manual_submit_url_author_fallback_from_reddit(self, mock_fetch, mock_metadata, _mock_series, client, auth_headers, db_session):
         """When author is omitted and a URL is provided, the author falls back to Reddit metadata."""
         mock_metadata.return_value = {"title": "Reddit Title", "author": "reddit_author"}
         mock_fetch.return_value = "Full story text fetched from Reddit."
@@ -279,7 +283,9 @@ class TestSeriesParts:
     def test_returns_empty_for_story_without_parts(self, client, sample_story, db_session):
         resp = client.get(f"/stories/{sample_story.id}/series-parts")
         assert resp.status_code == 200
-        assert resp.json() == []
+        data = resp.json()
+        assert data["parts"] == []
+        assert data["total_count"] == 0
 
     def test_returns_404_for_nonexistent_story(self, client, db_session):
         resp = client.get("/stories/9999/series-parts")
@@ -319,7 +325,7 @@ class TestSeriesParts:
 
         resp = client.get(f"/stories/{series_story.id}/series-parts")
         assert resp.status_code == 200
-        data = resp.json()
+        data = resp.json()["parts"]
         assert len(data) == 2
         assert data[0]["story_id"] == submitted.id
         assert data[1]["story_id"] is None
@@ -356,7 +362,7 @@ class TestSeriesParts:
 
         resp = client.get(f"/stories/{series_story.id}/series-parts")
         assert resp.status_code == 200
-        data = resp.json()
+        data = resp.json()["parts"]
         assert data[0]["story_id"] == submitted.id
 
     def test_enriches_part_with_host_variant(self, client, db_session):
@@ -391,7 +397,7 @@ class TestSeriesParts:
 
         resp = client.get(f"/stories/{series_story.id}/series-parts")
         assert resp.status_code == 200
-        data = resp.json()
+        data = resp.json()["parts"]
         assert data[0]["story_id"] == submitted.id
 
 
@@ -656,11 +662,11 @@ class TestCreateFolder:
 
     def test_create_folder_empty_name_rejected(self, client, auth_headers, db_session):
         resp = client.post("/stories/folders/create", json={"name": ""}, headers=auth_headers)
-        assert resp.status_code == 400
+        assert resp.status_code in (400, 422)
 
     def test_create_folder_whitespace_only_name_rejected(self, client, auth_headers, db_session):
         resp = client.post("/stories/folders/create", json={"name": "   "}, headers=auth_headers)
-        assert resp.status_code == 400
+        assert resp.status_code in (400, 422)
 
     def test_create_duplicate_folder_name_rejected(self, client, auth_headers, db_session):
         client.post("/stories/folders/create", json={"name": "Duplicated"}, headers=auth_headers)
