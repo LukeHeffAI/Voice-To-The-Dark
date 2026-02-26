@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+{% block title %}{{ story.title }} — Read — Voice In The Dark{% endblock %}
+{% block styles %}
+        body { padding: 1.25rem; }
+
+        .reader-container {
+            max-width: 640px;
+            margin: 0 auto;
+        }
+
+        /* ── Header ──────────────────────────────────────────── */
+        .reader-header {
+            padding: 2.5rem 0 2rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2.5rem;
+            text-align: center;
+        }
+        .reader-title {
+            font-family: var(--serif);
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text-1);
+            line-height: 1.25;
+        }
+        .reader-meta {
+            font-size: 0.8rem;
+            color: var(--text-3);
+            margin-top: 0.6rem;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            letter-spacing: 0.02em;
+        }
+        .reader-meta a {
+            color: var(--text-2);
+            text-decoration: none;
+            transition: color 0.2s var(--ease);
+        }
+        .reader-meta a:hover { color: var(--text-1); }
+        .reader-stats {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .reader-stat {
+            font-size: 0.75rem;
+            color: var(--text-3);
+            letter-spacing: 0.02em;
+        }
+        .reader-stat-value {
+            color: var(--text-2);
+            font-weight: 600;
+        }
+
+        /* ── Reading progress bar ────────────────────────────── */
+        .reading-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 2px;
+            background: var(--accent);
+            box-shadow: 0 0 8px rgba(160,32,32,0.4);
+            z-index: 9998;
+            transition: width 0.1s linear;
+        }
+
+        /* ── Story text ──────────────────────────────────────── */
+        .reader-body {
+            font-family: var(--serif);
+            font-size: 1.2rem;
+            font-weight: 400;
+            color: var(--text-1);
+            line-height: 1.85;
+            letter-spacing: 0.01em;
+            padding-bottom: 4rem;
+        }
+        .reader-body p {
+            margin-bottom: 1.4em;
+            text-indent: 0;
+        }
+        .reader-body p:first-child {
+            font-size: 1.25rem;
+        }
+        .reader-body p:first-child::first-letter {
+            font-size: 3.2em;
+            float: left;
+            line-height: 0.8;
+            margin: 0.06em 0.12em 0 0;
+            color: var(--accent);
+            font-weight: 700;
+            font-family: var(--serif);
+        }
+
+        /* ── Separator between sections ──────────────────────── */
+        .reader-body hr {
+            border: none;
+            text-align: center;
+            margin: 2.5rem 0;
+            color: var(--text-3);
+            font-size: 1rem;
+            letter-spacing: 0.5em;
+        }
+        .reader-body hr::after {
+            content: '\2022  \2022  \2022';
+        }
+
+        /* ── Bottom nav ──────────────────────────────────────── */
+        .reader-footer {
+            border-top: 1px solid var(--border);
+            padding: 2rem 0;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        /* ── Series nav in reader ────────────────────────────── */
+        .reader-series-nav {
+            border-top: 1px solid var(--border);
+            padding: 1.5rem 0 0;
+            margin-top: 1rem;
+        }
+        .reader-series-title {
+            font-family: var(--serif);
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-2);
+            margin-bottom: 0.6rem;
+            letter-spacing: 0.03em;
+            text-align: center;
+        }
+        .reader-series-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .series-part {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.55rem 0.85rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            text-decoration: none;
+            color: var(--text-2);
+            font-family: var(--sans);
+            font-size: 0.82rem;
+            transition: all 0.2s var(--ease);
+        }
+        .series-part:hover {
+            border-color: var(--border-hover);
+            background: var(--surface-hover);
+        }
+        .series-part.current {
+            border-color: rgba(160,32,32,0.3);
+            background: var(--accent-dim);
+        }
+        .series-part-num {
+            font-weight: 600;
+            color: var(--text-3);
+            min-width: 1.5rem;
+            text-align: center;
+        }
+{% endblock %}
+{% block body %}
+    <div class="reading-progress" id="readingProgress"></div>
+    <div class="reader-container">
+        <a href="/story/{{ story.id }}" class="back-link">&larr; Story details</a>
+
+        <div class="reader-header">
+            <div class="reader-title">{{ story.title }}</div>
+            <div class="reader-meta">
+                {% if story.author %}
+                <span>by u/{{ story.author }}</span>
+                {% endif %}
+                {% if story.reddit_url %}
+                <a href="{{ story.reddit_url }}" target="_blank" rel="noopener">View on Reddit</a>
+                {% endif %}
+            </div>
+            <div class="reader-stats">
+                {% if word_count %}
+                <div class="reader-stat"><span class="reader-stat-value">{{ '{:,}'.format(word_count) }}</span> words</div>
+                {% endif %}
+                {% if read_minutes %}
+                <div class="reader-stat">~<span class="reader-stat-value">{{ read_minutes }}</span> min read</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="reader-body" id="readerBody">
+            {% for paragraph in paragraphs %}
+                {% if paragraph == '---' %}
+                    <hr>
+                {% else %}
+                    <p>{{ paragraph }}</p>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <div class="reader-series-nav" id="seriesSection" style="display:none;">
+            <div class="reader-series-title">Series Parts</div>
+            <ul class="reader-series-list" id="seriesList"></ul>
+        </div>
+
+        <div class="reader-footer">
+            <a href="/story/{{ story.id }}" class="btn-secondary">&larr; Story Details</a>
+            {% if story.audio_file_path %}
+            <a href="/listen/{{ story.id }}" class="btn-secondary">&#9654; Listen</a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+{% block scripts %}
+    <script>
+    /* ── Reading progress ─────────────────────────────────── */
+    const progressBar = document.getElementById('readingProgress');
+    const body = document.getElementById('readerBody');
+
+    function updateProgress() {
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        if (docHeight <= 0) { progressBar.style.width = '100%'; return; }
+        const pct = Math.min(100, (window.scrollY / docHeight) * 100);
+        progressBar.style.width = pct + '%';
+    }
+
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+
+    /* ── Save / restore scroll position ───────────────────── */
+    const storyId = {{ story.id }};
+    const storageKey = 'vttd_read_pos_' + storyId;
+
+    function saveScrollPosition() {
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        if (docHeight <= 0) return;
+        const pct = window.scrollY / docHeight;
+        localStorage.setItem(storageKey, pct.toFixed(4));
+    }
+
+    function restoreScrollPosition() {
+        const saved = parseFloat(localStorage.getItem(storageKey));
+        if (saved && saved > 0.01 && saved < 0.99) {
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            window.scrollTo(0, Math.round(saved * docHeight));
+        }
+    }
+
+    let scrollSaveTimer = null;
+    window.addEventListener('scroll', function() {
+        clearTimeout(scrollSaveTimer);
+        scrollSaveTimer = setTimeout(saveScrollPosition, 300);
+    }, { passive: true });
+    window.addEventListener('beforeunload', saveScrollPosition);
+
+    // Restore after fonts are loaded for accurate scroll height
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(restoreScrollPosition);
+    } else {
+        window.addEventListener('load', restoreScrollPosition);
+    }
+
+    /* ── Series parts ─────────────────────────────────────── */
+    (async function loadSeriesParts() {
+        try {
+            const resp = await fetch('/stories/' + storyId + '/series-parts');
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const parts = data.parts || [];
+            if (!parts || parts.length < 2) return;
+
+            const section = document.getElementById('seriesSection');
+            const list = document.getElementById('seriesList');
+            section.style.display = 'block';
+
+            const currentUrl = {{ story.reddit_url | tojson if story.reddit_url else 'null' }};
+            function canonicalPath(url) {
+                try {
+                    const u = new URL(url);
+                    return u.hostname.replace(/^www\./, '') + u.pathname.replace(/\/$/, '');
+                } catch { return (url || '').replace(/\/$/, ''); }
+            }
+            const currentKey = currentUrl ? canonicalPath(currentUrl) : null;
+
+            for (let idx = 0; idx < parts.length; idx++) {
+                const part = parts[idx];
+                const li = document.createElement('li');
+                const isCurrent = currentKey && part.url && (
+                    currentKey === canonicalPath(part.url)
+                );
+                const partNum = idx + 1;
+                const partTitle = part.title || 'Part ' + partNum;
+
+                if (isCurrent) {
+                    li.innerHTML =
+                        '<div class="series-part current">' +
+                            '<span class="series-part-num">' + partNum + '</span>' +
+                            '<span>' + escapeHtml(partTitle) + ' (current)</span>' +
+                        '</div>';
+                } else if (part.story_id) {
+                    li.innerHTML =
+                        '<a class="series-part" href="/read/' + part.story_id + '">' +
+                            '<span class="series-part-num">' + partNum + '</span>' +
+                            '<span>' + escapeHtml(partTitle) + '</span>' +
+                        '</a>';
+                } else {
+                    li.innerHTML =
+                        '<div class="series-part" style="opacity:0.5;">' +
+                            '<span class="series-part-num">' + partNum + '</span>' +
+                            '<span>' + escapeHtml(partTitle) + ' (not fetched)</span>' +
+                        '</div>';
+                }
+                list.appendChild(li);
+            }
+        } catch(e) {}
+    })();
+
+    function escapeHtml(text) {
+        const d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
+    }
+    </script>
+{% endblock %}

@@ -302,6 +302,13 @@
                     <div class="step-info">
                         {{ (story.narration_text or '') | length }} characters of narration text
                     </div>
+                    {% if story.text_content %}
+                    <div style="margin-top: 0.5rem;">
+                        <a href="/read/{{ story.id }}" class="btn-secondary">
+                            Read Story
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             <div class="step" id="scriptStep">
