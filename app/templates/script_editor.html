@@ -368,6 +368,7 @@
 
 {% block scripts %}
     <script>
+    (function() {
     const storyId = {{ story.id }};
     let script = {{ script_json | safe }};
     let hasChanges = false;
@@ -608,6 +609,15 @@
         return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
+    // Expose functions used by inline onclick handlers
+    window.saveScript = saveScript;
+    window.onVoiceChange = onVoiceChange;
+    window.onProfileChange = onProfileChange;
+    window.confirmEdit = confirmEdit;
+    window.cancelEdit = cancelEdit;
+    window.deleteSegment = deleteSegment;
+
     render();
+    })();
     </script>
 {% endblock %}
