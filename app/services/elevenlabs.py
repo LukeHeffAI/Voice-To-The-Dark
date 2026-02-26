@@ -288,11 +288,20 @@ def generate_voice_preview(voice_id: str) -> str:
         return cached_path
 
     logger.info(f"Generating voice preview for {voice_id}")
-    tts_request(
-        text=VOICE_PREVIEW_TEXT,
-        voice_id=voice_id,
-        output_file=cached_path,
-        preset="horror_narrator",
-    )
+    temp_path = cached_path + f".{uuid.uuid4().hex}.tmp"
+    try:
+        tts_request(
+            text=VOICE_PREVIEW_TEXT,
+            voice_id=voice_id,
+            output_file=temp_path,
+            preset="horror_narrator",
+        )
+        os.replace(temp_path, cached_path)
+    finally:
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        except OSError:
+            logger.debug(f"Failed to remove temporary voice preview file: {temp_path}", exc_info=True)
 
     return cached_path

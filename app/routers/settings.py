@@ -66,12 +66,12 @@ def settings_page(request: Request, db: Session = Depends(get_db), user: User | 
     cache_info = get_cache_info()
 
     voice_notes = _get_voice_notes(db)
-    voice_pool_json = json.dumps([
+    voice_pool_json = [
         {"voice_id": v.voice_id, "name": v.name, "gender": v.gender,
          "age": v.age, "archetypes": v.archetypes,
          "notes": voice_notes.get(v.voice_id, "")}
         for v in VOICE_POOL
-    ])
+    ]
 
     return templates.TemplateResponse("settings.html", {
         "request": request,
