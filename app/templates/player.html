@@ -493,9 +493,9 @@
             <div class="controls">
                 <button class="control-btn small" id="repeatBtn" title="Repeat: Off">&#128257;<span class="repeat-one-dot">1</span></button>
                 <button class="control-btn small" id="prevBtn" title="Previous">&#9664;&#9664;</button>
-                <button class="control-btn" id="skipBackBtn" title="Back 30s">&#9664;&#9664; 30</button>
+                <button class="control-btn" id="skipBackBtn" title="Back 15s">&#9664;&#9664; 15</button>
                 <button class="control-btn play-btn" id="playBtn">&#9654;</button>
-                <button class="control-btn" id="skipFwdBtn" title="Forward 30s">30 &#9654;&#9654;</button>
+                <button class="control-btn" id="skipFwdBtn" title="Forward 15s">15 &#9654;&#9654;</button>
                 <button class="control-btn small" id="nextBtn" title="Next">&#9654;&#9654;</button>
                 <button class="control-btn small" id="queueBtn" title="Queue">&#9776;</button>
             </div>
@@ -582,8 +582,8 @@
 
         // ── Wire controls to PlayerCore ────────────────────
         playBtn.addEventListener('click', function() { PlayerCore.togglePlay(); });
-        skipBackBtn.addEventListener('click', function() { PlayerCore.skip(-30); });
-        skipFwdBtn.addEventListener('click', function() { PlayerCore.skip(30); });
+        skipBackBtn.addEventListener('click', function() { PlayerCore.skip(-15); });
+        skipFwdBtn.addEventListener('click', function() { PlayerCore.skip(15); });
         prevBtn.addEventListener('click', function() { Playlist.prev(); });
         nextBtn.addEventListener('click', function() { Playlist.next(); });
         repeatBtn.addEventListener('click', function() { Playlist.toggleRepeat(); });
