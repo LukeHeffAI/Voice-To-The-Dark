@@ -338,7 +338,7 @@
 {% endblock %}
 
 {% block body %}
-    <div class="page-container">
+    <div class="page-container" data-story-id="{{ story.id }}">
         <a href="/story/{{ story.id }}" class="back-link">&larr; Back to story</a>
 
         <div class="page-header">
@@ -364,15 +364,17 @@
         <p class="click-hint">Tap a segment to edit it</p>
         <div class="segment-list" id="segmentList"></div>
     </div>
+    <script type="application/json" id="editorScriptData">{{ script_json | safe }}</script>
+    <script type="application/json" id="editorVoicePool">{{ voice_pool_json | safe }}</script>
 {% endblock %}
 
 {% block scripts %}
     <script>
     (function() {
-    const storyId = {{ story.id }};
-    let script = {{ script_json | safe }};
+    const storyId = parseInt(document.querySelector('.page-container').dataset.storyId, 10);
+    let script = JSON.parse(document.getElementById('editorScriptData').textContent);
     let hasChanges = false;
-    const voicePool = {{ voice_pool_json | safe }};
+    const voicePool = JSON.parse(document.getElementById('editorVoicePool').textContent);
 
     function render() {
         renderCharacters();
