@@ -974,7 +974,7 @@ class TestScriptEditorPage:
         resp = client.get(f"/story/{story.id}/edit-script")
         assert resp.status_code == 200
         # The script JSON and voice pool JSON should be embedded
-        assert "voice_pool_json" not in resp.text or "voicePool" in resp.text
+        assert "const voicePool =" in resp.text
         assert "let script =" in resp.text
 
     def test_contains_voice_pool_json(self, client, db_session):
