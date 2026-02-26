@@ -13,6 +13,62 @@ logger = logging.getLogger(__name__)
 DEFAULT_NARRATOR_VOICE = "pNInz6obpgDQGcFmaJgB"  # ElevenLabs "Adam"
 
 
+def _consolidate_voice_segments(
+    segments: list[ScriptSegment],
+) -> list[ScriptSegment]:
+    """Merge consecutive voice segments from the same character into single
+    segments so ElevenLabs can produce more natural, continuous delivery.
+
+    Only adjacent NARRATION/DIALOGUE segments sharing the same character are
+    merged.  Any other segment type (SFX, AMBIENT, PAUSE) or a switch to a
+    different character flushes the current group.
+
+    The merged segment keeps the first segment's type and tone; texts are
+    joined with a single space (ElevenLabs infers pacing from punctuation).
+    """
+
+    def _flush(group: list[ScriptSegment]) -> ScriptSegment:
+        if len(group) == 1:
+            return group[0]
+        joined_text = " ".join(seg.text for seg in group if seg.text)
+        return ScriptSegment(
+            type=group[0].type,
+            character=group[0].character,
+            text=joined_text,
+            tone=group[0].tone,
+        )
+
+    result: list[ScriptSegment] = []
+    current_group: list[ScriptSegment] = []
+
+    for segment in segments:
+        is_voice = segment.type in (SegmentType.NARRATION, SegmentType.DIALOGUE)
+
+        if is_voice and current_group:
+            # Same character as the running group? Extend it.
+            group_char = current_group[0].character or "narrator"
+            seg_char = segment.character or "narrator"
+            if seg_char == group_char:
+                current_group.append(segment)
+                continue
+
+        # Flush any pending group before handling this segment.
+        if current_group:
+            result.append(_flush(current_group))
+            current_group = []
+
+        if is_voice:
+            current_group = [segment]
+        else:
+            result.append(segment)
+
+    # Flush trailing group.
+    if current_group:
+        result.append(_flush(current_group))
+
+    return result
+
+
 def generate_narration(
     script: NarrationScript,
     voice_map: dict[str, str],
@@ -40,11 +96,14 @@ def generate_narration(
 
     tmp_folder = create_tmp_folder()
 
+    # --- Consolidate consecutive same-character voice segments ---
+    consolidated = _consolidate_voice_segments(script.segments)
+
     # --- Generate all segments ---
     segment_files: list[tuple[str, ScriptSegment]] = []
 
-    for i, segment in enumerate(script.segments):
-        logger.info(f"Generating segment {i + 1}/{len(script.segments)}: {segment.type}")
+    for i, segment in enumerate(consolidated):
+        logger.info(f"Generating segment {i + 1}/{len(consolidated)}: {segment.type}")
 
         path = _generate_segment(segment, voice_map, tmp_folder, i)
         if path:

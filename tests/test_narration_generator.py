@@ -15,6 +15,7 @@ from app.schemas.narration import (
 )
 from app.services.narration_generator import (
     generate_narration,
+    _consolidate_voice_segments,
     _generate_segment,
     _tone_to_preset,
     _generate_voice_segment,
@@ -772,3 +773,253 @@ class TestIndexFormatting:
         )
         result = _generate_segment(segment, _voice_map(), "/tmp/t", 9999)
         assert result == "/tmp/t/seg_9999_sfx.mp3"
+
+
+# ---------------------------------------------------------------------------
+# _consolidate_voice_segments  (pure function -- no mocks needed)
+# ---------------------------------------------------------------------------
+
+class TestConsolidateVoiceSegments:
+
+    def test_empty_list_returns_empty(self):
+        assert _consolidate_voice_segments([]) == []
+
+    def test_single_voice_segment_unchanged(self):
+        seg = ScriptSegment(
+            type=SegmentType.NARRATION, character="narrator",
+            text="Hello.", tone="ominous",
+        )
+        result = _consolidate_voice_segments([seg])
+        assert len(result) == 1
+        assert result[0] is seg
+
+    def test_single_non_voice_segment_unchanged(self):
+        seg = ScriptSegment(type=SegmentType.PAUSE, duration_ms=1500)
+        result = _consolidate_voice_segments([seg])
+        assert len(result) == 1
+        assert result[0] is seg
+
+    def test_two_consecutive_same_character_merged(self):
+        segs = [
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="The door opened.", tone="ominous"),
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="Something was wrong.", tone="foreboding"),
+        ]
+        result = _consolidate_voice_segments(segs)
+        assert len(result) == 1
+        assert result[0].text == "The door opened. Something was wrong."
+        assert result[0].character == "narrator"
+        assert result[0].type == SegmentType.NARRATION
+        assert result[0].tone == "ominous"  # first segment's tone
+
+    def test_three_consecutive_same_character_merged(self):
+        segs = [
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="Line one.", tone="calm"),
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="Line two.", tone="ominous"),
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="Line three.", tone="foreboding"),
+        ]
+        result = _consolidate_voice_segments(segs)
+        assert len(result) == 1
+        assert result[0].text == "Line one. Line two. Line three."
+        assert result[0].tone == "calm"
+
+    def test_different_characters_not_merged(self):
+        segs = [
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="I heard a voice.", tone="ominous"),
+            ScriptSegment(type=SegmentType.DIALOGUE, character="sarah",
+                          text="Who's there?", tone="whisper"),
+        ]
+        result = _consolidate_voice_segments(segs)
+        assert len(result) == 2
+        assert result[0].text == "I heard a voice."
+        assert result[1].text == "Who's there?"
+
+    def test_pause_breaks_chain(self):
+        segs = [
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="Before.", tone="ominous"),
+            ScriptSegment(type=SegmentType.PAUSE, duration_ms=2000),
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="After.", tone="calm"),
+        ]
+        result = _consolidate_voice_segments(segs)
+        assert len(result) == 3
+        assert result[0].text == "Before."
+        assert result[1].type == SegmentType.PAUSE
+        assert result[2].text == "After."
+
+    def test_sfx_breaks_chain(self):
+        segs = [
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="I reached for the handle.", tone="ominous"),
+            ScriptSegment(type=SegmentType.SFX, description="door creaking"),
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="The door swung open.", tone="ominous"),
+        ]
+        result = _consolidate_voice_segments(segs)
+        assert len(result) == 3
+        assert result[0].text == "I reached for the handle."
+        assert result[1].type == SegmentType.SFX
+        assert result[2].text == "The door swung open."
+
+    def test_ambient_breaks_chain(self):
+        segs = [
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="First.", tone="calm"),
+            ScriptSegment(type=SegmentType.AMBIENT, description="wind", loop=True),
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="Second.", tone="calm"),
+        ]
+        result = _consolidate_voice_segments(segs)
+        assert len(result) == 3
+
+    def test_mixed_scenario(self):
+        """narrator x3, sfx, sarah x2, pause, narrator x1 -> 4 groups + sfx + pause."""
+        segs = [
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="A.", tone="calm"),
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="B.", tone="calm"),
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="C.", tone="calm"),
+            ScriptSegment(type=SegmentType.SFX, description="thud"),
+            ScriptSegment(type=SegmentType.DIALOGUE, character="sarah",
+                          text="D.", tone="whisper"),
+            ScriptSegment(type=SegmentType.DIALOGUE, character="sarah",
+                          text="E.", tone="panic"),
+            ScriptSegment(type=SegmentType.PAUSE, duration_ms=1500),
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="F.", tone="ominous"),
+        ]
+        result = _consolidate_voice_segments(segs)
+        assert len(result) == 5
+        # narrator A+B+C merged
+        assert result[0].text == "A. B. C."
+        assert result[0].character == "narrator"
+        # sfx unchanged
+        assert result[1].type == SegmentType.SFX
+        # sarah D+E merged
+        assert result[2].text == "D. E."
+        assert result[2].character == "sarah"
+        assert result[2].tone == "whisper"  # first segment's tone
+        # pause unchanged
+        assert result[3].type == SegmentType.PAUSE
+        # narrator F standalone
+        assert result[4].text == "F."
+        assert result[4].character == "narrator"
+
+    def test_merged_segment_uses_first_type(self):
+        """If narration is followed by dialogue from the same character,
+        the merged segment keeps the first segment's type."""
+        segs = [
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="I thought aloud.", tone="calm"),
+            ScriptSegment(type=SegmentType.DIALOGUE, character="narrator",
+                          text="What is happening?", tone="panic"),
+        ]
+        result = _consolidate_voice_segments(segs)
+        assert len(result) == 1
+        assert result[0].type == SegmentType.NARRATION
+        assert result[0].text == "I thought aloud. What is happening?"
+
+    def test_none_character_treated_as_narrator(self):
+        """Segments with character=None should merge with explicit 'narrator'."""
+        segs = [
+            ScriptSegment(type=SegmentType.NARRATION, character=None,
+                          text="Implicit narrator.", tone="calm"),
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="Explicit narrator.", tone="calm"),
+        ]
+        result = _consolidate_voice_segments(segs)
+        assert len(result) == 1
+        assert result[0].text == "Implicit narrator. Explicit narrator."
+
+    def test_no_voice_segments_passes_through(self):
+        """A sequence of only non-voice segments passes through unchanged."""
+        segs = [
+            ScriptSegment(type=SegmentType.AMBIENT, description="rain", loop=True),
+            ScriptSegment(type=SegmentType.SFX, description="thunder"),
+            ScriptSegment(type=SegmentType.PAUSE, duration_ms=1000),
+        ]
+        result = _consolidate_voice_segments(segs)
+        assert len(result) == 3
+        assert result[0] is segs[0]
+        assert result[1] is segs[1]
+        assert result[2] is segs[2]
+
+
+# ---------------------------------------------------------------------------
+# generate_narration with consolidation
+# ---------------------------------------------------------------------------
+
+class TestGenerateNarrationWithConsolidation:
+
+    @patch("app.services.narration_generator.os.remove")
+    @patch("app.services.narration_generator.os.makedirs")
+    @patch("app.services.narration_generator.create_tmp_folder", return_value="/tmp/narr_work")
+    @patch("app.services.narration_generator.mix_narration")
+    @patch("app.services.narration_generator.generate_audio")
+    def test_consecutive_same_character_produces_single_api_call(
+        self,
+        mock_gen_audio,
+        mock_mix,
+        mock_tmp,
+        mock_makedirs,
+        mock_remove,
+    ):
+        mock_mix.return_value = MagicMock(spec=AudioSegment)
+
+        segments = [
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="First line.", tone="ominous"),
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="Second line.", tone="calm"),
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="Third line.", tone="foreboding"),
+        ]
+        script = _make_script(segments)
+
+        generate_narration(script, _voice_map(), "/output/story.mp3")
+
+        # All three narrator lines should be consolidated into one API call
+        mock_gen_audio.assert_called_once()
+        called_text = mock_gen_audio.call_args.args[0]
+        assert called_text == "First line. Second line. Third line."
+
+    @patch("app.services.narration_generator.os.remove")
+    @patch("app.services.narration_generator.os.makedirs")
+    @patch("app.services.narration_generator.create_tmp_folder", return_value="/tmp/narr_work")
+    @patch("app.services.narration_generator.mix_narration")
+    @patch("app.services.narration_generator.generate_sfx")
+    @patch("app.services.narration_generator.generate_audio")
+    def test_sfx_between_same_character_prevents_merge(
+        self,
+        mock_gen_audio,
+        mock_gen_sfx,
+        mock_mix,
+        mock_tmp,
+        mock_makedirs,
+        mock_remove,
+    ):
+        mock_mix.return_value = MagicMock(spec=AudioSegment)
+
+        segments = [
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="Before.", tone="ominous"),
+            ScriptSegment(type=SegmentType.SFX, description="thud"),
+            ScriptSegment(type=SegmentType.NARRATION, character="narrator",
+                          text="After.", tone="ominous"),
+        ]
+        script = _make_script(segments)
+
+        generate_narration(script, _voice_map(), "/output/story.mp3")
+
+        # Two separate voice API calls because SFX breaks the chain
+        assert mock_gen_audio.call_count == 2
+        assert mock_gen_audio.call_args_list[0].args[0] == "Before."
+        assert mock_gen_audio.call_args_list[1].args[0] == "After."
