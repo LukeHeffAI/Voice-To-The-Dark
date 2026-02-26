@@ -218,6 +218,7 @@
 {% endblock %}
 {% block scripts %}
     <script>
+    (function() {
     /* ── Reading progress ─────────────────────────────────── */
     const progressBar = document.getElementById('readingProgress');
     const body = document.getElementById('readerBody');
@@ -325,5 +326,6 @@
         d.textContent = text;
         return d.innerHTML;
     }
+    })();
     </script>
 {% endblock %}
