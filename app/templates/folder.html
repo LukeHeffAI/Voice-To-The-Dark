@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block styles %}
-        body { padding: 1.25rem; }
+        .page-folder { padding: 1.25rem; }
 
         .page-header {
             max-width: 640px;
@@ -146,31 +146,34 @@
             border: 1px solid var(--border);
         }
 
-        /* Remove button */
-        .card-remove-btn {
-            position: absolute;
-            top: 50%;
-            right: 0.6rem;
-            transform: translateY(-50%);
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: transparent;
-            border: none;
-            border-radius: var(--r-sm);
-            color: var(--text-3);
-            cursor: pointer;
-            transition: all 0.2s var(--ease);
-            z-index: 2;
-            font-size: 1rem;
-            line-height: 1;
+        /* Three-dot menu button */
+        .card-menu-btn {
+            position: absolute; top: 50%; right: 0.6rem; transform: translateY(-50%);
+            width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+            background: transparent; border: none; border-radius: var(--r-sm);
+            color: var(--text-3); cursor: pointer; transition: all 0.2s var(--ease);
+            z-index: 2; font-size: 1.1rem; line-height: 1;
         }
-        .card-remove-btn:hover {
-            color: var(--error);
-            background: var(--error-dim);
+        .card-menu-btn:hover { color: var(--text-1); background: var(--surface-active); }
+
+        .card-dropdown {
+            display: none; position: absolute; top: calc(50% + 18px); right: 0.6rem;
+            min-width: 200px; background: #161616; border: 1px solid var(--border-hover);
+            border-radius: var(--r-md); padding: 0.35rem 0; z-index: 100;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
         }
+        .card-dropdown.open { display: block; }
+        .card-dropdown-item {
+            display: flex; align-items: center; gap: 0.6rem; width: 100%;
+            padding: 0.6rem 1rem; border: none; background: none;
+            color: var(--text-2); font-family: var(--sans); font-size: 0.8rem;
+            cursor: pointer; text-align: left; transition: all 0.15s var(--ease); white-space: nowrap;
+        }
+        .card-dropdown-item:hover { background: var(--surface-hover); color: var(--text-1); }
+        .card-dropdown-item.danger { color: var(--error); }
+        .card-dropdown-item.danger:hover { background: var(--error-dim); }
+        .dropdown-icon { width: 14px; text-align: center; font-size: 0.85rem; flex-shrink: 0; }
+        .dropdown-separator { height: 1px; background: var(--border); margin: 0.3rem 0; }
 
         .empty-state {
             text-align: center;
@@ -187,40 +190,14 @@
         }
         .empty-state a:hover { text-decoration: underline; }
 
-        .auth-nav {
+        .page-folder .auth-nav {
             max-width: 640px;
             margin: 0 auto;
-        }
-        .auth-nav .username {
-            color: var(--text-2);
-            font-weight: 500;
-        }
-
-        /* Toast notification */
-        .toast {
-            position: fixed;
-            bottom: 1.5rem;
-            left: 50%;
-            transform: translateX(-50%) translateY(80px);
-            padding: 0.65rem 1.3rem;
-            background: #1a1a1a;
-            border: 1px solid var(--border-hover);
-            border-radius: var(--r-md);
-            color: var(--text-1);
-            font-size: 0.8rem;
-            z-index: 10001;
-            opacity: 0;
-            transition: all 0.35s var(--ease);
-            pointer-events: none;
-        }
-        .toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
         }
 {% endblock %}
 
 {% block body %}
-    <div class="fog settle" aria-hidden="true"></div>
+    <div class="page-folder">
     <div class="auth-nav">
         {% if user %}
         <span class="username">{{ user.username }}</span>
@@ -272,7 +249,21 @@
                         {% endif %}
                     </div>
                 </a>
-                <button class="card-remove-btn" onclick="removeFromFolder({{ folder.id }}, {{ story.id }})" aria-label="Remove from folder" title="Remove from folder">&#10005;</button>
+                <button class="card-menu-btn" role="button" onclick="toggleFolderDropdown(event, {{ story.id }})" aria-label="Story options">&#8942;</button>
+                <div class="card-dropdown" id="folder-dropdown-{{ story.id }}">
+                    {% if story.audio_file_path %}
+                    <button class="card-dropdown-item" onclick="addToQueue({{ story.id }}, {{ story.title|tojson }}, {{ (story.author or '')|tojson }})">
+                        <span class="dropdown-icon">+</span> Add to Queue
+                    </button>
+                    <button class="card-dropdown-item" onclick="playNext({{ story.id }}, {{ story.title|tojson }}, {{ (story.author or '')|tojson }})">
+                        <span class="dropdown-icon">&#9654;</span> Play Next
+                    </button>
+                    <div class="dropdown-separator"></div>
+                    {% endif %}
+                    <button class="card-dropdown-item danger" onclick="removeFromFolder({{ folder.id }}, {{ story.id }})">
+                        <span class="dropdown-icon">&#10005;</span> Remove from folder
+                    </button>
+                </div>
             </div>
         </li>
         {% endfor %}
@@ -284,48 +275,81 @@
     </div>
     {% endif %}
 
-    <div class="toast" id="toast"></div>
+    </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 (function() {
-    function showToast(msg) {
-        const t = document.getElementById('toast');
-        t.textContent = msg;
-        t.classList.add('show');
-        setTimeout(() => t.classList.remove('show'), 2200);
+    var openDropdownId = null;
+
+    window.toggleFolderDropdown = function(e, storyId) {
+        e.preventDefault();
+        e.stopPropagation();
+        var dd = document.getElementById('folder-dropdown-' + storyId);
+        if (openDropdownId === storyId) {
+            dd.classList.remove('open');
+            openDropdownId = null;
+        } else {
+            closeFolderDropdowns();
+            dd.classList.add('open');
+            openDropdownId = storyId;
+        }
+    };
+
+    function closeFolderDropdowns() {
+        document.querySelectorAll('.card-dropdown.open').forEach(function(el) { el.classList.remove('open'); });
+        openDropdownId = null;
     }
 
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.card-menu-btn') && !e.target.closest('.card-dropdown')) {
+            closeFolderDropdowns();
+        }
+    });
+
     window.removeFromFolder = function(folderId, storyId) {
+        closeFolderDropdowns();
         fetch('/stories/folders/' + folderId + '/stories/' + storyId, { method: 'DELETE' })
-            .then(r => {
+            .then(function(r) {
                 if (!r.ok) throw new Error('Server error: ' + r.status);
                 return r.json();
             })
-            .then(() => {
-                const wrapper = document.querySelector('[data-story-id="' + storyId + '"]');
+            .then(function() {
+                var wrapper = document.querySelector('[data-story-id="' + storyId + '"]');
                 if (wrapper) {
                     wrapper.parentElement.style.transition = 'opacity 0.3s, max-height 0.3s';
                     wrapper.parentElement.style.opacity = '0';
                     wrapper.parentElement.style.maxHeight = '0';
                     wrapper.parentElement.style.overflow = 'hidden';
-                    setTimeout(() => wrapper.parentElement.remove(), 350);
+                    setTimeout(function() { wrapper.parentElement.remove(); }, 350);
                 }
                 showToast('Removed from folder');
             })
-            .catch(() => showToast('Failed to remove story from folder'));
+            .catch(function() { showToast('Failed to remove story from folder'); });
     };
 
     window.deleteFolder = function(folderId) {
         if (!confirm('Delete this folder? Stories will not be deleted.')) return;
         fetch('/stories/folders/' + folderId, { method: 'DELETE' })
-            .then(r => {
+            .then(function(r) {
                 if (!r.ok) throw new Error('Server error: ' + r.status);
                 return r.json();
             })
-            .then(() => { window.location.href = '/'; })
-            .catch(() => showToast('Failed to delete folder'));
+            .then(function() { VTTDRouter.navigate('/'); })
+            .catch(function() { showToast('Failed to delete folder'); });
+    };
+
+    window.addToQueue = function(storyId, title, author) {
+        closeFolderDropdowns();
+        Playlist.addToEnd({ storyId: storyId, title: title, author: author });
+        showToast('Added to queue');
+    };
+
+    window.playNext = function(storyId, title, author) {
+        closeFolderDropdowns();
+        Playlist.addNext({ storyId: storyId, title: title, author: author });
+        showToast('Playing next');
     };
 })();
 </script>
