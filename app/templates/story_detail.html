@@ -402,7 +402,11 @@
 {% endblock %}
 {% block scripts %}
     <script>
+    (function() {
     const storyId = JSON.parse('{{ story.id | tojson }}');
+    window.generateScript = generateScript;
+    window.generateAudio = generateAudio;
+    window.regenerateAudio = regenerateAudio;
     async function generateScript() {
         const btn = document.getElementById('genScriptBtn');
         const status = document.getElementById('scriptStatus');
@@ -637,5 +641,6 @@
         d.textContent = text;
         return d.innerHTML;
     }
+    })();
     </script>
 {% endblock %}
