@@ -85,6 +85,14 @@
                     liveStyles.textContent = newStyles.textContent;
                 }
 
+                // Extract and execute page-specific scripts
+                var newScripts = doc.getElementById('page-scripts');
+                var liveScripts = document.getElementById('page-scripts');
+                if (newScripts && liveScripts) {
+                    liveScripts.innerHTML = newScripts.innerHTML;
+                    executeScripts(liveScripts);
+                }
+
                 // Update title
                 var newTitle = doc.querySelector('title');
                 if (newTitle) {
