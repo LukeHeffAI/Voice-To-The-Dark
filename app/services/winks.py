@@ -12,13 +12,18 @@ TOTAL_WINKS = 40
 # Simple in-memory cache for subscription info
 _cache = {"data": None, "expires_at": 0.0}
 _CACHE_TTL = 300  # 5 minutes
+_FAILURE_TTL = 60  # 1-minute backoff when a request fails
 
 
 def get_subscription_info() -> dict | None:
-    """Fetch ElevenLabs subscription info, cached for 5 minutes."""
+    """Fetch ElevenLabs subscription info, cached for 5 minutes.
+
+    Failures are also cached for 1 minute to avoid hammering the upstream
+    API (or blocking every page render) during outages.
+    """
     now = time.time()
-    if _cache["data"] and now < _cache["expires_at"]:
-        return _cache["data"]
+    if now < _cache["expires_at"]:
+        return _cache["data"]  # may be None when a previous failure is cached
 
     if not settings.ELEVENLABS_API_KEY:
         return None
@@ -36,6 +41,8 @@ def get_subscription_info() -> dict | None:
         return data
     except Exception:
         logger.debug("Failed to fetch ElevenLabs subscription info", exc_info=True)
+        _cache["data"] = None
+        _cache["expires_at"] = now + _FAILURE_TTL
         return None
 
 
