@@ -1215,8 +1215,8 @@ class TestFolderPage:
             cookies=_auth_cookie(auth_headers),
         )
         assert resp.status_code == 200
-        # The active folder pill has class "active"
-        assert "active" in resp.text
+        # The active folder pill should render with the 'active' class on its pill element
+        assert 'class="folder-pill active"' in resp.text
 
     def test_contains_home_link(self, client, db_session, test_user, auth_headers):
         """Folder page has a link back to the home page."""
