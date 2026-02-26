@@ -203,7 +203,7 @@ class TestStoryDetailPage:
         resp = client.get(f"/story/{sample_story.id}")
         assert resp.status_code == 200
         assert "The Haunted House" in resp.text
-        assert "The Haunted House" in resp.text
+        assert "<title>The Haunted House</title>" in resp.text
 
     def test_404_for_missing_story(self, client, db_session):
         """Returns 404 for a non-existent story ID."""
