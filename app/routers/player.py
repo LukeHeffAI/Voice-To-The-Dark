@@ -13,6 +13,7 @@ from app.schemas.narration import NarrationScript
 from app.deps import get_optional_user
 from app.services.voice_pool import VOICE_POOL
 from app.services.winks import get_winks_remaining, estimate_story_winks, estimate_stories_winks
+from app.models.app_setting import get_setting
 
 logger = logging.getLogger(__name__)
 
@@ -227,9 +228,17 @@ def script_editor_page(request: Request, story_id: int, db: Session = Depends(ge
     if not story.script_json:
         raise HTTPException(status_code=404, detail="No script generated for this story yet")
 
+    # Load voice notes so they appear in voice selection dropdowns
+    raw_notes = get_setting(db, "voice_notes", "{}")
+    try:
+        voice_notes = json.loads(raw_notes)
+    except (json.JSONDecodeError, TypeError):
+        voice_notes = {}
+
     voice_pool_json = json.dumps([
         {"voice_id": v.voice_id, "name": v.name, "gender": v.gender,
-         "age": v.age, "archetypes": v.archetypes}
+         "age": v.age, "archetypes": v.archetypes,
+         "notes": voice_notes.get(v.voice_id, "")}
         for v in VOICE_POOL
     ])
 

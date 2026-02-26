@@ -53,6 +53,12 @@ MODEL_ELEVEN_V3 = "eleven_v3"
 # SFX cache directory
 SFX_CACHE_DIR = "./data/sfx_cache"
 
+# Voice preview cache directory
+VOICE_PREVIEW_CACHE_DIR = "./data/voice_previews"
+
+# Short dramatic sentence used when generating voice previews
+VOICE_PREVIEW_TEXT = "The shadows crept closer, and I knew then that something unspeakable was watching from the darkness."
+
 
 def generate_audio(
     text: str,
@@ -265,3 +271,28 @@ def tts_request(
         for chunk in response.iter_content(chunk_size=8192):
             if chunk:
                 f.write(chunk)
+
+
+def generate_voice_preview(voice_id: str) -> str:
+    """Generate a short horror-themed voice preview sample and cache it.
+
+    Returns the path to the cached MP3 file. If a cached preview already
+    exists for this voice_id, returns it immediately without an API call.
+    """
+    os.makedirs(VOICE_PREVIEW_CACHE_DIR, exist_ok=True)
+
+    cached_path = os.path.join(VOICE_PREVIEW_CACHE_DIR, f"{voice_id}.mp3")
+
+    if os.path.exists(cached_path):
+        logger.info(f"Voice preview cache hit: {voice_id}")
+        return cached_path
+
+    logger.info(f"Generating voice preview for {voice_id}")
+    tts_request(
+        text=VOICE_PREVIEW_TEXT,
+        voice_id=voice_id,
+        output_file=cached_path,
+        preset="horror_narrator",
+    )
+
+    return cached_path

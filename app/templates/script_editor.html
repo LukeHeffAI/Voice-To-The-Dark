@@ -391,12 +391,19 @@
         const males = voicePool.filter(v => v.gender === 'male');
         const females = voicePool.filter(v => v.gender === 'female');
 
+        function voiceOptionLabel(v) {
+            let label = escapeHtml(v.name) + ' \u2014 ' + escapeHtml(v.archetypes.join(', '));
+            if (v.notes) {
+                label += ' (' + escapeHtml(v.notes) + ')';
+            }
+            return label;
+        }
+
         html += '<optgroup label="Male">';
         for (const v of males) {
             const sel = v.voice_id === currentId ? ' selected' : '';
             html += '<option value="' + v.voice_id + '"' + sel + '>' +
-                escapeHtml(v.name) + ' — ' + escapeHtml(v.archetypes.join(', ')) +
-                '</option>';
+                voiceOptionLabel(v) + '</option>';
         }
         html += '</optgroup>';
 
@@ -404,8 +411,7 @@
         for (const v of females) {
             const sel = v.voice_id === currentId ? ' selected' : '';
             html += '<option value="' + v.voice_id + '"' + sel + '>' +
-                escapeHtml(v.name) + ' — ' + escapeHtml(v.archetypes.join(', ')) +
-                '</option>';
+                voiceOptionLabel(v) + '</option>';
         }
         html += '</optgroup>';
 
