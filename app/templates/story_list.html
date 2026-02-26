@@ -204,10 +204,14 @@
 {% endblock %}
 
 {% block body %}
+
     <div class="page-story-list">
         <div class="auth-nav">
             {% if user %}
             <span class="username">{{ user.username }}</span>
+            {% if winks_remaining %}
+            <span class="winks-badge"><span class="winks-badge-icon">&#10022;</span> {{ winks_remaining[0] }}/{{ winks_remaining[1] }} Winks</span>
+            {% endif %}
             <a href="/settings">Settings</a>
             <a href="#" onclick="fetch('/auth/logout',{method:'POST'}).then(function(){VTTDRouter.navigate('/')})">Sign out</a>
             {% else %}
@@ -280,6 +284,11 @@
                             <span class="dropdown-icon">&#9654;</span> Play Next
                         </button>
                         {% endif %}
+                      
+                        {% if story_winks_map and story.id in story_winks_map %}
+                        <span class="winks-estimate">~{{ story_winks_map[story.id] }} Winks</span>
+                        {% endif %}
+                      
                         <div class="dropdown-separator"></div>
                         <button class="card-dropdown-item danger" onclick="hideFromHome({{ story.id }})">
                             <span class="dropdown-icon">&#10005;</span> Remove from recent
