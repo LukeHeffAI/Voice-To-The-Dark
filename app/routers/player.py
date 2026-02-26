@@ -220,7 +220,7 @@ def story_detail_page(request: Request, story_id: int, db: Session = Depends(get
 
 
 @router.get("/story/{story_id}/edit-script", response_class=HTMLResponse)
-def script_editor_page(request: Request, story_id: int, db: Session = Depends(get_db)):
+def script_editor_page(request: Request, story_id: int, db: Session = Depends(get_db), user: User | None = Depends(get_optional_user)):
     """Serve the script editor page for a story."""
     story = db.query(Story).filter(Story.id == story_id).first()
     if not story:
@@ -228,19 +228,22 @@ def script_editor_page(request: Request, story_id: int, db: Session = Depends(ge
     if not story.script_json:
         raise HTTPException(status_code=404, detail="No script generated for this story yet")
 
-    # Load voice notes so they appear in voice selection dropdowns
-    raw_notes = get_setting(db, "voice_notes", "{}")
-    try:
-        voice_notes = json.loads(raw_notes)
-    except (json.JSONDecodeError, TypeError):
+    # Only expose voice notes to authenticated users; anonymous visitors get empty notes
+    if user:
+        raw_notes = get_setting(db, "voice_notes", "{}")
+        try:
+            voice_notes = json.loads(raw_notes)
+        except (json.JSONDecodeError, TypeError):
+            voice_notes = {}
+    else:
         voice_notes = {}
 
-    voice_pool_json = json.dumps([
+    voice_pool_json = [
         {"voice_id": v.voice_id, "name": v.name, "gender": v.gender,
          "age": v.age, "archetypes": v.archetypes,
          "notes": voice_notes.get(v.voice_id, "")}
         for v in VOICE_POOL
-    ])
+    ]
 
     return templates.TemplateResponse("script_editor.html", {
         "request": request,

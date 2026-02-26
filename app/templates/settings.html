@@ -421,7 +421,7 @@
 {% endblock %}
 
 {% block scripts %}
-    <script id="voicePoolData" type="application/json">{{ voice_pool_json | safe }}</script>
+    <script id="voicePoolData" type="application/json">{{ voice_pool_json | tojson }}</script>
     <script>
     const voicePool = JSON.parse(document.getElementById('voicePoolData').textContent);
     const cacheInfo = {{ cache_info | tojson }};

@@ -365,7 +365,7 @@
         <div class="segment-list" id="segmentList"></div>
     </div>
     <script type="application/json" id="editorScriptData">{{ script_json | safe }}</script>
-    <script type="application/json" id="editorVoicePool">{{ voice_pool_json | safe }}</script>
+    <script type="application/json" id="editorVoicePool">{{ voice_pool_json | tojson }}</script>
 {% endblock %}
 
 {% block scripts %}

@@ -232,10 +232,12 @@ def _tone_to_preset(tone: str | None) -> str:
         return "horror_narrator"
 
     tone_lower = tone.lower()
+    # Check high-intensity cues first so they take priority in merged tone strings
+    # (e.g. "calm shifting to panicked" should yield horror_dialogue, not calm)
+    if any(word in tone_lower for word in ["panic", "scream", "shout", "frantic", "desperate", "terrified"]):
+        return "horror_dialogue"
     if any(word in tone_lower for word in ["whisper", "quiet", "hushed", "soft"]):
         return "whisper"
     if any(word in tone_lower for word in ["calm", "steady", "composed", "matter-of-fact"]):
         return "calm"
-    if any(word in tone_lower for word in ["panic", "scream", "shout", "frantic", "desperate", "terrified"]):
-        return "horror_dialogue"
     return "horror_narrator"
