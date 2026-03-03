@@ -322,8 +322,8 @@
             padding: 0.45rem 1.8rem 0.45rem 0.65rem;
             border: 1px solid var(--border);
             border-radius: var(--r-sm);
-            background: rgba(0,0,0,0.2);
-            color: var(--text-1);
+            background: rgba(0,0,0,0.35);
+            color: var(--text-2);
             font-family: var(--sans);
             font-size: 0.82rem;
             outline: none;
@@ -331,7 +331,7 @@
             color-scheme: dark;
             -webkit-appearance: none;
             appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238a8a8a'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23555'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-position: right 0.6rem center;
             transition: border-color 0.2s var(--ease);
@@ -339,6 +339,10 @@
         }
         .filter-select:hover { border-color: var(--border-hover); }
         .filter-select:focus { border-color: var(--border-focus); }
+        .filter-select option {
+            background: #1a1a1a;
+            color: var(--text-2);
+        }
 {% endblock %}
 
 {% block body %}
