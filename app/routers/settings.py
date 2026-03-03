@@ -72,11 +72,11 @@ def settings_page(request: Request, db: Session = Depends(get_db), user: User | 
             "name": v.name,
             "gender": v.gender,
             "age": v.age,
+            "role": v.role,
             "archetypes": v.archetypes,
             "notes": voice_notes.get(v.voice_id, ""),
-            "model": v.model
+            "model": v.model,
         }
-
         for v in VOICE_POOL
     ]
 
