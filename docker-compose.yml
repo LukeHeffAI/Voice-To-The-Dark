@@ -11,6 +11,7 @@ services:
       - ./data/db:/app/data/db
       - ./data/stories:/app/data/stories
       - ./data/sfx_cache:/app/data/sfx_cache
+      - ./data/voice_previews:/app/data/voice_previews
 
   # Optional: Cloudflare Tunnel for remote access (free, no port forwarding)
   # Start with: docker compose --profile tunnel up -d
