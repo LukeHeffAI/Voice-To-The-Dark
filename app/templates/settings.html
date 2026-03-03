@@ -318,36 +318,68 @@
             letter-spacing: 0.05em;
             font-family: var(--sans);
         }
-        .filter-select {
-            padding: 0.45rem 1.8rem 0.45rem 0.65rem;
+        .filter-dd {
+            position: relative;
+            width: 100%;
+        }
+        .filter-dd-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.45rem 0.65rem;
             border: 1px solid var(--border);
             border-radius: var(--r-sm);
             background: rgba(0,0,0,0.35);
             color: var(--text-2);
             font-family: var(--sans);
             font-size: 0.82rem;
-            outline: none;
             cursor: pointer;
-            color-scheme: dark;
-            -webkit-appearance: none;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23555'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 0.6rem center;
             transition: border-color 0.2s var(--ease);
             width: 100%;
+            user-select: none;
         }
-        .filter-select:hover { border-color: var(--border-hover); }
-        .filter-select:focus { border-color: var(--border-focus); }
-        .filter-select option {
+        .filter-dd-toggle:hover { border-color: var(--border-hover); }
+        .filter-dd.open .filter-dd-toggle { border-color: var(--border-focus); }
+        .filter-dd-arrow {
+            width: 0; height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 5px solid var(--text-3);
+            margin-left: 0.5rem;
+            flex-shrink: 0;
+        }
+        .filter-dd-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 3px);
+            left: 0; right: 0;
             background: #1a1a1a;
-            color: var(--text-2);
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 100;
+            padding: 0.2rem 0;
         }
-        .filter-select option:hover,
-        .filter-select option:checked {
+        .filter-dd.open .filter-dd-menu { display: block; }
+        .filter-dd-item {
+            padding: 0.38rem 0.65rem;
+            color: var(--text-2);
+            font-family: var(--sans);
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: background 0.12s ease, color 0.12s ease;
+        }
+        .filter-dd-item:hover {
             background: #2a1a1a;
-            color: var(--text-2);
+            color: var(--text-1);
         }
+        .filter-dd-item.active {
+            color: var(--accent);
+        }
+        .filter-dd-menu::-webkit-scrollbar { width: 5px; }
+        .filter-dd-menu::-webkit-scrollbar-track { background: transparent; }
+        .filter-dd-menu::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 {% endblock %}
 
 {% block body %}
@@ -444,27 +476,31 @@
             <div class="voice-filter-row">
                 <div class="filter-group">
                     <label class="filter-label">Gender</label>
-                    <select id="filterGender" class="filter-select" onchange="onFilterChange()">
-                        <option value="">All</option>
-                    </select>
+                    <div class="filter-dd" id="filterGender">
+                        <div class="filter-dd-toggle"><span class="filter-dd-text">All</span><span class="filter-dd-arrow"></span></div>
+                        <div class="filter-dd-menu"></div>
+                    </div>
                 </div>
                 <div class="filter-group">
                     <label class="filter-label">Role</label>
-                    <select id="filterRole" class="filter-select" onchange="onFilterChange()">
-                        <option value="">All</option>
-                    </select>
+                    <div class="filter-dd" id="filterRole">
+                        <div class="filter-dd-toggle"><span class="filter-dd-text">All</span><span class="filter-dd-arrow"></span></div>
+                        <div class="filter-dd-menu"></div>
+                    </div>
                 </div>
                 <div class="filter-group">
                     <label class="filter-label">Age</label>
-                    <select id="filterAge" class="filter-select" onchange="onFilterChange()">
-                        <option value="">All</option>
-                    </select>
+                    <div class="filter-dd" id="filterAge">
+                        <div class="filter-dd-toggle"><span class="filter-dd-text">All</span><span class="filter-dd-arrow"></span></div>
+                        <div class="filter-dd-menu"></div>
+                    </div>
                 </div>
                 <div class="filter-group">
                     <label class="filter-label">Archetype</label>
-                    <select id="filterArchetype" class="filter-select" onchange="onFilterChange()">
-                        <option value="">All</option>
-                    </select>
+                    <div class="filter-dd" id="filterArchetype">
+                        <div class="filter-dd-toggle"><span class="filter-dd-text">All</span><span class="filter-dd-arrow"></span></div>
+                        <div class="filter-dd-menu"></div>
+                    </div>
                 </div>
             </div>
             <div class="voice-filter-count" id="voiceFilterCount"></div>
@@ -598,14 +634,96 @@
         return d.innerHTML;
     }
 
-    // DOM references for filter dropdowns
-    const filterEls = {
+    // ── Custom dropdown helpers ─────────────
+    var ddEls = {
         gender: document.getElementById('filterGender'),
         role: document.getElementById('filterRole'),
         age: document.getElementById('filterAge'),
         archetype: document.getElementById('filterArchetype')
     };
 
+    function openDD(dd) {
+        closeAllDDs();
+        dd.classList.add('open');
+    }
+    function closeAllDDs() {
+        document.querySelectorAll('.filter-dd.open').forEach(function(el) {
+            el.classList.remove('open');
+        });
+    }
+
+    // Toggle on click
+    Object.keys(ddEls).forEach(function(key) {
+        var toggle = ddEls[key].querySelector('.filter-dd-toggle');
+        toggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (ddEls[key].classList.contains('open')) {
+                closeAllDDs();
+            } else {
+                openDD(ddEls[key]);
+            }
+        });
+    });
+
+    // Close on outside click
+    document.addEventListener('click', function() { closeAllDDs(); });
+
+    function selectDDValue(filterKey, value, label) {
+        filters[filterKey] = value;
+        ddEls[filterKey].querySelector('.filter-dd-text').textContent = label;
+        closeAllDDs();
+        populateDropdowns();
+        renderVoices();
+    }
+
+    function buildMenu(filterKey, items) {
+        var menu = ddEls[filterKey].querySelector('.filter-dd-menu');
+        var currentVal = filters[filterKey];
+        menu.innerHTML = '';
+
+        // "All" option
+        var allItem = document.createElement('div');
+        allItem.className = 'filter-dd-item' + (currentVal === '' ? ' active' : '');
+        allItem.textContent = 'All';
+        allItem.addEventListener('click', function(e) {
+            e.stopPropagation();
+            selectDDValue(filterKey, '', 'All');
+        });
+        menu.appendChild(allItem);
+
+        for (var i = 0; i < items.length; i++) {
+            (function(item) {
+                var el = document.createElement('div');
+                el.className = 'filter-dd-item' + (item.value === currentVal ? ' active' : '');
+                el.textContent = item.label;
+                el.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    selectDDValue(filterKey, item.value, item.label);
+                });
+                menu.appendChild(el);
+            })(items[i]);
+        }
+
+        // Update toggle text
+        if (currentVal) {
+            var found = false;
+            for (var j = 0; j < items.length; j++) {
+                if (items[j].value === currentVal) {
+                    ddEls[filterKey].querySelector('.filter-dd-text').textContent = items[j].label;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                filters[filterKey] = '';
+                ddEls[filterKey].querySelector('.filter-dd-text').textContent = 'All';
+            }
+        } else {
+            ddEls[filterKey].querySelector('.filter-dd-text').textContent = 'All';
+        }
+    }
+
+    // ── Filter logic ─────────────────────────
     function voiceHasArchetype(v, arch) {
         for (var i = 0; i < v.archetypes.length; i++) {
             if (v.archetypes[i].toLowerCase() === arch) return true;
@@ -637,87 +755,44 @@
         });
     }
 
-    function populateSelect(filterKey, extractFn) {
-        var el = filterEls[filterKey];
-        var currentVal = filters[filterKey];
+    function populateSimple(filterKey, extractFn) {
         var subset = getSubsetExcluding(filterKey);
-
         var seen = {};
-        var options = [];
+        var items = [];
         for (var i = 0; i < subset.length; i++) {
             var val = extractFn(subset[i]);
             if (!seen[val]) {
                 seen[val] = true;
-                options.push(val);
+                items.push({ value: val, label: val.charAt(0).toUpperCase() + val.slice(1) });
             }
         }
-        options.sort();
-
-        el.innerHTML = '<option value="">All</option>';
-        for (var j = 0; j < options.length; j++) {
-            var opt = document.createElement('option');
-            opt.value = options[j];
-            opt.textContent = options[j].charAt(0).toUpperCase() + options[j].slice(1);
-            el.appendChild(opt);
-        }
-
-        if (currentVal && options.indexOf(currentVal) === -1) {
-            filters[filterKey] = '';
-            el.value = '';
-        } else {
-            el.value = currentVal;
-        }
+        items.sort(function(a, b) { return a.value < b.value ? -1 : a.value > b.value ? 1 : 0; });
+        buildMenu(filterKey, items);
     }
 
-    function populateArchetypeSelect() {
-        var el = filterEls.archetype;
-        var currentVal = filters.archetype;
+    function populateArchetype() {
         var subset = getSubsetExcluding('archetype');
-
         var seen = {};
-        var options = [];
+        var items = [];
         for (var i = 0; i < subset.length; i++) {
             var arr = subset[i].archetypes;
             for (var k = 0; k < arr.length; k++) {
                 var val = arr[k].toLowerCase();
                 if (!seen[val]) {
                     seen[val] = true;
-                    options.push({ lower: val, display: arr[k] });
+                    items.push({ value: val, label: arr[k].charAt(0).toUpperCase() + arr[k].slice(1) });
                 }
             }
         }
-        options.sort(function(a, b) { return a.lower < b.lower ? -1 : a.lower > b.lower ? 1 : 0; });
-
-        el.innerHTML = '<option value="">All</option>';
-        for (var j = 0; j < options.length; j++) {
-            var opt = document.createElement('option');
-            opt.value = options[j].lower;
-            opt.textContent = options[j].display.charAt(0).toUpperCase() + options[j].display.slice(1);
-            el.appendChild(opt);
-        }
-
-        if (currentVal && !seen[currentVal]) {
-            filters.archetype = '';
-            el.value = '';
-        } else {
-            el.value = currentVal;
-        }
+        items.sort(function(a, b) { return a.value < b.value ? -1 : a.value > b.value ? 1 : 0; });
+        buildMenu('archetype', items);
     }
 
     function populateDropdowns() {
-        populateSelect('gender', function(v) { return v.gender; });
-        populateSelect('role', function(v) { return v.role; });
-        populateSelect('age', function(v) { return v.age; });
-        populateArchetypeSelect();
-    }
-
-    function onFilterChange() {
-        filters.gender = filterEls.gender.value;
-        filters.role = filterEls.role.value;
-        filters.age = filterEls.age.value;
-        filters.archetype = filterEls.archetype.value;
-        populateDropdowns();
-        renderVoices();
+        populateSimple('gender', function(v) { return v.gender; });
+        populateSimple('role', function(v) { return v.role; });
+        populateSimple('age', function(v) { return v.age; });
+        populateArchetype();
     }
 
     function renderVoices() {
