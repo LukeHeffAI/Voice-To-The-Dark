@@ -293,16 +293,18 @@ def generate_voice_preview(voice_id: str, model: str = MODEL_ELEVEN_V3) -> str:
         tts_request(
             text=VOICE_PREVIEW_TEXT,
             voice_id=voice_id,
-            output_file=cached_path,
+            output_file=temp_path,
             preset="horror_narrator",
             model_id=model,
         )
         os.replace(temp_path, cached_path)
-    finally:
+    except Exception:
+        # Clean up partial temp file on failure
         try:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
         except OSError:
             logger.debug(f"Failed to remove temporary voice preview file: {temp_path}", exc_info=True)
+        raise
 
     return cached_path
