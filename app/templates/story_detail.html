@@ -366,6 +366,11 @@
                     {% endif %}
                     {% else %}
                         {% if user %}
+                        {% if story.script_json %}
+                        <div class="step-info" style="margin-bottom: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(255, 170, 0, 0.1); border-left: 3px solid var(--warn, #fa0); border-radius: 4px; font-size: 0.85rem; color: var(--text-secondary, #b0b0b0);">
+                            Audio needs to be generated from the current script.
+                        </div>
+                        {% endif %}
                         <button class="btn-primary" id="genAudioBtn"
                                 onclick="generateAudio()"
                                 {{ 'disabled' if not story.script_json }}>

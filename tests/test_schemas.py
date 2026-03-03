@@ -310,6 +310,7 @@ class TestGenerateNarrationRequest:
         assert req.story_id == 1
         assert req.voice_map is None
         assert req.force_regenerate is False
+        assert req.bust_cache is False
 
     def test_with_voice_map(self):
         vm = {"narrator": "voice_abc", "villain": "voice_xyz"}
@@ -321,7 +322,7 @@ class TestGenerateNarrationRequest:
             GenerateNarrationRequest()
 
     def test_round_trip(self):
-        data = {"story_id": 3, "voice_map": {"a": "b"}, "force_regenerate": True}
+        data = {"story_id": 3, "voice_map": {"a": "b"}, "force_regenerate": True, "bust_cache": False}
         obj = GenerateNarrationRequest.model_validate(data)
         assert obj.model_dump() == data
 

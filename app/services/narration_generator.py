@@ -1,44 +1,56 @@
 import os
 import uuid
 import logging
+from dataclasses import dataclass
 from pydub import AudioSegment
 
 from app.schemas.narration import NarrationScript, SegmentType, ScriptSegment
 from app.services.elevenlabs import generate_audio, generate_sfx
 from app.services.audio_mixer import mix_narration
-from app.services.audio_utils import create_tmp_folder
+from app.services.segment_cache import lookup as cache_lookup, SEGMENT_CACHE_DIR
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_NARRATOR_VOICE = "pNInz6obpgDQGcFmaJgB"  # ElevenLabs "Adam"
 
 
+@dataclass
+class NarrationResult:
+    """Result from generate_narration including cache statistics."""
+
+    output_path: str
+    cache_hits: int
+    cache_misses: int
+    total_segments: int
+
+
 def generate_narration(
     script: NarrationScript,
     voice_map: dict[str, str],
     output_path: str | None = None,
-) -> str:
+    bust_cache: bool = False,
+) -> NarrationResult:
     """Walk through a narration script, generate all audio segments, then mix
     them into a fully produced audio file.
 
-    This function handles generation (calling TTS and SFX APIs). The actual
-    mixing — layering ambient, placing SFX, crossfades, fades, normalization —
-    is delegated to audio_mixer.mix_narration().
+    Uses a persistent segment cache to skip TTS/SFX API calls for segments
+    whose content hasn't changed since the last generation. The mixing step
+    always runs in full to ensure correct timing and flow.
 
     Args:
         script: The structured narration script from the script adapter.
         voice_map: Maps character keys (e.g. "narrator", "sarah") to
                    ElevenLabs voice IDs.
         output_path: Where to write the final mixed audio. Auto-generated if None.
+        bust_cache: If True, ignore the segment cache and regenerate everything.
 
     Returns:
-        Path to the final audio file.
+        NarrationResult with the output path and cache statistics.
     """
     if not output_path:
         output_path = f"./data/stories/{uuid.uuid4()}.mp3"
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
-    tmp_folder = create_tmp_folder()
+    os.makedirs(SEGMENT_CACHE_DIR, exist_ok=True)
 
     # --- Merge consecutive same-character voice segments ---
     merged_segments = _group_consecutive_segments(script.segments)
@@ -47,55 +59,85 @@ def generate_narration(
         f"{len(merged_segments)} after merging consecutive lines"
     )
 
-    # --- Generate all segments ---
+    # --- Generate all segments (with caching) ---
     segment_files: list[tuple[str, ScriptSegment]] = []
+    cache_hits = 0
+    cache_misses = 0
 
     for i, segment in enumerate(merged_segments):
-        logger.info(f"Generating segment {i + 1}/{len(merged_segments)}: {segment.type}")
+        # Resolve voice_id and preset for cache key computation
+        voice_id = None
+        preset = None
+        if segment.type in (SegmentType.NARRATION, SegmentType.DIALOGUE):
+            character = segment.character or "narrator"
+            voice_id = voice_map.get(
+                character, voice_map.get("narrator", DEFAULT_NARRATOR_VOICE)
+            )
+            preset = _tone_to_preset(segment.tone)
 
-        path = _generate_segment(segment, voice_map, tmp_folder, i)
-        if path:
-            segment_files.append((path, segment))
+        # Check cache (unless bust_cache is set)
+        cache_result = cache_lookup(segment, voice_id=voice_id, preset=preset)
+
+        if cache_result.is_hit and not bust_cache:
+            cache_hits += 1
+            logger.info(
+                f"Reusing cached segment {i + 1}/{len(merged_segments)}: "
+                f"{segment.type.value}"
+            )
+            segment_files.append((cache_result.cached_path, segment))
+        else:
+            cache_misses += 1
+            logger.info(
+                f"Generating segment {i + 1}/{len(merged_segments)}: "
+                f"{segment.type.value}"
+            )
+            path = _generate_segment(
+                segment, voice_map, cache_result.cached_path
+            )
+            if path:
+                segment_files.append((path, segment))
 
     # --- Mix everything via the dedicated mixer ---
     final = mix_narration(segment_files)
     final.export(output_path, format="mp3")
 
-    # --- Clean up temp files ---
-    for path, _ in segment_files:
-        try:
-            os.remove(path)
-        except Exception:
-            pass
-
-    logger.info(f"Narration complete: {output_path} ({len(segment_files)} segments)")
-    return output_path
+    logger.info(
+        f"Narration complete: {output_path} ({len(segment_files)} segments, "
+        f"{cache_hits} cached, {cache_misses} generated)"
+    )
+    return NarrationResult(
+        output_path=output_path,
+        cache_hits=cache_hits,
+        cache_misses=cache_misses,
+        total_segments=len(merged_segments),
+    )
 
 
 def _generate_segment(
     segment: ScriptSegment,
     voice_map: dict[str, str],
-    tmp_folder: str,
-    index: int,
+    output_path: str,
 ) -> str | None:
-    """Generate a single audio segment based on its type."""
+    """Generate a single audio segment based on its type.
 
+    The output_path is the cache location where the file will be written
+    so it can be reused on subsequent generations.
+    """
     if segment.type in (SegmentType.NARRATION, SegmentType.DIALOGUE):
-        return _generate_voice_segment(segment, voice_map, tmp_folder, index)
+        return _generate_voice_segment(segment, voice_map, output_path)
     elif segment.type == SegmentType.SFX:
-        return _generate_sfx_segment(segment, tmp_folder, index)
+        return _generate_sfx_segment(segment, output_path)
     elif segment.type == SegmentType.AMBIENT:
-        return _generate_ambient_segment(segment, tmp_folder, index)
+        return _generate_ambient_segment(segment, output_path)
     elif segment.type == SegmentType.PAUSE:
-        return _generate_pause_segment(segment, tmp_folder, index)
+        return _generate_pause_segment(segment, output_path)
     return None
 
 
 def _generate_voice_segment(
     segment: ScriptSegment,
     voice_map: dict[str, str],
-    tmp_folder: str,
-    index: int,
+    output_path: str,
 ) -> str | None:
     """Generate a voice segment (narration or dialogue)."""
     if not segment.text:
@@ -105,51 +147,44 @@ def _generate_voice_segment(
     voice_id = voice_map.get(character, voice_map.get("narrator", DEFAULT_NARRATOR_VOICE))
     preset = _tone_to_preset(segment.tone)
 
-    out_path = os.path.join(tmp_folder, f"seg_{index:04d}_voice.mp3")
-    generate_audio(segment.text, voice_id, output_path=out_path, preset=preset)
-    return out_path
+    generate_audio(segment.text, voice_id, output_path=output_path, preset=preset)
+    return output_path
 
 
 def _generate_sfx_segment(
     segment: ScriptSegment,
-    tmp_folder: str,
-    index: int,
+    output_path: str,
 ) -> str | None:
     """Generate a sound effect segment."""
     if not segment.description:
         return None
 
-    out_path = os.path.join(tmp_folder, f"seg_{index:04d}_sfx.mp3")
-    generate_sfx(segment.description, output_path=out_path, duration_seconds=5.0)
-    return out_path
+    generate_sfx(segment.description, output_path=output_path, duration_seconds=5.0)
+    return output_path
 
 
 def _generate_ambient_segment(
     segment: ScriptSegment,
-    tmp_folder: str,
-    index: int,
+    output_path: str,
 ) -> str | None:
     """Generate an ambient sound segment."""
     if not segment.description:
         return None
 
     duration = 10.0 if segment.loop else 5.0
-    out_path = os.path.join(tmp_folder, f"seg_{index:04d}_ambient.mp3")
-    generate_sfx(segment.description, output_path=out_path, duration_seconds=duration)
-    return out_path
+    generate_sfx(segment.description, output_path=output_path, duration_seconds=duration)
+    return output_path
 
 
 def _generate_pause_segment(
     segment: ScriptSegment,
-    tmp_folder: str,
-    index: int,
+    output_path: str,
 ) -> str | None:
     """Generate a silence segment of the specified duration."""
     duration_ms = segment.duration_ms or 1500
     silence = AudioSegment.silent(duration=duration_ms)
-    out_path = os.path.join(tmp_folder, f"seg_{index:04d}_pause.mp3")
-    silence.export(out_path, format="mp3")
-    return out_path
+    silence.export(output_path, format="mp3")
+    return output_path
 
 
 def _group_consecutive_segments(
