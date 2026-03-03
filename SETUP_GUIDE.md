@@ -64,8 +64,8 @@ a cheap one through Cloudflare Registrar, or use a free domain service.
 #### 3. Create the Tunnel
 
 1. In the Cloudflare dashboard, go to **Zero Trust** (left sidebar)
-2. Navigate to **Networks** > **Tunnels**
-3. Click **Create a tunnel**
+2. Navigate to **Networks** > **Connectors**
+3. Click **Add a tunnel**
 4. Choose **Cloudflared** as the connector type
 5. Name it something like `voice-in-the-dark`
 6. On the **Install connector** step, find and copy the **tunnel token**
