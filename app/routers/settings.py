@@ -67,9 +67,16 @@ def settings_page(request: Request, db: Session = Depends(get_db), user: User | 
 
     voice_notes = _get_voice_notes(db)
     voice_pool_json = [
-        {"voice_id": v.voice_id, "name": v.name, "gender": v.gender,
-         "age": v.age, "archetypes": v.archetypes,
-         "notes": voice_notes.get(v.voice_id, "")}
+        {
+            "voice_id": v.voice_id,
+            "name": v.name,
+            "gender": v.gender,
+            "age": v.age,
+            "archetypes": v.archetypes,
+            "notes": voice_notes.get(v.voice_id, ""),
+            "model": v.model
+        }
+
         for v in VOICE_POOL
     ]
 
@@ -196,12 +203,12 @@ def update_voice_notes(body: dict, db: Session = Depends(get_db), user: User = D
 @router.get("/voice-preview/{voice_id}")
 def voice_preview(voice_id: str, user: User = Depends(get_current_user)):
     """Generate or return a cached voice preview sample for the given voice."""
-    valid_voice_ids = {v.voice_id for v in VOICE_POOL}
+    valid_voice_ids = {v.voice_id: v.model for v in VOICE_POOL}
     if voice_id not in valid_voice_ids:
         raise HTTPException(status_code=404, detail="Voice not found in pool")
 
     try:
-        preview_path = generate_voice_preview(voice_id)
+        preview_path = generate_voice_preview(voice_id, model=valid_voice_ids[voice_id])
     except ElevenLabsError as exc:
         raise HTTPException(
             status_code=502,
