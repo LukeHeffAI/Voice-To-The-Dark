@@ -46,6 +46,79 @@ docker compose up -d --build
 docker compose exec voice-to-the-dark python -m app.create_user <username> <password>
 ```
 
+### Remote Access (Optional — Cloudflare Tunnel)
+
+If someone outside your home network needs access (e.g., a friend in another city),
+you can use a **free Cloudflare Tunnel**. This creates a secure public URL without
+opening ports on your router, and hides your home IP address.
+
+#### 1. Create a Free Cloudflare Account
+
+Go to [dash.cloudflare.com](https://dash.cloudflare.com) and sign up.
+
+#### 2. Add a Domain (or use Cloudflare's free subdomain)
+
+You need a domain pointed at Cloudflare. If you don't own one, you can register
+a cheap one through Cloudflare Registrar, or use a free domain service.
+
+#### 3. Create the Tunnel
+
+1. In the Cloudflare dashboard, go to **Zero Trust** (left sidebar)
+2. Navigate to **Networks** > **Tunnels**
+3. Click **Create a tunnel**
+4. Choose **Cloudflared** as the connector type
+5. Name it something like `voice-in-the-dark`
+6. On the **Install connector** step, find and copy the **tunnel token**
+   (it's the long string after `--token` in the install command)
+7. On the **Route tunnel** step, add a public hostname:
+   - **Subdomain**: e.g., `stories` (or whatever you like)
+   - **Domain**: select your domain
+   - **Service type**: `HTTP`
+   - **URL**: `voice-to-the-dark:8000`
+
+   This last URL uses the Docker container name, which resolves automatically
+   on Docker's internal network.
+
+#### 4. Enable the Tunnel
+
+Run the tunnel setup script:
+
+```bash
+bash tunnel.sh enable
+```
+
+It will prompt for your token, save it to `.env`, and start the tunnel container.
+Your app will be available at the URL you configured (e.g., `https://stories.yourdomain.com`).
+
+You can also run `bash tunnel.sh` with no arguments for an interactive walkthrough.
+
+#### Tunnel Management
+
+```bash
+# Check tunnel status
+bash tunnel.sh status
+
+# Enable (interactive token prompt)
+bash tunnel.sh enable
+
+# Disable and stop tunnel
+bash tunnel.sh disable
+
+# View tunnel logs
+docker compose --profile tunnel logs -f cloudflared
+```
+
+**Note:** If the tunnel is enabled, use `docker compose --profile tunnel up -d`
+(instead of plain `docker compose up -d`) when restarting to include the tunnel.
+
+#### Sharing with Your Friend
+
+Once the tunnel is running, send them the URL (e.g., `https://stories.yourdomain.com`).
+They can open it in any browser — no VPN or special software needed. They can also
+add it to their phone's home screen the same way described in the Phone Setup section below.
+
+---
+
 ### Data
 
 Everything persists in `./data/`:

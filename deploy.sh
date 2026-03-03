@@ -84,7 +84,7 @@ echo "  Deployment complete!"
 echo "========================================"
 echo
 echo "  On this machine:    http://localhost:8000"
-echo "  On her phone:       http://${LAN_IP}:8000"
+echo "  On your network:    http://${LAN_IP}:8000"
 echo
 echo "  Admin account:      $ADMIN_USER"
 echo
@@ -92,6 +92,7 @@ echo "  Data stored in:     ./data/"
 echo "  Logs:               docker compose logs -f"
 echo "  Stop:               docker compose down"
 echo "  Restart:            docker compose restart"
+echo "  Remote access:      bash tunnel.sh  (optional, see SETUP_GUIDE.md)"
 echo
 echo "  The app auto-starts on reboot."
 echo "========================================"
