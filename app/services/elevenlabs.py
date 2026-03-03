@@ -273,7 +273,7 @@ def tts_request(
                 f.write(chunk)
 
 
-def generate_voice_preview(voice_id: str) -> str:
+def generate_voice_preview(voice_id: str, model: str = MODEL_ELEVEN_V3) -> str:
     """Generate a short horror-themed voice preview sample and cache it.
 
     Returns the path to the cached MP3 file. If a cached preview already
@@ -295,6 +295,7 @@ def generate_voice_preview(voice_id: str) -> str:
             voice_id=voice_id,
             output_file=temp_path,
             preset="horror_narrator",
+            model_id=model,
         )
         os.replace(temp_path, cached_path)
     finally:

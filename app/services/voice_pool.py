@@ -9,6 +9,7 @@ voice settings so two characters sharing a voice ID still sound distinct.
 import random
 import logging
 from dataclasses import dataclass
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -20,13 +21,18 @@ class VoiceEntry:
     gender: str  # "male", "female"
     age: str  # "young", "adult", "middle", "elder"
     archetypes: list[str]  # keyword tags for matching
+    model: str = "eleven_v3"  # default model, could be extended for more complex pools
 
 
 # Well-known ElevenLabs premade voices available on all plans.
 VOICE_POOL: list[VoiceEntry] = [
     # ── Male voices ──────────────────────────────────────────────
-    VoiceEntry("pNInz6obpgDQGcFmaJgB", "Adam", "male", "adult",
-               ["narrator", "deep", "authoritative", "steady", "calm"]),
+    VoiceEntry("7p1Ofvcwsv7UBPoFNcpI", "Julian", "male", "adult",
+               ["British", "deep", "rich", "mature", "narrator"],
+               model="eleven_multilingual_v2"),
+    VoiceEntry("Gsndh0O5AnuI2Hj3YUlA", "Adam", "male", "adult",
+               ["narrator", "deep", "authoritative", "steady", "English"],
+               model="eleven_multilingual_v2"),
     VoiceEntry("ErXwobaYiN019PkySvjV", "Antoni", "male", "adult",
                ["warm", "conversational", "friendly", "everyman"]),
     VoiceEntry("VR6AewLTigWG4xSOukaG", "Arnold", "male", "adult",
@@ -41,6 +47,9 @@ VOICE_POOL: list[VoiceEntry] = [
                ["british", "authoritative", "formal", "narrator", "refined"]),
     VoiceEntry("SOYHLrjzK2X1ezoPC6cr", "Harry", "male", "young",
                ["young", "anxious", "nervous", "scared", "uncertain"]),
+    VoiceEntry("uDsPstFWFBUXjIBimV7s", "Santa (yes, really)", "male", "elderly",
+               ["warm", "playful", "jolly", "keeps lists", "checks them twice"],
+               model="eleven_multilingual_v2"),
     VoiceEntry("GBv7mTt0atIp3Br8iCZE", "Thomas", "male", "adult",
                ["calm", "steady", "matter-of-fact", "professional"]),
     VoiceEntry("ZQe5CZNOzWyzPSCn5a3c", "James", "male", "elder",
