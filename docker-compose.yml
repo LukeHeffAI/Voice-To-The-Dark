@@ -15,7 +15,7 @@ services:
   # Optional: Cloudflare Tunnel for remote access (free, no port forwarding)
   # Start with: docker compose --profile tunnel up -d
   cloudflared:
-    image: cloudflare/cloudflared:latest
+    image: cloudflare/cloudflared:2024.8.2
     container_name: cloudflared-tunnel
     restart: unless-stopped
     profiles:

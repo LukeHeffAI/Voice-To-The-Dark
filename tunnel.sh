@@ -19,7 +19,9 @@ show_help() {
 
 enable_tunnel() {
     if [ -z "${1:-}" ]; then
-        read -p "  Paste your Cloudflare Tunnel token: " TOKEN
+        echo "  Note: The token will be stored in your local .env file."
+        read -sp "  Paste your Cloudflare Tunnel token: " TOKEN
+        echo
     else
         TOKEN="$1"
     fi
@@ -30,12 +32,11 @@ enable_tunnel() {
     fi
 
     # Save token to .env
-    if grep -q "CLOUDFLARE_TUNNEL_TOKEN" .env 2>/dev/null; then
-        sed -i "s|.*CLOUDFLARE_TUNNEL_TOKEN.*|CLOUDFLARE_TUNNEL_TOKEN=$TOKEN|" .env
-    else
-        echo "" >> .env
-        echo "CLOUDFLARE_TUNNEL_TOKEN=$TOKEN" >> .env
+    if grep -Eq '^#?\s*CLOUDFLARE_TUNNEL_TOKEN=' .env 2>/dev/null; then
+        sed -i -E '/^#?\s*CLOUDFLARE_TUNNEL_TOKEN=/d' .env
     fi
+    echo "" >> .env
+    echo "CLOUDFLARE_TUNNEL_TOKEN=$TOKEN" >> .env
 
     echo "Tunnel token saved. Starting tunnel..."
     $COMPOSE --profile tunnel up -d
