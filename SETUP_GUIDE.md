@@ -79,47 +79,37 @@ a cheap one through Cloudflare Registrar, or use a free domain service.
    This last URL uses the Docker container name, which resolves automatically
    on Docker's internal network.
 
-#### 4. Add the Token to Your Server
+#### 4. Enable the Tunnel
 
-Add your token to `.env`:
-
-```
-CLOUDFLARE_TUNNEL_TOKEN=eyJhIjoi...your-token-here
-```
-
-Or if running `deploy.sh` for the first time, it will ask you interactively.
-
-#### 5. Start with the Tunnel
+Run the tunnel setup script:
 
 ```bash
-docker compose --profile tunnel up -d
+bash tunnel.sh enable
 ```
 
-The tunnel container will connect to Cloudflare and your app will be available
-at your configured URL (e.g., `https://stories.yourdomain.com`).
+It will prompt for your token, save it to `.env`, and start the tunnel container.
+Your app will be available at the URL you configured (e.g., `https://stories.yourdomain.com`).
+
+You can also run `bash tunnel.sh` with no arguments for an interactive walkthrough.
 
 #### Tunnel Management
 
 ```bash
-# Start app + tunnel
-docker compose --profile tunnel up -d
+# Check tunnel status
+bash tunnel.sh status
+
+# Enable (interactive token prompt)
+bash tunnel.sh enable
+
+# Disable and stop tunnel
+bash tunnel.sh disable
 
 # View tunnel logs
 docker compose --profile tunnel logs -f cloudflared
-
-# Restart everything including tunnel
-docker compose --profile tunnel restart
-
-# Stop tunnel only (keep app running on LAN)
-docker compose --profile tunnel stop cloudflared
-
-# Stop everything
-docker compose --profile tunnel down
 ```
 
-**Note:** If you use the tunnel, always include `--profile tunnel` in your
-`docker compose` commands. A plain `docker compose up -d` will start the app
-but not the tunnel.
+**Note:** If the tunnel is enabled, use `docker compose --profile tunnel up -d`
+(instead of plain `docker compose up -d`) when restarting to include the tunnel.
 
 #### Sharing with Your Friend
 
