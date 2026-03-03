@@ -92,7 +92,11 @@ class TestFullPipeline:
         mock_fetch.return_value = "A terrifying encounter in the woods."
         mock_script.return_value = MOCK_SCRIPT
         mock_voices.return_value = {"narrator": "voice_1", "emma": "voice_2"}
-        mock_narrate.return_value = "/tmp/audio/full_test.mp3"
+        from app.services.narration_generator import NarrationResult
+        mock_narrate.return_value = NarrationResult(
+            output_path="/tmp/audio/full_test.mp3",
+            cache_hits=0, cache_misses=5, total_segments=5,
+        )
 
         url = "https://www.reddit.com/r/nosleep/comments/full/pipeline/"
 

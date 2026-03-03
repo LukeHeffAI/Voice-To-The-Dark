@@ -52,6 +52,7 @@ class GenerateNarrationRequest(BaseModel):
     story_id: int
     voice_map: Optional[dict[str, str]] = None  # auto-assigned if omitted
     force_regenerate: bool = False
+    bust_cache: bool = False  # force-regenerate all segments regardless of cache
 
 
 class PlaybackStateRequest(BaseModel):

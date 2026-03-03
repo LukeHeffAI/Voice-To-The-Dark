@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -9,7 +10,7 @@ from app.services.script_adapter import generate_script
 from app.services.narration_generator import generate_narration
 from app.models.story import Story
 from app.schemas.story import GenerateScriptRequest, GenerateNarrationRequest
-from app.schemas.narration import NarrationScript
+from app.schemas.narration import NarrationScript, SegmentType
 from app.services.voice_pool import auto_assign_voices
 from app.models.story import User
 from app.deps import get_current_user
@@ -228,12 +229,26 @@ def get_script(story_id: int, db: Session = Depends(get_db)):
     }
 
 
+def _delete_audio_file(path: str | None) -> None:
+    """Delete an audio file from disk if it exists. Failures are logged but not raised."""
+    if not path:
+        return
+    try:
+        if os.path.exists(path):
+            os.remove(path)
+            logger.info("Deleted old audio file: %s", path)
+    except Exception:
+        logger.warning("Failed to delete old audio file: %s", path, exc_info=True)
+
+
 @router.put("/script/{story_id}")
 def update_script(story_id: int, script_data: dict, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Update/edit the narration script before generating audio.
 
     Accepts the full script JSON so the user can tweak character assignments,
     adjust SFX cues, modify tone directions, etc.
+
+    Invalidates existing audio since it no longer matches the edited script.
     """
     story = db.query(Story).filter(Story.id == story_id).first()
     if not story:
@@ -241,6 +256,24 @@ def update_script(story_id: int, script_data: dict, user: User = Depends(get_cur
 
     # Validate the script structure
     script = NarrationScript(**script_data)
+
+    # Validate that segment characters exist in the characters dict
+    character_names = set(script.characters.keys())
+    unknown_characters = set()
+    for seg in script.segments:
+        if seg.type in (SegmentType.NARRATION, SegmentType.DIALOGUE) and seg.character:
+            if seg.character not in character_names:
+                unknown_characters.add(seg.character)
+    if unknown_characters:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Segments reference undefined characters: {sorted(unknown_characters)}. "
+                   f"Defined characters: {sorted(character_names)}",
+        )
+
+    # Invalidate stale audio — the script has changed
+    _delete_audio_file(story.audio_file_path)
+    story.audio_file_path = None
 
     story.script_json = json.dumps(script.model_dump())
     db.commit()
@@ -255,6 +288,9 @@ def generate_narration_route(req: GenerateNarrationRequest, _rl=Depends(rate_lim
     Requires a script to have been generated first (via /generate-script).
     If voice_map is omitted, voices are auto-assigned from a diverse pool
     based on each character's voice_profile description.
+
+    Uses a persistent segment cache to skip TTS/SFX API calls for segments
+    whose content hasn't changed since the last generation.
     """
     story = db.query(Story).filter(Story.id == req.story_id).first()
     if not story:
@@ -286,8 +322,20 @@ def generate_narration_route(req: GenerateNarrationRequest, _rl=Depends(rate_lim
                        f"Required characters: {script.character_names()}",
             )
 
+    # Persist voice IDs into character profiles so subsequent regenerations
+    # are deterministic (auto_assign_voices respects pre-set voice_ids)
+    for char_name, voice_id in voice_map.items():
+        if char_name in script.characters:
+            script.characters[char_name].voice_id = voice_id
+    story.script_json = json.dumps(script.model_dump())
+
+    # Clean up old audio file before regeneration
+    _delete_audio_file(story.audio_file_path)
+
     try:
-        audio_path = generate_narration(script, voice_map)
+        result = generate_narration(
+            script, voice_map, bust_cache=req.bust_cache
+        )
     except ElevenLabsError as exc:
         logger.exception("ElevenLabs narration generation failed for story %s", req.story_id)
         raise HTTPException(
@@ -301,13 +349,19 @@ def generate_narration_route(req: GenerateNarrationRequest, _rl=Depends(rate_lim
             detail=f"Narration generation failed unexpectedly: {exc}",
         ) from exc
 
-    story.audio_file_path = audio_path
+    story.audio_file_path = result.output_path
     db.commit()
     db.refresh(story)
 
     return {
         "message": "Narration generated successfully!",
-        "audio_file": story.audio_file_path,
-        "segments_processed": len(script.segments),
+        "audio_file": result.output_path,
+        "segments_processed": result.total_segments,
         "voice_assignments": voice_map,
+        "cache_stats": {
+            "total_segments": result.total_segments,
+            "cache_hits": result.cache_hits,
+            "cache_misses": result.cache_misses,
+            "api_calls_saved": result.cache_hits,
+        },
     }
