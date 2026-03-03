@@ -293,7 +293,7 @@ def generate_voice_preview(voice_id: str, model: str = MODEL_ELEVEN_V3) -> str:
         tts_request(
             text=VOICE_PREVIEW_TEXT,
             voice_id=voice_id,
-            output_file=temp_path,
+            output_file=cached_path,
             preset="horror_narrator",
             model_id=model,
         )
