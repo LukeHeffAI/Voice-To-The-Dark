@@ -12,6 +12,8 @@ services:
       - ./data/stories:/app/data/stories
       - ./data/sfx_cache:/app/data/sfx_cache
       - ./data/voice_previews:/app/data/voice_previews
+      - ./data/segment_cache:/app/data/segment_cache
+      - ./data/reddit_cache:/app/data/reddit_cache
 
   # Optional: Cloudflare Tunnel for remote access (free, no port forwarding)
   # Start with: docker compose --profile tunnel up -d

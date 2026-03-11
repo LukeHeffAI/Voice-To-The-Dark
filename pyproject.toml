@@ -1,0 +1,21 @@
+[project]
+name = "voice-in-the-dark"
+version = "0.2.0"
+description = "Transform Reddit r/nosleep horror stories into dramatic audio productions"
+requires-python = ">=3.11"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+src = ["apps", "config"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"

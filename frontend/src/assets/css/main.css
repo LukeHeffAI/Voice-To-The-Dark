@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #050505;
+  --color-surface: rgba(255, 255, 255, 0.03);
+  --color-surface-hover: rgba(255, 255, 255, 0.045);
+  --color-surface-active: rgba(255, 255, 255, 0.055);
+  --color-accent: #a02020;
+  --color-accent-hover: #bf2626;
+  --color-success: #3a7d5c;
+  --color-info: #6868b8;
+  --color-warn: #b8a040;
+  --color-ambient: #48b8b8;
+  --font-family-serif: "Cormorant Garamond", Georgia, serif;
+  --font-family-sans: Inter, system-ui, sans-serif;
+}
