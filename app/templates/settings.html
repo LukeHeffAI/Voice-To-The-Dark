@@ -665,8 +665,12 @@
         });
     });
 
-    // Close on outside click
-    document.addEventListener('click', function() { closeAllDDs(); });
+    // Close on outside click (but ignore clicks inside dropdowns)
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.filter-dd')) {
+            closeAllDDs();
+        }
+    });
 
     function selectDDValue(filterKey, value, label) {
         filters[filterKey] = value;
