@@ -219,6 +219,12 @@
         }
         .voice-badge.male { color: var(--info); background: rgba(104,104,184,0.12); }
         .voice-badge.female { color: #b868b8; background: rgba(184,104,184,0.12); }
+        .voice-badge.narrator { color: var(--success); background: rgba(58,125,92,0.12); }
+        .voice-filter-count {
+            font-size: 0.75rem;
+            color: var(--text-3);
+            margin-bottom: 0.75rem;
+        }
         .voice-archetypes {
             font-size: 0.78rem;
             color: var(--text-3);
@@ -294,27 +300,86 @@
 
         .voice-filter-row {
             display: flex;
-            gap: 0.5rem;
+            gap: 0.75rem;
             margin-bottom: 1rem;
             flex-wrap: wrap;
         }
-        .filter-btn {
-            padding: 0.35rem 0.8rem;
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            min-width: 0;
+            flex: 1 1 130px;
+        }
+        .filter-label {
+            font-size: 0.68rem;
+            color: var(--text-3);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-family: var(--sans);
+        }
+        .filter-dd {
+            position: relative;
+            width: 100%;
+        }
+        .filter-dd-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.45rem 0.65rem;
             border: 1px solid var(--border);
             border-radius: var(--r-sm);
-            background: none;
-            color: var(--text-3);
+            background: rgba(0,0,0,0.35);
+            color: var(--text-2);
             font-family: var(--sans);
-            font-size: 0.78rem;
+            font-size: 0.82rem;
             cursor: pointer;
-            transition: all 0.2s var(--ease);
+            transition: border-color 0.2s var(--ease);
+            width: 100%;
+            user-select: none;
         }
-        .filter-btn:hover { color: var(--text-2); border-color: var(--text-3); }
-        .filter-btn.active {
+        .filter-dd-toggle:hover { border-color: var(--border-hover); }
+        .filter-dd.open .filter-dd-toggle { border-color: var(--border-focus); }
+        .filter-dd-arrow {
+            width: 0; height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 5px solid var(--text-3);
+            margin-left: 0.5rem;
+            flex-shrink: 0;
+        }
+        .filter-dd-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 3px);
+            left: 0; right: 0;
+            background: #1a1a1a;
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 100;
+            padding: 0.2rem 0;
+        }
+        .filter-dd.open .filter-dd-menu { display: block; }
+        .filter-dd-item {
+            padding: 0.38rem 0.65rem;
+            color: var(--text-2);
+            font-family: var(--sans);
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: background 0.12s ease, color 0.12s ease;
+        }
+        .filter-dd-item:hover {
+            background: #2a1a1a;
             color: var(--text-1);
-            border-color: var(--accent);
-            background: rgba(160,32,32,0.1);
         }
+        .filter-dd-item.active {
+            color: var(--accent);
+        }
+        .filter-dd-menu::-webkit-scrollbar { width: 5px; }
+        .filter-dd-menu::-webkit-scrollbar-track { background: transparent; }
+        .filter-dd-menu::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 {% endblock %}
 
 {% block body %}
@@ -409,10 +474,36 @@
         <!-- ── Voice Library Tab ──────────────── -->
         <div class="tab-panel" id="tab-voices">
             <div class="voice-filter-row">
-                <button class="filter-btn active" data-filter="all" onclick="filterVoices('all')">All</button>
-                <button class="filter-btn" data-filter="male" onclick="filterVoices('male')">Male</button>
-                <button class="filter-btn" data-filter="female" onclick="filterVoices('female')">Female</button>
+                <div class="filter-group">
+                    <label class="filter-label">Gender</label>
+                    <div class="filter-dd" id="filterGender">
+                        <div class="filter-dd-toggle"><span class="filter-dd-text">All</span><span class="filter-dd-arrow"></span></div>
+                        <div class="filter-dd-menu"></div>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Role</label>
+                    <div class="filter-dd" id="filterRole">
+                        <div class="filter-dd-toggle"><span class="filter-dd-text">All</span><span class="filter-dd-arrow"></span></div>
+                        <div class="filter-dd-menu"></div>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Age</label>
+                    <div class="filter-dd" id="filterAge">
+                        <div class="filter-dd-toggle"><span class="filter-dd-text">All</span><span class="filter-dd-arrow"></span></div>
+                        <div class="filter-dd-menu"></div>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Archetype</label>
+                    <div class="filter-dd" id="filterArchetype">
+                        <div class="filter-dd-toggle"><span class="filter-dd-text">All</span><span class="filter-dd-arrow"></span></div>
+                        <div class="filter-dd-menu"></div>
+                    </div>
+                </div>
             </div>
+            <div class="voice-filter-count" id="voiceFilterCount"></div>
             <div id="voiceList"></div>
         </div>
     </div>
@@ -427,7 +518,7 @@
     const cacheInfo = {{ cache_info | tojson }};
     const now = Date.now() / 1000;
 
-    let currentFilter = 'all';
+    let filters = { gender: '', role: '', age: '', archetype: '' };
     let previewPlaying = null;  // voice_id currently playing
     let noteSaveTimers = {};    // debounce timers per voice_id
 
@@ -543,21 +634,183 @@
         return d.innerHTML;
     }
 
-    function filterVoices(filter) {
-        currentFilter = filter;
-        document.querySelectorAll('.filter-btn').forEach(b => {
-            b.classList.toggle('active', b.dataset.filter === filter);
+    // ── Custom dropdown helpers ─────────────
+    var ddEls = {
+        gender: document.getElementById('filterGender'),
+        role: document.getElementById('filterRole'),
+        age: document.getElementById('filterAge'),
+        archetype: document.getElementById('filterArchetype')
+    };
+
+    function openDD(dd) {
+        closeAllDDs();
+        dd.classList.add('open');
+    }
+    function closeAllDDs() {
+        document.querySelectorAll('.filter-dd.open').forEach(function(el) {
+            el.classList.remove('open');
         });
+    }
+
+    // Toggle on click
+    Object.keys(ddEls).forEach(function(key) {
+        var toggle = ddEls[key].querySelector('.filter-dd-toggle');
+        toggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (ddEls[key].classList.contains('open')) {
+                closeAllDDs();
+            } else {
+                openDD(ddEls[key]);
+            }
+        });
+    });
+
+    // Close on outside click (but ignore clicks inside dropdowns)
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.filter-dd')) {
+            closeAllDDs();
+        }
+    });
+
+    function selectDDValue(filterKey, value, label) {
+        filters[filterKey] = value;
+        ddEls[filterKey].querySelector('.filter-dd-text').textContent = label;
+        closeAllDDs();
+        populateDropdowns();
         renderVoices();
+    }
+
+    function buildMenu(filterKey, items) {
+        var menu = ddEls[filterKey].querySelector('.filter-dd-menu');
+        var currentVal = filters[filterKey];
+        menu.innerHTML = '';
+
+        // "All" option
+        var allItem = document.createElement('div');
+        allItem.className = 'filter-dd-item' + (currentVal === '' ? ' active' : '');
+        allItem.textContent = 'All';
+        allItem.addEventListener('click', function(e) {
+            e.stopPropagation();
+            selectDDValue(filterKey, '', 'All');
+        });
+        menu.appendChild(allItem);
+
+        for (var i = 0; i < items.length; i++) {
+            (function(item) {
+                var el = document.createElement('div');
+                el.className = 'filter-dd-item' + (item.value === currentVal ? ' active' : '');
+                el.textContent = item.label;
+                el.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    selectDDValue(filterKey, item.value, item.label);
+                });
+                menu.appendChild(el);
+            })(items[i]);
+        }
+
+        // Update toggle text
+        if (currentVal) {
+            var found = false;
+            for (var j = 0; j < items.length; j++) {
+                if (items[j].value === currentVal) {
+                    ddEls[filterKey].querySelector('.filter-dd-text').textContent = items[j].label;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                filters[filterKey] = '';
+                ddEls[filterKey].querySelector('.filter-dd-text').textContent = 'All';
+            }
+        } else {
+            ddEls[filterKey].querySelector('.filter-dd-text').textContent = 'All';
+        }
+    }
+
+    // ── Filter logic ─────────────────────────
+    function voiceHasArchetype(v, arch) {
+        for (var i = 0; i < v.archetypes.length; i++) {
+            if (v.archetypes[i].toLowerCase() === arch) return true;
+        }
+        return false;
+    }
+
+    function getFilteredVoices() {
+        return voicePool.filter(function(v) {
+            if (filters.gender && v.gender !== filters.gender) return false;
+            if (filters.role && v.role !== filters.role) return false;
+            if (filters.age && v.age !== filters.age) return false;
+            if (filters.archetype && !voiceHasArchetype(v, filters.archetype)) return false;
+            return true;
+        });
+    }
+
+    function getSubsetExcluding(excludeKey) {
+        return voicePool.filter(function(v) {
+            for (var key in filters) {
+                if (key === excludeKey || !filters[key]) continue;
+                if (key === 'archetype') {
+                    if (!voiceHasArchetype(v, filters[key])) return false;
+                } else if (v[key] !== filters[key]) {
+                    return false;
+                }
+            }
+            return true;
+        });
+    }
+
+    function populateSimple(filterKey, extractFn) {
+        var subset = getSubsetExcluding(filterKey);
+        var seen = {};
+        var items = [];
+        for (var i = 0; i < subset.length; i++) {
+            var val = extractFn(subset[i]);
+            if (!seen[val]) {
+                seen[val] = true;
+                items.push({ value: val, label: val.charAt(0).toUpperCase() + val.slice(1) });
+            }
+        }
+        items.sort(function(a, b) { return a.value < b.value ? -1 : a.value > b.value ? 1 : 0; });
+        buildMenu(filterKey, items);
+    }
+
+    function populateArchetype() {
+        var subset = getSubsetExcluding('archetype');
+        var seen = {};
+        var items = [];
+        for (var i = 0; i < subset.length; i++) {
+            var arr = subset[i].archetypes;
+            for (var k = 0; k < arr.length; k++) {
+                var val = arr[k].toLowerCase();
+                if (!seen[val]) {
+                    seen[val] = true;
+                    items.push({ value: val, label: arr[k].charAt(0).toUpperCase() + arr[k].slice(1) });
+                }
+            }
+        }
+        items.sort(function(a, b) { return a.value < b.value ? -1 : a.value > b.value ? 1 : 0; });
+        buildMenu('archetype', items);
+    }
+
+    function populateDropdowns() {
+        populateSimple('gender', function(v) { return v.gender; });
+        populateSimple('role', function(v) { return v.role; });
+        populateSimple('age', function(v) { return v.age; });
+        populateArchetype();
     }
 
     function renderVoices() {
         const container = document.getElementById('voiceList');
+        const countEl = document.getElementById('voiceFilterCount');
         container.innerHTML = '';
 
-        const filtered = currentFilter === 'all'
-            ? voicePool
-            : voicePool.filter(v => v.gender === currentFilter);
+        const filtered = getFilteredVoices();
+
+        if (countEl) {
+            countEl.textContent = filtered.length === voicePool.length
+                ? 'Showing all ' + voicePool.length + ' voices'
+                : 'Showing ' + filtered.length + ' of ' + voicePool.length + ' voices';
+        }
 
         for (const voice of filtered) {
             const card = document.createElement('div');
@@ -570,6 +823,7 @@
                     '<span class="voice-name">' + escapeHtml(voice.name) + '</span>' +
                     '<span class="voice-badge ' + voice.gender + '">' + voice.gender + '</span>' +
                     '<span class="voice-badge">' + voice.age + '</span>' +
+                    '<span class="voice-badge ' + voice.role + '">' + voice.role + '</span>' +
                 '</div>' +
                 '<div class="voice-archetypes">' + escapeHtml(voice.archetypes.join(', ')) + '</div>' +
                 '<div class="voice-preview-row">' +
@@ -664,6 +918,7 @@
     }
 
     // Initial render
+    populateDropdowns();
     renderVoices();
     </script>
 {% endblock %}
