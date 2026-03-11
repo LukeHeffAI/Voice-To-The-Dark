@@ -6,45 +6,20 @@
 
 ## Current State of the Repository
 
-### What Exists
+> **Last audited: 2026-03-05** — Automated analysis by task-analyser agents.
 
-| File | Status | Notes |
-|---|---|---|
-| `app/config.py` | Functional | Loads `ELEVENLABS_API_KEY`, `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET` from `.env` |
-| `app/database.py` | Functional | SQLAlchemy + SQLite (`horror_narrator.db`) |
-| `app/main.py` | Skeleton | FastAPI app created, but **routers are not registered** |
-| `app/models/story.py` | Functional | `Story` model (id, title, reddit_url, text_content, audio_file_path) and `User` model (id, username, password_hash, is_admin) |
-| `app/schemas/story.py` | Empty | No Pydantic schemas defined |
-| `app/services/reddit.py` | Functional | Fetches top posts via PRAW, multi-part story detection with recursive link following, single-post fetch |
-| `app/services/elevenlabs.py` | Functional | Basic TTS generation with text chunking (4900 char limit), audio stitching via pydub |
-| `app/services/audio_utils.py` | Functional | Audio file stitching, temp folder management, cleanup utilities |
-| `app/routers/audio.py` | Functional | `POST /generate-audio` — takes story_id + voice_id, generates audio, saves path to DB |
-| `app/routers/stories.py` | Empty | No endpoints |
-| `app/routers/auth.py` | Empty | No endpoints |
-| `requirements.txt` | Empty | Dependencies not listed |
+### Summary
 
-### What Works
+The project is **substantially complete**. Phases 1–3 (foundations, script adaptation, enhanced audio) and Phases 5–8 (frontend, auth, testing, deployment) are nearly all done. Phase 4 (local TTS fallback) is entirely unstarted. A handful of partial items remain across other phases.
 
-- Reddit story fetching (single and multi-part) via PRAW
-- Basic ElevenLabs TTS generation with chunking
-- Audio file concatenation with pydub
-- SQLite storage for stories and audio paths
-- Audio generation endpoint (though the router isn't wired up)
+### What's Left To Do
 
-### What Needs Improvement or Rework
-
-1. **Text chunking is naive** — splits at a fixed character count, potentially mid-word or mid-sentence. Must split on sentence/paragraph boundaries.
-2. **No dramatic adaptation** — stories are sent to TTS as raw Reddit text. No processing to make narration dramatic, remove Reddit-isms (e.g. "edit:", "update:", markdown formatting), or add pacing/tone cues.
-3. **Single voice only** — no support for multiple character voices or narrator vs. dialogue distinction.
-4. **No sound effects or ambient audio** — just flat speech with no atmosphere.
-5. **No LLM integration** — no script adaptation layer to transform a written story into a performance-ready narration script.
-6. **Routers not wired up** — `main.py` doesn't include any routers, so the API doesn't actually serve any endpoints.
-7. **No requirements.txt** — dependencies aren't tracked.
-8. **No local TTS fallback** — entirely dependent on ElevenLabs API.
-9. **`_extract_reddit_links` returns tuples** — `re.findall` with groups returns a list of tuples, not strings. The multi-part logic will break.
-10. **No error handling on the audio route** — DB session not properly managed (no dependency injection, no `finally` close).
-11. **No frontend** — no way for a user to interact with the system beyond raw API calls.
-12. **No tests** — nothing is tested.
+1. **No local TTS fallback** (Phase 4) — entirely dependent on ElevenLabs API. Orpheus TTS and Chatterbox integration not started.
+2. **Voice preferences not persisted** (3.7a) — auto-assigned voices don't carry across stories; no DB-backed preferred mapping.
+3. **Some read endpoints lack auth** (6.2a) — `list_stories`, `top_nosleep`, `check_duplicate`, `get_script`, `stream`, `download` have no or optional auth.
+4. **No user-facing audio quality presets** (7.5a/b) — internal voice presets exist but users can't choose draft vs. production quality.
+5. **No native local HTTPS** (8.3a) — Cloudflare Tunnel handles remote HTTPS, but local network has no TLS.
+6. **Text chunking uses paragraphs, not sentences** (1.5) — splits on `\n\n` rather than sentence boundaries.
 
 ---
 
@@ -171,52 +146,57 @@ Two sub-systems work here:
 
 Get the existing code working correctly before adding new features.
 
-- [ ] **1.1** Populate `requirements.txt` with all dependencies (fastapi, uvicorn, sqlalchemy, praw, requests, pydub, python-dotenv, anthropic, elevenlabs)
-- [ ] **1.2** Wire up routers in `main.py` (audio, stories, auth)
-- [ ] **1.3** Fix `_extract_reddit_links` regex bug (returns tuples instead of strings)
-- [ ] **1.4** Add proper FastAPI dependency injection for DB sessions (replace manual `SessionLocal()` calls)
-- [ ] **1.5** Improve text chunking to split on sentence boundaries instead of fixed character count
-- [ ] **1.6** Add text cleaning to strip Reddit formatting artifacts from story text
-- [ ] **1.7** Define Pydantic schemas for story creation, response, and audio generation
-- [ ] **1.8** Implement stories router: endpoints to submit a URL, list stories, get story by ID, delete a story
-- [ ] **1.9** Add `.env.example` with required environment variable names
-- [ ] **1.10** Add `ANTHROPIC_API_KEY` to config settings
+- [x] **1.1** Populate `requirements.txt` with all dependencies (fastapi, uvicorn, sqlalchemy, praw, requests, pydub, python-dotenv, anthropic, elevenlabs)
+- [x] **1.2** Wire up routers in `main.py` (audio, stories, auth)
+- [x] **1.3** Fix `_extract_reddit_links` regex bug (returns tuples instead of strings)
+- [x] **1.4** Add proper FastAPI dependency injection for DB sessions (replace manual `SessionLocal()` calls)
+- [~] **1.5** Improve text chunking to split on sentence boundaries instead of fixed character count — *PARTIAL: splits on paragraph boundaries (`\n\n`), not sentence boundaries*
+- [~] **1.6** Add text cleaning to strip Reddit formatting artifacts from story text — *PARTIAL: some cleaning exists, but could be improved to handle more edge cases and ensure clean input for the LLM*
+   - Formatting for bolding, italics, strikethrough (e.g. `**bold**`, `*italics*`, `~~strikethrough~~`)
+   - Remove "Edit:", "Update:", and award mentions
+- [x] **1.7** Define Pydantic schemas for story creation, response, and audio generation
+- [x] **1.8** Implement stories router: endpoints to submit a URL, list stories, get story by ID, delete a story
+- [x] **1.9** Add `.env.example` with required environment variable names
+- [x] **1.10** Add `ANTHROPIC_API_KEY` to config settings
 
 ### Phase 2: Script Adaptation Engine (Claude Integration)
 
 The LLM-powered transformation from raw text to dramatic narration script.
 
-- [ ] **2.1** Design the narration script JSON schema (segment types, character definitions, SFX cues, tone markers)
-- [ ] **2.2** Create `app/services/script_adapter.py` — the Claude API integration that transforms story text into a narration script
-- [ ] **2.3** Craft and iterate on the system prompt for dramatic horror narration adaptation
-- [ ] **2.4** Handle long stories that exceed Claude's output limits — process in sections, maintain continuity
-- [ ] **2.5** Store the generated script in the database (add a `script_json` column to the Story model)
-- [ ] **2.6** Add an endpoint to trigger script generation and retrieve/preview the script
-- [ ] **2.7** Allow manual script editing (so the user can tweak character assignments, add/remove SFX cues, etc. before generating audio)
+- [x] **2.1** Design the narration script JSON schema (segment types, character definitions, SFX cues, tone markers)
+- [x] **2.2** Create `app/services/script_adapter.py` — the Claude API integration that transforms story text into a narration script
+- [x] **2.3** Craft and iterate on the system prompt for dramatic horror narration adaptation
+- [x] **2.4** Handle long stories that exceed Claude's output limits — process in sections, maintain continuity
+- [x] **2.5** Store the generated script in the database (add a `script_json` column to the Story model)
+- [x] **2.6** Add an endpoint to trigger script generation and retrieve/preview the script
+- [x] **2.7** Allow manual script editing (so the user can tweak character assignments, add/remove SFX cues, etc. before generating audio)
 
 ### Phase 3: Enhanced Audio Generation
 
 Upgrade from flat TTS to dramatic multi-voice + SFX production.
 
-- [ ] **3.1** Upgrade ElevenLabs integration to use Eleven v3 model with voice settings tuned for horror
-- [ ] **3.2** Implement voice mapping — assign ElevenLabs voice IDs to characters defined in the script
-- [ ] **3.3** Create `app/services/sfx_generator.py` — ElevenLabs Sound Effects V2 integration for generating SFX from text descriptions
-- [ ] **3.4** Implement SFX caching — store generated SFX by description hash, reuse across stories
-- [ ] **3.5** Create `app/services/audio_mixer.py` — takes all generated segments and mixes them into a single production:
+- [x] **3.1** Upgrade ElevenLabs integration to use Eleven v3 model with voice settings tuned for horror
+- [x] **3.2** Implement voice mapping — assign ElevenLabs voice IDs to characters defined in the script
+- [x] **3.3** Create `app/services/sfx_generator.py` — ElevenLabs Sound Effects V2 integration for generating SFX from text descriptions — *Implemented within `elevenlabs.py` rather than a separate module*
+- [x] **3.4** Implement SFX caching — store generated SFX by description hash, reuse across stories
+- [x] **3.5** Create `app/services/audio_mixer.py` — takes all generated segments and mixes them into a single production:
   - Layer ambient audio under narration
   - Insert SFX at correct positions
   - Apply crossfades, pauses, volume normalization
   - Add intro/outro fades
-- [ ] **3.6** Refactor `generate_audio` to orchestrate the full pipeline: script → voice segments → SFX → mix → final file
-- [ ] **3.7** Add a voice/character configuration system (map character profiles to specific ElevenLabs voice IDs, store preferred voices)
+- [x] **3.6** Refactor `generate_audio` to orchestrate the full pipeline: script → voice segments → SFX → mix → final file
+- [~] **3.7** Add a voice/character configuration system (map character profiles to specific ElevenLabs voice IDs, store preferred voices) — *PARTIAL: voice pool with auto-assignment exists, but no persistent database-backed preferred voice storage across stories*
+  - [x] Voice pool with 32 voices and auto-assignment by profile description
+  - [x] Manual voice_id assignment via script editor
+  - [ ] **3.7a** Persist preferred character→voice mappings in the database so assignments carry across stories (e.g. "always use voice X for 'young woman, anxious'")
 
 ### Phase 4: Local TTS Fallback
 
 Add local TTS support for the RTX 4090 as an alternative to ElevenLabs.
 
 - [ ] **4.1** Integrate Orpheus TTS (3B) as the primary local TTS engine
-- [ ] **4.2** Create `app/services/local_tts.py` with a common interface matching the ElevenLabs service
-- [ ] **4.3** Add a TTS provider selection mechanism (ElevenLabs vs. local) configurable per generation or globally
+- [ ] **4.2** Create `app/services/local_tts.py` with a common interface matching the ElevenLabs service — *should accept the same segment format and return audio bytes*
+- [ ] **4.3** Add a TTS provider selection mechanism (ElevenLabs vs. local) configurable per generation or globally — *currently `narration_generator.py` always calls ElevenLabs `generate_audio()`*
 - [ ] **4.4** Optionally integrate Chatterbox for voice cloning capability (clone a preferred narrator voice from an audio sample)
 - [ ] **4.5** Test and tune local model voice settings for horror narration quality
 
@@ -224,36 +204,43 @@ Add local TTS support for the RTX 4090 as an alternative to ElevenLabs.
 
 Build a simple, functional web UI.
 
-- [ ] **5.1** Choose frontend approach (recommend: simple server-rendered templates with HTMX, or a lightweight React/Svelte SPA)
-- [ ] **5.2** Story submission page: paste a nosleep URL, see story preview, trigger narration
-- [ ] **5.3** Story browser: list stored stories with status (fetched, scripted, narrated), filter by top/recent
-- [ ] **5.4** Narration player: in-browser audio player with download option
-- [ ] **5.5** Script preview/editor: view the generated narration script, tweak character assignments and SFX cues before audio generation
-- [ ] **5.6** Voice configuration page: select/preview ElevenLabs voices for each character role
-- [ ] **5.7** Pipeline status: show progress as a story moves through fetch → adapt → generate → mix stages
+- [x] **5.1** Choose frontend approach — *Jinja2 templates + vanilla JS client-side router (VTTDRouter) for SPA-like navigation with persistent audio*
+- [x] **5.2** Story submission page: paste a nosleep URL, see story preview, trigger narration
+- [x] **5.3** Story browser: list stored stories with status (fetched, scripted, narrated), filter by top/recent
+- [x] **5.4** Narration player: in-browser audio player with download option
+- [x] **5.5** Script preview/editor: view the generated narration script, tweak character assignments and SFX cues before audio generation
+- [x] **5.6** Voice configuration page: select/preview ElevenLabs voices for each character role
+- [x] **5.7** Pipeline status: show progress as a story moves through fetch → adapt → generate → mix stages
 
 ### Phase 6: Auth & Security
 
 Lock it down so only you (and your girlfriend) can use it.
 
-- [ ] **6.1** Implement simple authentication (recommend: basic username/password with JWT tokens — no need for OAuth complexity for 1-2 users)
-- [ ] **6.2** Protect all API routes with auth middleware
-- [ ] **6.3** Add rate limiting to prevent accidental API abuse
-- [ ] **6.4** Ensure API keys are never exposed to the frontend
+- [x] **6.1** Implement simple authentication (recommend: basic username/password with JWT tokens — no need for OAuth complexity for 1-2 users)
+- [~] **6.2** Protect all API routes with auth middleware — *PARTIAL: most routes protected, but several read endpoints use optional auth or none*
+  - [x] Auth dependency (`get_current_user`) applied to write/mutation endpoints
+  - [ ] **6.2a** Audit and tighten auth on read endpoints — `list_stories`, `top_nosleep`, `check_duplicate`, `get_script`, `stream`, `download` currently have no or optional auth
+- [x] **6.3** Add rate limiting to prevent accidental API abuse
+- [x] **6.4** Ensure API keys are never exposed to the frontend
 
 ### Phase 7: Testing & Polish
 
-- [ ] **7.1** Write unit tests for text cleaning, chunking, and script parsing
-- [ ] **7.2** Write integration tests for the narration pipeline (mock external APIs)
-- [ ] **7.3** Add logging throughout the pipeline for debugging
-- [ ] **7.4** Add error recovery — if a stage fails, allow retrying from that stage instead of starting over
-- [ ] **7.5** Add audio quality presets (quick draft vs. full production)
+- [x] **7.1** Write unit tests for text cleaning, chunking, and script parsing
+- [x] **7.2** Write integration tests for the narration pipeline (mock external APIs)
+- [x] **7.3** Add logging throughout the pipeline for debugging
+- [x] **7.4** Add error recovery — if a stage fails, allow retrying from that stage instead of starting over
+- [ ] **7.5** Add audio quality presets (quick draft vs. full production) — *Voice presets exist internally (`VOICE_PRESETS` in elevenlabs.py) but no user-facing quality mode selection*
+  - [x] Internal voice presets (horror_narrator, horror_dialogue, whisper, calm)
+  - [ ] **7.5a** Add a quality mode parameter to generation endpoints (e.g. "draft" = faster model/lower quality, "production" = full Eleven v3)
+  - [ ] **7.5b** Expose quality selection in the frontend UI when triggering audio generation
 
 ### Phase 8: Deployment (Optional)
 
-- [ ] **8.1** Dockerize the application
-- [ ] **8.2** Set up for deployment (self-hosted or cloud) — since the RTX 4090 is local, a local deployment may be preferable
-- [ ] **8.3** Configure HTTPS if exposing externally
+- [x] **8.1** Dockerize the application
+- [x] **8.2** Set up for deployment (self-hosted or cloud) — *deploy.sh, tunnel.sh, and SETUP_GUIDE.md all in place; supports local network and Cloudflare Tunnel*
+- [~] **8.3** Configure HTTPS if exposing externally — *PARTIAL: Cloudflare Tunnel provides HTTPS for remote access*
+  - [x] HTTPS via Cloudflare Tunnel for remote/external access
+  - [ ] **8.3a** Add native HTTPS/TLS for local network deployments (e.g. reverse proxy with nginx/Caddy, or self-signed certs)
 
 ---
 
