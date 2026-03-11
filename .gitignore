@@ -5,7 +5,7 @@
 data/
 
 # Generated audio and SFX cache
-stories/
+/stories/
 sfx_cache/
 tmp/
 
