@@ -29,9 +29,10 @@ MOCK_SCRIPT = NarrationScript(
 class TestFullPipeline:
     """Test the submit → script → narration pipeline end to end."""
 
+    @patch("app.routers.stories.find_series_parts", return_value=[])
     @patch("app.routers.stories.fetch_post_metadata")
-    @patch("app.routers.stories.fetch_multi_part_story")
-    def test_submit_then_check_duplicate(self, mock_fetch, mock_metadata, client, auth_headers, db_session):
+    @patch("app.routers.stories.fetch_story_text")
+    def test_submit_then_check_duplicate(self, mock_fetch, mock_metadata, _mock_series, client, auth_headers, db_session):
         """Submit a story, then verify duplicate check finds it."""
         mock_metadata.return_value = {"title": "The Haunted Basement", "author": "test_author"}
         mock_fetch.return_value = "It was a dark November evening. The old house creaked."
@@ -49,10 +50,11 @@ class TestFullPipeline:
         assert resp.json()["is_duplicate"] is True
         assert resp.json()["existing_story_id"] == story_id
 
+    @patch("app.routers.stories.find_series_parts", return_value=[])
     @patch("app.routers.stories.fetch_post_metadata")
-    @patch("app.routers.stories.fetch_multi_part_story")
+    @patch("app.routers.stories.fetch_story_text")
     @patch("app.routers.audio.generate_script")
-    def test_submit_then_generate_script(self, mock_script, mock_fetch, mock_metadata, client, auth_headers, db_session):
+    def test_submit_then_generate_script(self, mock_script, mock_fetch, mock_metadata, _mock_series, client, auth_headers, db_session):
         """Submit a story, then generate its script."""
         mock_metadata.return_value = {"title": "The Haunted Basement", "author": "test_author"}
         mock_fetch.return_value = "It was a dark November evening."
@@ -75,21 +77,26 @@ class TestFullPipeline:
         assert resp.status_code == 200
         assert resp.json()["segment_count"] == 5
 
+    @patch("app.routers.stories.find_series_parts", return_value=[])
     @patch("app.routers.stories.fetch_post_metadata")
-    @patch("app.routers.stories.fetch_multi_part_story")
+    @patch("app.routers.stories.fetch_story_text")
     @patch("app.routers.audio.generate_script")
     @patch("app.routers.audio.generate_narration")
     @patch("app.routers.audio.auto_assign_voices")
     def test_full_pipeline_submit_script_narrate(
         self, mock_voices, mock_narrate, mock_script, mock_fetch, mock_metadata,
-        client, auth_headers, db_session,
+        _mock_series, client, auth_headers, db_session,
     ):
         """Submit → script → narration → verify audio path is stored."""
         mock_metadata.return_value = {"title": "Full Pipeline Test", "author": "test_author"}
         mock_fetch.return_value = "A terrifying encounter in the woods."
         mock_script.return_value = MOCK_SCRIPT
         mock_voices.return_value = {"narrator": "voice_1", "emma": "voice_2"}
-        mock_narrate.return_value = "/tmp/audio/full_test.mp3"
+        from app.services.narration_generator import NarrationResult
+        mock_narrate.return_value = NarrationResult(
+            output_path="/tmp/audio/full_test.mp3",
+            cache_hits=0, cache_misses=5, total_segments=5,
+        )
 
         url = "https://www.reddit.com/r/nosleep/comments/full/pipeline/"
 
@@ -113,9 +120,10 @@ class TestFullPipeline:
         resp = client.get(f"/stories/{story_id}")
         assert resp.json()["audio_file_path"] == "/tmp/audio/full_test.mp3"
 
+    @patch("app.routers.stories.find_series_parts", return_value=[])
     @patch("app.routers.stories.fetch_post_metadata")
-    @patch("app.routers.stories.fetch_multi_part_story")
-    def test_resubmit_returns_existing(self, mock_fetch, mock_metadata, client, auth_headers, db_session):
+    @patch("app.routers.stories.fetch_story_text")
+    def test_resubmit_returns_existing(self, mock_fetch, mock_metadata, _mock_series, client, auth_headers, db_session):
         """Submitting the same URL twice returns the same story without re-fetching."""
         mock_metadata.return_value = {"title": "Duplicate Test", "author": "test_author"}
         mock_fetch.return_value = "Story content here."
@@ -144,9 +152,10 @@ class TestFullPipeline:
 class TestPlaybackFlow:
     """Test the playback state save/resume flow."""
 
+    @patch("app.routers.stories.find_series_parts", return_value=[])
     @patch("app.routers.stories.fetch_post_metadata")
-    @patch("app.routers.stories.fetch_multi_part_story")
-    def test_save_and_resume_position(self, mock_fetch, mock_metadata, client, auth_headers, db_session):
+    @patch("app.routers.stories.fetch_story_text")
+    def test_save_and_resume_position(self, mock_fetch, mock_metadata, _mock_series, client, auth_headers, db_session):
         mock_metadata.return_value = {"title": "Playback Test", "author": "test_author"}
         mock_fetch.return_value = "Story for playback testing."
 

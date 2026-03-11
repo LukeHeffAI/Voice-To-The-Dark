@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create data directories inside the container (volume-mounted at runtime)
-RUN mkdir -p /app/data/db /app/data/stories /app/data/sfx_cache /app/tmp
+RUN mkdir -p /app/data/db /app/data/stories /app/data/sfx_cache /app/data/voice_previews /app/tmp
 
 EXPOSE 8000
 

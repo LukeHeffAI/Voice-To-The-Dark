@@ -11,3 +11,18 @@ services:
       - ./data/db:/app/data/db
       - ./data/stories:/app/data/stories
       - ./data/sfx_cache:/app/data/sfx_cache
+      - ./data/voice_previews:/app/data/voice_previews
+
+  # Optional: Cloudflare Tunnel for remote access (free, no port forwarding)
+  # Start with: docker compose --profile tunnel up -d
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-tunnel
+    restart: unless-stopped
+    profiles:
+      - tunnel
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - voice-to-the-dark

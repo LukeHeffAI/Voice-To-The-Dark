@@ -17,6 +17,7 @@ class _TruncatedResponseError(Exception):
 # caller will automatically re-split and retry.
 MAX_OUTPUT_TOKENS = 20000
 
+#  TODO: review and refine the system prompt for better performance.
 SYSTEM_PROMPT = """\
 You are a horror audio drama director. Your job is to transform a written \
 horror story into a structured narration script that will be performed by \

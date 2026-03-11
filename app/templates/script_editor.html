@@ -338,7 +338,7 @@
 {% endblock %}
 
 {% block body %}
-    <div class="page-container">
+    <div class="page-container" data-story-id="{{ story.id }}">
         <a href="/story/{{ story.id }}" class="back-link">&larr; Back to story</a>
 
         <div class="page-header">
@@ -350,6 +350,10 @@
                 <button class="save-btn" id="saveBtn" onclick="saveScript()">Save Changes</button>
                 <div class="save-status" id="saveStatus"></div>
             </div>
+        </div>
+
+        <div class="regen-notice" style="margin-bottom: 1.5rem; padding: 0.75rem 1rem; background: rgba(255, 170, 0, 0.1); border-left: 3px solid var(--warn, #fa0); border-radius: 4px; font-size: 0.9rem; color: var(--text-secondary, #b0b0b0);">
+            Saving changes to the script will require audio regeneration.
         </div>
 
         <div class="characters-panel">
@@ -364,14 +368,17 @@
         <p class="click-hint">Tap a segment to edit it</p>
         <div class="segment-list" id="segmentList"></div>
     </div>
+    <script type="application/json" id="editorScriptData">{{ script_json | safe }}</script>
+    <script type="application/json" id="editorVoicePool">{{ voice_pool_json | tojson }}</script>
 {% endblock %}
 
 {% block scripts %}
     <script>
-    const storyId = {{ story.id }};
-    let script = {{ script_json | safe }};
+    (function() {
+    const storyId = parseInt(document.querySelector('.page-container').dataset.storyId, 10);
+    let script = JSON.parse(document.getElementById('editorScriptData').textContent);
     let hasChanges = false;
-    const voicePool = {{ voice_pool_json | safe }};
+    const voicePool = JSON.parse(document.getElementById('editorVoicePool').textContent);
 
     function render() {
         renderCharacters();
@@ -388,12 +395,19 @@
         const males = voicePool.filter(v => v.gender === 'male');
         const females = voicePool.filter(v => v.gender === 'female');
 
+        function voiceOptionLabel(v) {
+            let label = escapeHtml(v.name) + ' \u2014 ' + escapeHtml(v.archetypes.join(', '));
+            if (v.notes) {
+                label += ' (' + escapeHtml(v.notes) + ')';
+            }
+            return label;
+        }
+
         html += '<optgroup label="Male">';
         for (const v of males) {
             const sel = v.voice_id === currentId ? ' selected' : '';
             html += '<option value="' + v.voice_id + '"' + sel + '>' +
-                escapeHtml(v.name) + ' — ' + escapeHtml(v.archetypes.join(', ')) +
-                '</option>';
+                voiceOptionLabel(v) + '</option>';
         }
         html += '</optgroup>';
 
@@ -401,8 +415,7 @@
         for (const v of females) {
             const sel = v.voice_id === currentId ? ' selected' : '';
             html += '<option value="' + v.voice_id + '"' + sel + '>' +
-                escapeHtml(v.name) + ' — ' + escapeHtml(v.archetypes.join(', ')) +
-                '</option>';
+                voiceOptionLabel(v) + '</option>';
         }
         html += '</optgroup>';
 
@@ -434,8 +447,8 @@
             card.className = 'character-card';
             card.innerHTML =
                 '<div class="char-card-header">' +
-                    '<span class="char-card-name ' + roleClass + '">' + escapeHtml(key) + '</span>' +
-                    '<span class="char-card-badge ' + roleClass + '">' + roleLabel + '</span>' +
+                    '<span class="char-card-name ' + roleClass.replace(/_/g, ' ') + '">' + escapeHtml(key) + '</span>' +
+                    '<span class="char-card-badge ' + roleClass.replace(/_/g, ' ') + '">' + roleLabel + '</span>' +
                 '</div>' +
                 '<div class="char-field">' +
                     '<div class="char-field-label">Voice profile</div>' +
@@ -608,6 +621,15 @@
         return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
+    // Expose functions used by inline onclick handlers
+    window.saveScript = saveScript;
+    window.onVoiceChange = onVoiceChange;
+    window.onProfileChange = onProfileChange;
+    window.confirmEdit = confirmEdit;
+    window.cancelEdit = cancelEdit;
+    window.deleteSegment = deleteSegment;
+
     render();
+    })();
     </script>
 {% endblock %}

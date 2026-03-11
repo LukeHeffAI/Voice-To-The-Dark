@@ -29,7 +29,8 @@
             border-radius: var(--r-lg);
             color: var(--text-3);
             text-decoration: none;
-            font-size: 0.85rem;
+            font-family: var(--serif);
+            font-size: 1.3rem;
             font-weight: 500;
             letter-spacing: 0.04em;
             transition: all 0.3s var(--ease);
@@ -169,7 +170,7 @@
         .card-dropdown-item {
             display: flex; align-items: center; gap: 0.6rem; width: 100%;
             padding: 0.6rem 1rem; border: none; background: none;
-            color: var(--text-2); font-family: var(--sans); font-size: 0.8rem;
+            color: var(--text-2); font-family: var(--serif); font-size: 0.8rem;
             cursor: pointer; text-align: left; transition: all 0.15s var(--ease); white-space: nowrap;
         }
         .card-dropdown-item:hover { background: var(--surface-hover); color: var(--text-1); }
@@ -223,7 +224,7 @@
             <h1>Voice In The Dark</h1>
         </div>
 
-        <a href="/submit" class="submit-link">+ Submit a new story</a>
+        <a href="/submit" class="submit-link">+ Hear a new tale</a>
 
         {% if user and folders %}
         <nav class="folder-nav">

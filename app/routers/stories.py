@@ -122,7 +122,7 @@ def _auto_submit_series_parts(
         part_url = (part.get("url") or "").strip()
         if not part_url:
             continue
-        if _urls_equivalent(part_url, submitted_url):
+        if _canonical_url_key(part_url) == _canonical_url_key(submitted_url):
             continue
 
         # Skip if already in the DB (consider common URL variants)
@@ -172,7 +172,7 @@ def _auto_submit_series_parts(
         content_digest = hash_content(part_text)
         dup = db.query(Story.id).filter(Story.content_hash == content_digest).first()
         if dup:
-            existing_keys.add(part_key)
+            existing_keys.add(_canonical_url_key(part_url))
             continue
 
         narration = clean_for_narration(part_text)
@@ -187,7 +187,7 @@ def _auto_submit_series_parts(
             series_json=series_json_str,
         )
         db.add(story)
-        existing_keys.add(part_key)
+        existing_keys.add(_canonical_url_key(part_url))
 
     try:
         db.commit()
