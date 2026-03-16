@@ -2,18 +2,18 @@
 import { computed } from 'vue'
 import type { Story } from '../api/types'
 
-const props = defineProps<{ story: Story }>()
+const props = defineProps<{ story: Story; hasScript: boolean }>()
 
 const steps = computed(() => [
   {
     label: 'Story Fetched',
     done: true,
-    active: !props.story.audio_file_path && !hasScript.value,
+    active: !props.story.audio_file_path && !props.hasScript,
   },
   {
     label: 'Script Generated',
-    done: hasScript.value,
-    active: hasScript.value && !props.story.audio_file_path,
+    done: props.hasScript,
+    active: props.hasScript && !props.story.audio_file_path,
   },
   {
     label: 'Audio Ready',
@@ -21,13 +21,6 @@ const steps = computed(() => [
     active: false,
   },
 ])
-
-const hasScript = computed(() => {
-  // script_json presence isn't in StoryResponse directly,
-  // but we can infer from the API — the detail page fetches script separately.
-  // For pipeline display, we use the audio_file_path and a prop.
-  return false // Will be set by parent
-})
 </script>
 
 <template>
@@ -39,7 +32,7 @@ const hasScript = computed(() => {
       :class="{ done: step.done, active: step.active }"
     >
       <div class="step-number">
-        <span v-if="step.done" class="check">✓</span>
+        <span v-if="step.done" class="check">&#10003;</span>
         <span v-else>{{ i + 1 }}</span>
       </div>
       <span class="step-label">{{ step.label }}</span>
