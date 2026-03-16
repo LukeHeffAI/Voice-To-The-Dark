@@ -7,6 +7,7 @@ from apps.audio.api import router as audio_router
 from apps.player.api import router as player_router
 from apps.stories.api import router as stories_router
 from apps.stories.settings_api import router as settings_router
+from apps.tasks.api import router as tasks_router
 
 api = NinjaAPI(
     title="Voice In The Dark",
@@ -19,6 +20,7 @@ api.add_router("/stories/", stories_router, tags=["Stories"])
 api.add_router("/audio/", audio_router, tags=["Audio"])
 api.add_router("/settings/", settings_router, tags=["Settings"])
 api.add_router("/player/", player_router, tags=["Player"])
+api.add_router("/tasks/", tasks_router, tags=["Tasks"])
 
 urlpatterns = [
     path("admin/", admin.site.urls),

@@ -15,6 +15,8 @@ import type {
   NarrationScript,
   VoiceEntry,
   StoryInfo,
+  TaskStatus,
+  TaskStartResponse,
 } from '@/types'
 
 // ── Low-level fetch wrapper ─────────────────────────────────
@@ -129,7 +131,7 @@ export const foldersApi = {
 
 export const audioApi = {
   generateScript: (story_id: number, force_regenerate = false) =>
-    request<GenerateScriptResponse>('POST', '/audio/generate-script', { story_id, force_regenerate }),
+    request<TaskStartResponse | GenerateScriptResponse>('POST', '/audio/generate-script', { story_id, force_regenerate }),
   getScript: (story_id: number) =>
     request<ScriptInfoResponse>('GET', `/audio/script/${story_id}`),
   updateScript: (story_id: number, script: NarrationScript) =>
@@ -146,12 +148,17 @@ export const audioApi = {
     force_regenerate = false,
     bust_cache = false,
   ) =>
-    request<GenerateNarrationResponse>('POST', '/audio/generate-narration', {
+    request<TaskStartResponse | GenerateNarrationResponse>('POST', '/audio/generate-narration', {
       story_id,
       voice_map,
       force_regenerate,
       bust_cache,
     }),
+}
+
+export const tasksApi = {
+  getStatus: (taskId: number) => request<TaskStatus>('GET', `/tasks/status/${taskId}`),
+  getStoryTasks: (storyId: number) => request<TaskStatus[]>('GET', `/tasks/story/${storyId}`),
 }
 
 export const settingsApi = {

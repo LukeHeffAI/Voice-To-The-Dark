@@ -8,6 +8,7 @@ import pytest
 from apps.audio.helpers import pydantic_to_script, script_to_pydantic
 from apps.audio.models import NarrationScript as NarrationScriptModel
 from apps.stories.models import Story
+from apps.tasks.models import BackgroundTask, TaskType
 from schemas.narration import CharacterProfile, NarrationScript, ScriptSegment, SegmentType
 
 
@@ -61,15 +62,8 @@ class TestScriptHelpers:
 
 
 class TestGenerateScript:
-    @patch("apps.audio.api.generate_script")
-    def test_generate_script_success(self, mock_gen, client, auth_headers, test_story):
-        mock_script = NarrationScript(
-            title="Generated",
-            characters={"Narrator": CharacterProfile(voice_profile="deep")},
-            segments=[ScriptSegment(type=SegmentType.NARRATION, character="Narrator", text="Text.")],
-        )
-        mock_gen.return_value = mock_script
-
+    @patch("apps.tasks.executor.submit_task")
+    def test_generate_script_creates_task(self, mock_submit, client, auth_headers, test_story):
         resp = client.post(
             "/api/audio/generate-script",
             data=json.dumps({"story_id": test_story.id}),
@@ -78,9 +72,16 @@ class TestGenerateScript:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["message"] == "Script generated successfully!"
-        assert "Narrator" in data["characters"]
-        mock_gen.assert_called_once()
+        assert "task_id" in data
+        assert data["message"] == "Script generation started"
+
+        # Verify task was created
+        task = BackgroundTask.objects.get(id=data["task_id"])
+        assert task.task_type == TaskType.GENERATE_SCRIPT
+        assert task.story_id == test_story.id
+        assert task.status == "queued"
+
+        mock_submit.assert_called_once()
 
     def test_generate_script_story_not_found(self, client, auth_headers):
         resp = client.post(
@@ -188,16 +189,10 @@ class TestGenerateAudio:
 
 
 class TestGenerateNarration:
-    @patch("apps.audio.api.generate_narration")
+    @patch("apps.tasks.executor.submit_task")
     @patch("apps.audio.api.auto_assign_voices")
-    def test_generate_narration_success(self, mock_assign, mock_gen, client, auth_headers, story_with_script):
+    def test_generate_narration_creates_task(self, mock_assign, mock_submit, client, auth_headers, story_with_script):
         mock_assign.return_value = {"Narrator": "v1", "Ghost": "v2"}
-        mock_result = MagicMock()
-        mock_result.output_path = "/data/stories/narrated.mp3"
-        mock_result.total_segments = 3
-        mock_result.cache_hits = 1
-        mock_result.cache_misses = 2
-        mock_gen.return_value = mock_result
 
         resp = client.post(
             "/api/audio/generate-narration",
@@ -207,8 +202,16 @@ class TestGenerateNarration:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["audio_file"] == "/data/stories/narrated.mp3"
-        assert data["cache_stats"]["total_segments"] == 3
+        assert "task_id" in data
+        assert data["message"] == "Narration generation started"
+
+        # Verify task was created
+        task = BackgroundTask.objects.get(id=data["task_id"])
+        assert task.task_type == TaskType.GENERATE_NARRATION
+        assert task.story_id == story_with_script.id
+        assert task.status == "queued"
+
+        mock_submit.assert_called_once()
 
     def test_generate_narration_no_script(self, client, auth_headers, test_story):
         resp = client.post(
