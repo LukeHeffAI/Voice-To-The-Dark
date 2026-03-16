@@ -4,10 +4,10 @@
 # Runtime data (database, Reddit cache)
 data/
 
-# Generated audio and SFX cache
-stories/
-sfx_cache/
-tmp/
+# Generated audio and SFX cache (root-level legacy directories)
+/stories/
+/sfx_cache/
+/tmp/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
