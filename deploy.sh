@@ -102,17 +102,15 @@ echo "Container is running. Waiting for startup..."
 MAX_WAIT=60
 ELAPSED=0
 while [ $ELAPSED -lt $MAX_WAIT ]; do
-    STATUS=$($COMPOSE ps --format json 2>/dev/null | python3 -c "
-import sys, json
-for line in sys.stdin:
-    obj = json.loads(line)
-    if obj.get('Name') == 'voice-to-the-dark' or obj.get('Service') == 'voice-to-the-dark':
-        print(obj.get('Health', obj.get('State', '')))
-        break
-" 2>/dev/null || echo "unknown")
+    STATUS=$(docker inspect --format='{{.State.Health.Status}}' voice-to-the-dark 2>/dev/null || echo "starting")
     if [ "$STATUS" = "healthy" ]; then
         echo "Application is ready!"
         break
+    fi
+    if [ "$STATUS" = "unhealthy" ]; then
+        echo "Error: Container is unhealthy."
+        echo "Check logs with: docker compose logs"
+        exit 1
     fi
     sleep 3
     ELAPSED=$((ELAPSED + 3))
