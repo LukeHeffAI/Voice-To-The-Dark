@@ -158,6 +158,23 @@ def update_voice_notes(request):
     return {"notes": existing}
 
 
+@router.get("/voices")
+def list_voices(request):
+    """Return the curated voice pool as JSON."""
+    get_current_user(request)
+    return [
+        {
+            "voice_id": v.voice_id,
+            "name": v.name,
+            "gender": v.gender,
+            "age": v.age,
+            "archetypes": v.archetypes,
+            "role": v.role,
+        }
+        for v in VOICE_POOL
+    ]
+
+
 @router.get("/voice-preview/{voice_id}")
 def voice_preview(request, voice_id: str):
     """Generate or return a cached voice preview sample for the given voice."""
