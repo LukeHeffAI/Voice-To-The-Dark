@@ -47,8 +47,8 @@ if grep -q "change_me_to_a_random_secret" .env 2>/dev/null; then
 fi
 
 # ── 4. Create data directories ───────────────────────────────────
-mkdir -p data/db data/stories data/sfx_cache
-echo "Data directories ready (data/db, data/stories, data/sfx_cache)."
+mkdir -p data/db data/stories data/sfx_cache data/voice_previews data/segment_cache data/reddit_cache data/tmp
+echo "Data directories ready."
 
 # ── 5. Build and start the container ─────────────────────────────
 echo
@@ -57,19 +57,30 @@ $COMPOSE up -d --build
 
 echo
 echo "Container is running. Waiting for startup..."
-sleep 3
+sleep 5
 
-# ── 6. Create admin account ──────────────────────────────────────
+# ── 6. Migrate legacy data (if upgrading from v1) ────────────────
+if [ -f data/db/horror_narrator.db ]; then
+    echo
+    echo "── Legacy database detected (horror_narrator.db) ──"
+    read -p "  Migrate data from v1? (y/N): " MIGRATE_LEGACY
+    if [[ "$MIGRATE_LEGACY" =~ ^[Yy] ]]; then
+        $COMPOSE exec -T voice-to-the-dark python manage.py migrate_legacy_data
+        echo "  Legacy data migrated."
+    fi
+fi
+
+# ── 7. Create admin account ──────────────────────────────────────
 echo
 echo "── Create your admin account ──"
 read -p "  Admin username: " ADMIN_USER
 read -sp "  Admin password: " ADMIN_PASS
 echo
 
-$COMPOSE exec -T voice-to-the-dark python -m app.create_user "$ADMIN_USER" "$ADMIN_PASS" --admin
+$COMPOSE exec -T voice-to-the-dark python manage.py createuser "$ADMIN_USER" "$ADMIN_PASS" --admin
 echo
 
-# ── 7. Detect LAN IP and print access info ───────────────────────
+# ── 8. Detect LAN IP and print access info ───────────────────────
 LAN_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
 if [ -z "$LAN_IP" ]; then
     LAN_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}')

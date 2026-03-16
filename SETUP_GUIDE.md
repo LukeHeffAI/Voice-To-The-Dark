@@ -21,8 +21,8 @@ The script will:
 1. Create your `.env` from the template (you fill in API keys)
 2. Generate a secure JWT secret
 3. Build and start the Docker container
-4. Ask you to create your admin account
-5. Ask you to create your girlfriend's account
+4. Offer to migrate data from v1 (if upgrading)
+5. Ask you to create your admin account
 6. Print the URL to open on her phone
 
 That's it. The app auto-restarts on reboot.
@@ -43,8 +43,29 @@ docker compose down
 docker compose up -d --build
 
 # Create another user account
-docker compose exec voice-to-the-dark python -m app.create_user <username> <password>
+docker compose exec voice-to-the-dark python manage.py createuser <username> <password>
+
+# Create an admin account
+docker compose exec voice-to-the-dark python manage.py createuser <username> <password> --admin
 ```
+
+### Migrating from v1
+
+If you're upgrading from the FastAPI version, the deploy script will automatically
+detect the legacy database and offer to migrate your data. You can also run it
+manually:
+
+```bash
+# Preview what would be migrated
+docker compose exec voice-to-the-dark python manage.py migrate_legacy_data --dry-run
+
+# Run the migration
+docker compose exec voice-to-the-dark python manage.py migrate_legacy_data
+```
+
+This migrates users (with passwords), stories, playback positions, folders, and
+settings. Audio files in `data/stories/` and `data/sfx_cache/` are shared between
+both versions and don't need migration.
 
 ### Remote Access (Optional — Cloudflare Tunnel)
 
@@ -122,9 +143,13 @@ add it to their phone's home screen the same way described in the Phone Setup se
 ### Data
 
 Everything persists in `./data/`:
-- `data/db/horror_narrator.db` — database (stories, users, playback state)
+- `data/db/voice_in_the_dark.db` — database (stories, users, playback state)
 - `data/stories/` — generated audio files
 - `data/sfx_cache/` — cached sound effects
+- `data/segment_cache/` — cached audio segments
+- `data/voice_previews/` — voice preview samples
+- `data/reddit_cache/` — cached Reddit API responses
+- `data/tmp/` — temporary audio processing files
 
 To back up, just copy the `data/` folder.
 
