@@ -162,6 +162,28 @@ export interface SeriesPartsResponse {
   total_count: number
 }
 
+// ── Tasks ────────────────────────────────────────────
+
+export interface TaskStartResult {
+  task_id: number
+}
+
+export type TaskType = 'script' | 'narration'
+export type TaskStatusValue = 'queued' | 'running' | 'completed' | 'failed'
+
+export interface TaskStatus {
+  id: number
+  task_type: TaskType
+  status: TaskStatusValue
+  progress: number
+  stage: string
+  result: Record<string, unknown> | null
+  error_message: string
+  created_at: string
+  started_at: string | null
+  completed_at: string | null
+}
+
 // ── Playlist (frontend only) ─────────────────────────
 
 export interface TrackInfo {

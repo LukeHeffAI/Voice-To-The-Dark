@@ -7,6 +7,7 @@ import * as audioApi from '../api/audio'
 import { useNotificationStore } from '../stores/notifications'
 import { usePlayerStore } from '../stores/player'
 import SeriesParts from '../components/SeriesParts.vue'
+import TaskProgress from '../components/TaskProgress.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -17,10 +18,11 @@ const storyId = computed(() => Number(route.params.id))
 const story = ref<Story | null>(null)
 const loading = ref(true)
 const hasScript = ref(false)
-const scriptGenerating = ref(false)
-const audioGenerating = ref(false)
-const genStatus = ref('')
 const resumePosition = ref(0)
+
+// Task tracking
+const activeTaskId = ref<number | null>(null)
+const activeTaskType = ref<'script' | 'narration' | null>(null)
 
 async function loadStory() {
   loading.value = true
@@ -40,6 +42,14 @@ async function loadStory() {
     } catch {
       resumePosition.value = 0
     }
+    // Check for active task (page reload recovery)
+    try {
+      const active = await audioApi.getActiveTask(storyId.value)
+      activeTaskId.value = active.id
+      activeTaskType.value = active.task_type
+    } catch {
+      // No active task — normal state
+    }
   } catch {
     notifications.show('Story not found', 'error')
     router.push({ name: 'home' })
@@ -49,40 +59,50 @@ async function loadStory() {
 }
 
 async function generateScript() {
-  scriptGenerating.value = true
-  genStatus.value = 'Generating script...'
   try {
-    await audioApi.generateScript(storyId.value)
-    hasScript.value = true
-    genStatus.value = 'Script generated!'
-    notifications.show('Script generated', 'success')
+    const { task_id } = await audioApi.generateScript(storyId.value)
+    activeTaskId.value = task_id
+    activeTaskType.value = 'script'
   } catch (e) {
-    genStatus.value = e instanceof Error ? e.message : 'Script generation failed'
-    notifications.show('Script generation failed', 'error')
-  } finally {
-    scriptGenerating.value = false
+    notifications.show(e instanceof Error ? e.message : 'Failed to start script generation', 'error')
   }
 }
 
 async function generateAudio(forceRegenerate = false) {
   if (forceRegenerate && !confirm('Regenerate audio? This will replace the existing file.')) return
-  audioGenerating.value = true
-  genStatus.value = 'Generating narration...'
   try {
-    const result = await audioApi.generateNarration(storyId.value, {
+    const { task_id } = await audioApi.generateNarration(storyId.value, {
       force_regenerate: forceRegenerate,
     })
-    if (story.value) {
-      story.value.audio_file_path = result.audio_file
-    }
-    genStatus.value = `Audio ready! ${result.segments_processed} segments processed.`
-    notifications.show('Audio generated', 'success')
+    activeTaskId.value = task_id
+    activeTaskType.value = 'narration'
   } catch (e) {
-    genStatus.value = e instanceof Error ? e.message : 'Audio generation failed'
-    notifications.show('Audio generation failed', 'error')
-  } finally {
-    audioGenerating.value = false
+    notifications.show(
+      e instanceof Error ? e.message : 'Failed to start audio generation',
+      'error',
+    )
   }
+}
+
+function onTaskCompleted() {
+  if (activeTaskType.value === 'script') {
+    hasScript.value = true
+    notifications.show('Script generated', 'success')
+  } else if (activeTaskType.value === 'narration') {
+    // Reload story to get updated audio_file_path
+    storiesApi.getStory(storyId.value).then((s) => {
+      story.value = s
+    })
+    notifications.show('Audio generated', 'success')
+  }
+  activeTaskId.value = null
+  activeTaskType.value = null
+}
+
+function onTaskFailed(error: string) {
+  notifications.show(error || 'Generation failed', 'error')
+  activeTaskId.value = null
+  activeTaskType.value = null
 }
 
 function playStory() {
@@ -102,13 +122,15 @@ const pipelineStep = computed(() => {
   return 1
 })
 
+const isGenerating = computed(() => activeTaskId.value !== null)
+
 onMounted(loadStory)
 </script>
 
 <template>
   <div v-if="loading" class="loading">Loading story...</div>
   <div v-else-if="story">
-    <RouterLink to="/" class="back-link">← Back to stories</RouterLink>
+    <RouterLink to="/" class="back-link">&larr; Back to stories</RouterLink>
 
     <h1 class="detail-title">{{ story.title }}</h1>
     <div class="detail-meta">
@@ -120,51 +142,55 @@ onMounted(loadStory)
     <!-- Pipeline -->
     <div class="pipeline">
       <div class="step" :class="{ done: true }">
-        <div class="step-num"><span class="check">✓</span></div>
+        <div class="step-num"><span class="check">&#10003;</span></div>
         <span>Story Fetched</span>
       </div>
       <div class="step" :class="{ done: hasScript, active: pipelineStep === 1 }">
         <div class="step-num">
-          <span v-if="hasScript" class="check">✓</span><span v-else>2</span>
+          <span v-if="hasScript" class="check">&#10003;</span><span v-else>2</span>
         </div>
         <span>Script Generated</span>
       </div>
       <div class="step" :class="{ done: !!story.audio_file_path, active: pipelineStep === 2 }">
         <div class="step-num">
-          <span v-if="story.audio_file_path" class="check">✓</span><span v-else>3</span>
+          <span v-if="story.audio_file_path" class="check">&#10003;</span><span v-else>3</span>
         </div>
         <span>Audio Ready</span>
       </div>
     </div>
 
+    <!-- Task progress -->
+    <TaskProgress
+      v-if="activeTaskId"
+      :task-id="activeTaskId"
+      @completed="onTaskCompleted"
+      @failed="onTaskFailed"
+    />
+
     <!-- Actions -->
     <div class="actions">
       <!-- Step 2: Generate script -->
       <button
-        v-if="!hasScript"
+        v-if="!hasScript && !isGenerating"
         class="action-btn primary"
-        :disabled="scriptGenerating"
         @click="generateScript"
       >
-        <span v-if="scriptGenerating" class="spinner" />
-        {{ scriptGenerating ? 'Generating...' : 'Generate Script' }}
+        Generate Script
       </button>
 
       <!-- Step 3: Generate audio -->
       <button
-        v-else-if="!story.audio_file_path"
+        v-else-if="hasScript && !story.audio_file_path && !isGenerating"
         class="action-btn primary"
-        :disabled="audioGenerating"
         @click="generateAudio()"
       >
-        <span v-if="audioGenerating" class="spinner" />
-        {{ audioGenerating ? 'Generating...' : 'Generate Audio' }}
+        Generate Audio
       </button>
 
       <!-- All done: play/read/edit -->
-      <template v-else>
+      <template v-else-if="story.audio_file_path && !isGenerating">
         <button class="action-btn primary" @click="playStory">
-          ▶ {{ resumePosition > 0 ? 'Resume' : 'Listen' }}
+          &#9654; {{ resumePosition > 0 ? 'Resume' : 'Listen' }}
         </button>
         <button class="action-btn" @click="generateAudio(true)">
           Regenerate Audio
@@ -173,19 +199,20 @@ onMounted(loadStory)
 
       <!-- Always available if script exists -->
       <RouterLink
-        v-if="hasScript"
+        v-if="hasScript && !isGenerating"
         :to="{ name: 'script-editor', params: { id: storyId } }"
         class="action-btn"
       >
         Edit Script
       </RouterLink>
-      <RouterLink :to="{ name: 'reader', params: { id: storyId } }" class="action-btn">
+      <RouterLink
+        v-if="!isGenerating"
+        :to="{ name: 'reader', params: { id: storyId } }"
+        class="action-btn"
+      >
         Read Story
       </RouterLink>
     </div>
-
-    <!-- Status message -->
-    <div v-if="genStatus" class="gen-status">{{ genStatus }}</div>
 
     <!-- Series parts -->
     <SeriesParts :story-id="storyId" />
@@ -311,30 +338,5 @@ onMounted(loadStory)
 }
 .action-btn.primary:hover {
   background: var(--color-accent-hover);
-}
-.action-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.spinner {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.gen-status {
-  font-size: 0.8rem;
-  color: #8a8a8a;
-  margin-bottom: 1rem;
 }
 </style>

@@ -1,14 +1,14 @@
 import { request } from './client'
 import type {
   GenerateAudioResult,
-  GenerateNarrationResult,
-  GenerateScriptResult,
   NarrationScript,
   ScriptInfo,
+  TaskStartResult,
+  TaskStatus,
 } from './types'
 
 export function generateScript(storyId: number, forceRegenerate = false) {
-  return request<GenerateScriptResult>('POST', '/audio/generate-script', {
+  return request<TaskStartResult>('POST', '/audio/generate-script', {
     body: { story_id: storyId, force_regenerate: forceRegenerate },
   })
 }
@@ -27,7 +27,7 @@ export function generateNarration(
     bust_cache?: boolean
   },
 ) {
-  return request<GenerateNarrationResult>('POST', '/audio/generate-narration', {
+  return request<TaskStartResult>('POST', '/audio/generate-narration', {
     body: {
       story_id: storyId,
       voice_map: opts?.voice_map ?? null,
@@ -35,6 +35,14 @@ export function generateNarration(
       bust_cache: opts?.bust_cache ?? false,
     },
   })
+}
+
+export function getTaskStatus(taskId: number) {
+  return request<TaskStatus>('GET', `/audio/tasks/${taskId}`)
+}
+
+export function getActiveTask(storyId: number) {
+  return request<TaskStatus>('GET', `/audio/tasks/active/${storyId}`)
 }
 
 export function getScript(storyId: number) {
