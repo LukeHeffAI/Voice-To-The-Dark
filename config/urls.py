@@ -1,5 +1,6 @@
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, re_path
+from django.views.generic import TemplateView
 from ninja import NinjaAPI
 
 from apps.accounts.api import router as auth_router
@@ -23,4 +24,6 @@ api.add_router("/settings/", settings_router)
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", api.urls),
+    # SPA catch-all: serve Vue app for all non-API/admin routes
+    re_path(r"^(?!api/|admin/).*$", TemplateView.as_view(template_name="index.html"), name="spa"),
 ]
