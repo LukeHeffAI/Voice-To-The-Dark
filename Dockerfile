@@ -15,8 +15,8 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-COPY requirements-new.txt ./
-RUN pip install --no-cache-dir -r requirements-new.txt
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 COPY --from=frontend /app/frontend/dist /app/frontend/dist

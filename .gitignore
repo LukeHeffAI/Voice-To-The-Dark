@@ -9,6 +9,9 @@ data/
 /sfx_cache/
 /tmp/
 
+# Django collectstatic output
+staticfiles/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
