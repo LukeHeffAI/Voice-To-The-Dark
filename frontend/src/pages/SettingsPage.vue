@@ -72,48 +72,55 @@ interface VoiceInfo {
   name: string
   gender: string
   age: string
+  role: string
   archetypes: string[]
   notes: string
+  model: string
 }
 
 const voices = ref<VoiceInfo[]>([])
-const voiceFilter = ref<'all' | 'male' | 'female'>('all')
+const filters = ref({ gender: '', role: '', age: '', archetype: '' })
 const previewPlaying = ref<string | null>(null)
 const previewLoading = ref<string | null>(null)
 const noteSaved = ref<Record<string, boolean>>({})
 let previewAudio: HTMLAudioElement | null = null
 const noteSaveTimers: Record<string, ReturnType<typeof setTimeout>> = {}
 
+const genderOptions = computed(() => {
+  const set = new Set(voices.value.map((v) => v.gender))
+  return Array.from(set).sort()
+})
+
+const roleOptions = computed(() => {
+  const set = new Set(voices.value.map((v) => v.role))
+  return Array.from(set).sort()
+})
+
+const ageOptions = computed(() => {
+  const set = new Set(voices.value.map((v) => v.age))
+  return Array.from(set).sort()
+})
+
+const archetypeOptions = computed(() => {
+  const set = new Set(voices.value.flatMap((v) => v.archetypes))
+  return Array.from(set).sort()
+})
+
 const filteredVoices = computed(() => {
-  if (voiceFilter.value === 'all') return voices.value
-  return voices.value.filter((v) => v.gender === voiceFilter.value)
+  return voices.value.filter((v) => {
+    if (filters.value.gender && v.gender !== filters.value.gender) return false
+    if (filters.value.role && v.role !== filters.value.role) return false
+    if (filters.value.age && v.age !== filters.value.age) return false
+    if (filters.value.archetype && !v.archetypes.includes(filters.value.archetype)) return false
+    return true
+  })
 })
 
 async function loadVoices() {
   try {
-    // Voice pool comes from settings endpoint
-    const s = await settingsApi.getSettings()
-    if (s.voice_pool) {
-      try {
-        voices.value = JSON.parse(s.voice_pool)
-      } catch {
-        voices.value = []
-      }
-    }
+    voices.value = await settingsApi.getVoicePool()
   } catch {
     // No voices available
-  }
-
-  // Load saved notes
-  try {
-    const notes = await settingsApi.getVoiceNotes()
-    for (const voice of voices.value) {
-      if (notes[voice.voice_id]) {
-        voice.notes = notes[voice.voice_id] ?? ''
-      }
-    }
-  } catch {
-    // No notes
   }
 }
 
@@ -252,24 +259,45 @@ onUnmounted(() => {
     <!-- Voice Library Tab -->
     <div v-if="activeTab === 'voices'">
       <div class="voice-filter-row">
-        <button
-          v-for="f in (['all', 'male', 'female'] as const)"
-          :key="f"
-          class="filter-btn"
-          :class="{ active: voiceFilter === f }"
-          @click="voiceFilter = f"
-        >
-          {{ f === 'all' ? 'All' : f === 'male' ? 'Male' : 'Female' }}
-        </button>
+        <div class="filter-group">
+          <label class="filter-label">Gender</label>
+          <select v-model="filters.gender" class="filter-select">
+            <option value="">All</option>
+            <option v-for="opt in genderOptions" :key="opt" :value="opt">{{ opt }}</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Role</label>
+          <select v-model="filters.role" class="filter-select">
+            <option value="">All</option>
+            <option v-for="opt in roleOptions" :key="opt" :value="opt">{{ opt }}</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Age</label>
+          <select v-model="filters.age" class="filter-select">
+            <option value="">All</option>
+            <option v-for="opt in ageOptions" :key="opt" :value="opt">{{ opt }}</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Archetype</label>
+          <select v-model="filters.archetype" class="filter-select">
+            <option value="">All</option>
+            <option v-for="opt in archetypeOptions" :key="opt" :value="opt">{{ opt }}</option>
+          </select>
+        </div>
       </div>
+      <div class="voice-filter-count">{{ filteredVoices.length }} of {{ voices.length }} voices</div>
 
-      <div v-if="filteredVoices.length === 0" class="empty">No voices available</div>
+      <div v-if="filteredVoices.length === 0" class="empty">No voices match current filters</div>
 
       <div v-for="voice in filteredVoices" :key="voice.voice_id" class="voice-card">
         <div class="voice-card-header">
           <span class="voice-name">{{ voice.name }}</span>
           <span class="voice-badge" :class="voice.gender">{{ voice.gender }}</span>
           <span v-if="voice.age" class="voice-badge">{{ voice.age }}</span>
+          <span class="voice-badge" :class="voice.role">{{ voice.role }}</span>
         </div>
         <div class="voice-archetypes">{{ voice.archetypes.join(', ') }}</div>
 
@@ -464,29 +492,46 @@ onUnmounted(() => {
 /* Voice Library */
 .voice-filter-row {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
   flex-wrap: wrap;
 }
-.filter-btn {
-  padding: 0.35rem 0.8rem;
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1 1 130px;
+  min-width: 0;
+}
+.filter-label {
+  font-size: 0.68rem;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.filter-select {
+  padding: 0.45rem 0.65rem;
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 6px;
-  background: none;
-  color: #555;
+  background: rgba(0, 0, 0, 0.35);
+  color: #e8e6e3;
   font-family: inherit;
-  font-size: 0.78rem;
+  font-size: 0.82rem;
+  outline: none;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: border-color 0.2s;
+  width: 100%;
 }
-.filter-btn:hover {
-  color: #8a8a8a;
-  border-color: #555;
+.filter-select:hover {
+  border-color: rgba(255, 255, 255, 0.15);
 }
-.filter-btn.active {
-  color: rgba(255, 255, 255, 0.9);
-  border-color: var(--color-accent);
-  background: rgba(160, 32, 32, 0.1);
+.filter-select:focus {
+  border-color: rgba(160, 32, 32, 0.4);
+}
+.voice-filter-count {
+  font-size: 0.75rem;
+  color: #555;
+  margin-bottom: 0.75rem;
 }
 
 .empty {
@@ -536,6 +581,14 @@ onUnmounted(() => {
 .voice-badge.female {
   color: #b868b8;
   background: rgba(184, 104, 184, 0.12);
+}
+.voice-badge.other {
+  color: #8ab868;
+  background: rgba(138, 184, 104, 0.12);
+}
+.voice-badge.narrator {
+  color: var(--color-success);
+  background: rgba(58, 125, 92, 0.12);
 }
 .voice-archetypes {
   font-size: 0.78rem;

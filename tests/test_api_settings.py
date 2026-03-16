@@ -121,6 +121,42 @@ class TestUploadRedditCache:
 
 
 @pytest.mark.django_db
+class TestVoicePool:
+    def test_get_voice_pool(self, api_client, auth_headers):
+        resp = api_client.get("/api/settings/voice-pool", headers=auth_headers)
+        assert resp.status_code == 200
+        data = json.loads(resp.content)
+        assert isinstance(data, list)
+        assert len(data) > 0
+        # Check structure of first entry
+        entry = data[0]
+        assert "voice_id" in entry
+        assert "name" in entry
+        assert "gender" in entry
+        assert "age" in entry
+        assert "role" in entry
+        assert "archetypes" in entry
+        assert "notes" in entry
+        assert "model" in entry
+
+    def test_voice_pool_includes_notes(self, api_client, auth_headers):
+        from apps.audio.services.voice_pool import VOICE_POOL
+
+        voice_id = VOICE_POOL[0].voice_id
+        # Set a note first
+        put_json(api_client, "/api/settings/voice-notes", {voice_id: "test note"}, headers=auth_headers)
+        # Now check voice pool includes the note
+        resp = api_client.get("/api/settings/voice-pool", headers=auth_headers)
+        data = json.loads(resp.content)
+        entry = next(v for v in data if v["voice_id"] == voice_id)
+        assert entry["notes"] == "test note"
+
+    def test_requires_auth(self, api_client):
+        resp = api_client.get("/api/settings/voice-pool")
+        assert resp.status_code == 401
+
+
+@pytest.mark.django_db
 class TestVoiceNotes:
     def test_get_voice_notes_empty(self, api_client, auth_headers):
         resp = api_client.get("/api/settings/voice-notes", headers=auth_headers)

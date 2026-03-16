@@ -18,6 +18,21 @@ export function uploadRedditCache(timeframe: string, file: File) {
   )
 }
 
+export interface VoicePoolEntry {
+  voice_id: string
+  name: string
+  gender: string
+  age: string
+  role: string
+  archetypes: string[]
+  notes: string
+  model: string
+}
+
+export function getVoicePool() {
+  return request<VoicePoolEntry[]>('GET', '/settings/voice-pool')
+}
+
 export function getVoiceNotes() {
   return request<Record<string, string>>('GET', '/settings/voice-notes')
 }
