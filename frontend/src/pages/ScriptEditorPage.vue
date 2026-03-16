@@ -52,14 +52,14 @@ function typeClass(type: SegmentType) {
 
 // Character editing
 function onProfileChange(charKey: string, value: string) {
-  if (!script.value) return
-  script.value.characters[charKey].voice_profile = value
+  if (!script.value || !script.value.characters[charKey]) return
+  script.value.characters[charKey]!.voice_profile = value
   hasChanges.value = true
 }
 
 function onVoiceIdChange(charKey: string, value: string) {
-  if (!script.value) return
-  script.value.characters[charKey].voice_id = value || null
+  if (!script.value || !script.value.characters[charKey]) return
+  script.value.characters[charKey]!.voice_id = value || null
   hasChanges.value = true
 }
 
@@ -72,7 +72,7 @@ function startEdit(index: number) {
   }
 
   editingIndex.value = index
-  const seg = script.value.segments[index]
+  const seg = script.value.segments[index]!
   editText.value = seg.text || ''
   editTone.value = seg.tone || ''
   editCharacter.value = seg.character || ''
@@ -83,6 +83,7 @@ function startEdit(index: number) {
 function confirmEdit() {
   if (!script.value || editingIndex.value === null) return
   const seg = script.value.segments[editingIndex.value]
+  if (!seg) return
 
   if (isVoiceSegment(seg)) {
     seg.text = editText.value

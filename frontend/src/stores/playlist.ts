@@ -43,7 +43,7 @@ export const usePlaylistStore = defineStore(
       if (oldIndex < 0 || oldIndex >= items.value.length) return
       if (newIndex < 0 || newIndex >= items.value.length) return
 
-      const item = items.value.splice(oldIndex, 1)[0]
+      const item = items.value.splice(oldIndex, 1)[0]!
       items.value.splice(newIndex, 0, item)
 
       // Adjust currentIndex to follow the currently-playing track
@@ -60,7 +60,7 @@ export const usePlaylistStore = defineStore(
     function playAt(index: number) {
       if (index < 0 || index >= items.value.length) return
       currentIndex.value = index
-      const track = items.value[index]
+      const track = items.value[index]!
       const player = usePlayerStore()
       player.loadTrack(track.storyId, track.title, track.author, true)
     }
@@ -106,7 +106,7 @@ export const usePlaylistStore = defineStore(
     function toggleRepeat() {
       const modes: RepeatMode[] = ['off', 'all', 'one']
       const idx = modes.indexOf(repeatMode.value)
-      repeatMode.value = modes[(idx + 1) % 3]
+      repeatMode.value = modes[(idx + 1) % 3] ?? 'off'
     }
 
     /** Ensure the currently-playing track is in the playlist. */
@@ -114,7 +114,7 @@ export const usePlaylistStore = defineStore(
       if (
         items.value.length === 0 ||
         !items.value[currentIndex.value] ||
-        items.value[currentIndex.value].storyId !== info.storyId
+        items.value[currentIndex.value]!.storyId !== info.storyId
       ) {
         const found = items.value.findIndex((i) => i.storyId === info.storyId)
         if (found >= 0) {
