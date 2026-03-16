@@ -7,6 +7,12 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
     volumes:
       - ./data/db:/app/data/db
       - ./data/stories:/app/data/stories

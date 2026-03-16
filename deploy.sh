@@ -99,7 +99,30 @@ $COMPOSE up -d --build
 
 echo
 echo "Container is running. Waiting for startup..."
-sleep 5
+MAX_WAIT=60
+ELAPSED=0
+while [ $ELAPSED -lt $MAX_WAIT ]; do
+    STATUS=$($COMPOSE ps --format json 2>/dev/null | python3 -c "
+import sys, json
+for line in sys.stdin:
+    obj = json.loads(line)
+    if obj.get('Name') == 'voice-to-the-dark' or obj.get('Service') == 'voice-to-the-dark':
+        print(obj.get('Health', obj.get('State', '')))
+        break
+" 2>/dev/null || echo "unknown")
+    if [ "$STATUS" = "healthy" ]; then
+        echo "Application is ready!"
+        break
+    fi
+    sleep 3
+    ELAPSED=$((ELAPSED + 3))
+done
+
+if [ $ELAPSED -ge $MAX_WAIT ]; then
+    echo "Error: Container did not become healthy within ${MAX_WAIT}s."
+    echo "Check logs with: docker compose logs"
+    exit 1
+fi
 
 # ── 6. Migrate legacy data (if upgrading from v1) ────────────────
 if [ -f data/db/horror_narrator.db ]; then
