@@ -2,6 +2,7 @@ import js from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import pluginVue from 'eslint-plugin-vue'
 import eslintConfigPrettier from 'eslint-config-prettier'
+import globals from 'globals'
 
 export default [
   { ignores: ['dist/**'] },
@@ -9,6 +10,13 @@ export default [
   ...tseslint.configs.recommended,
   ...pluginVue.configs['flat/recommended'],
   eslintConfigPrettier,
+  {
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+      },
+    },
+  },
   {
     files: ['**/*.vue'],
     languageOptions: {
@@ -20,6 +28,7 @@ export default [
   {
     rules: {
       'vue/multi-word-component-names': 'off',
+      'vue/attributes-order': 'off',
     },
   },
 ]
