@@ -310,7 +310,7 @@ VOICE_POOL: list[VoiceEntry] = [
         "kPtEHAvRnjUJFv7SK9WI",
         "Glitch",
         "other",
-        "unknown",
+        "adult",
         ["glitchy", "robotic", "distorted", "digital", "synthetic"],
         "character",
         "eleven_multilingual_v2",
