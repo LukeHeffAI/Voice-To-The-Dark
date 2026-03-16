@@ -97,6 +97,25 @@ def upload_reddit_cache(request, timeframe: str, file: UploadedFile = File(...))
     }
 
 
+@router.get("/voice-pool", auth=JWTAuth())
+def get_voice_pool(request):
+    """Get the full voice pool with notes merged in."""
+    notes = _get_voice_notes()
+    return [
+        {
+            "voice_id": v.voice_id,
+            "name": v.name,
+            "gender": v.gender,
+            "age": v.age,
+            "role": v.role,
+            "archetypes": v.archetypes,
+            "notes": notes.get(v.voice_id, ""),
+            "model": v.model,
+        }
+        for v in VOICE_POOL
+    ]
+
+
 @router.get("/voice-notes", auth=JWTAuth())
 def get_voice_notes(request):
     """Get all voice notes as a dict of voice_id -> note string."""

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class VoiceEntry:
     voice_id: str
     name: str
-    gender: str  # "male", "female"
+    gender: str  # "male", "female", "other"
     age: str  # "young", "adult", "middle", "elder"
     archetypes: list[str]  # keyword tags for matching
     role: str = "character"  # "narrator" or "character"
@@ -58,6 +58,7 @@ VOICE_POOL: list[VoiceEntry] = [
         "adult",
         ["warm", "conversational", "friendly", "everyman"],
         "character",
+        "eleven_multilingual_v2",
     ),
     VoiceEntry(
         "VR6AewLTigWG4xSOukaG",
@@ -65,6 +66,8 @@ VOICE_POOL: list[VoiceEntry] = [
         "male",
         "adult",
         ["crisp", "strong", "gruff", "tough", "military"],
+        "character",
+        "eleven_multilingual_v2",
     ),
     VoiceEntry(
         "TxGEqnHWrfWFTfGW9XjX",
@@ -95,13 +98,6 @@ VOICE_POOL: list[VoiceEntry] = [
         "male",
         "elder",
         ["old", "veteran", "weathered", "grizzled", "wise"],
-    ),
-    VoiceEntry(
-        "onwK4e9ZLuTAKqWV03F9",
-        "Daniel",
-        "male",
-        "adult",
-        ["british", "authoritative", "formal", "narrator", "refined"],
     ),
     VoiceEntry(
         "SOYHLrjzK2X1ezoPC6cr",
@@ -154,6 +150,24 @@ VOICE_POOL: list[VoiceEntry] = [
         "adult",
         ["conversational", "british", "everyman", "relatable"],
     ),
+    VoiceEntry(
+        "dHd5gvgSOzSfduK4CvEg",
+        "Jerry",
+        "male",
+        "adult",
+        ["Talk show host", "enthusiastic", "loud", "over-the-top", "announcer"],
+        "character",
+        "eleven_multilingual_v2",
+    ),
+    VoiceEntry(
+        "Bj9UqZbhQsanLzgalpEG",
+        "Austin",
+        "male",
+        "adult",
+        ["Texan", "friendly", "relatable", "drawl"],
+        "character",
+        "eleven_multilingual_v2",
+    ),
     # ── Female voices ────────────────────────────────────────────
     VoiceEntry(
         "uYXf8XasLslADfZ2MB4u",
@@ -171,6 +185,15 @@ VOICE_POOL: list[VoiceEntry] = [
         "young",
         ["emotive", "expressive", "dramatic", "narrator"],
         "narrator",
+        "eleven_multilingual_v2",
+    ),
+    VoiceEntry(
+        "Ofxg0EhLSipL3WfvcXDG",
+        "Major Elizabeth",
+        "female",
+        "elder",
+        ["military", "commanding", "authoritative", "direct", "no-nonsense"],
+        "character",
         "eleven_multilingual_v2",
     ),
     VoiceEntry(
@@ -193,6 +216,15 @@ VOICE_POOL: list[VoiceEntry] = [
         "female",
         "elder",
         ["old", "wisdom", "narrator", "grandmother", "crone"],
+    ),
+    VoiceEntry(
+        "a5zfmqTslZJBP0jutmVY",
+        "Jen",
+        "female",
+        "adult",
+        ["annoying", "ditzy", "Beverly Hills", "vapid"],
+        "character",
+        "eleven_multilingual_v2",
     ),
     VoiceEntry(
         "AZnzlk1XvdvUeBnXmlld",
@@ -246,8 +278,8 @@ VOICE_POOL: list[VoiceEntry] = [
         "eleven_multilingual_v2",
     ),
     VoiceEntry(
-        "z9fAnlkpzviPz146aGWa",
-        "Glinda",
+        "7NsaqHdLuKNFvEfjpUno",
+        "Morgana",
         "female",
         "elder",
         ["old", "witch", "eerie", "sinister", "raspy", "crone"],
@@ -272,6 +304,34 @@ VOICE_POOL: list[VoiceEntry] = [
         "female",
         "young",
         ["child", "childish", "young", "small", "little"],
+    ),
+    # ── Other voices ────────────────────────────────────────────
+    VoiceEntry(
+        "kPtEHAvRnjUJFv7SK9WI",
+        "Glitch",
+        "other",
+        "adult",
+        ["glitchy", "robotic", "distorted", "digital", "synthetic"],
+        "character",
+        "eleven_multilingual_v2",
+    ),
+    VoiceEntry(
+        "wXvR48IpOq9HACltTmt7",
+        "Dante",
+        "other",
+        "adult",
+        ["sinister", "monster", "demonic", "deep", "gravelly"],
+        "narrator",
+        "eleven_multilingual_v2",
+    ),
+    VoiceEntry(
+        "xYWUvKNK6zWCgsdAK7Wi",
+        "Argonian",
+        "other",
+        "adult",
+        ["serpentine", "gravelly", "mysterious", "sinister", "foreign"],
+        "character",
+        "eleven_multilingual_v2",
     ),
 ]
 
