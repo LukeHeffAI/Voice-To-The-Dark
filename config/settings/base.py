@@ -115,3 +115,8 @@ SFX_CACHE_DIR = DATA_DIR / "sfx_cache"
 SEGMENT_CACHE_DIR = DATA_DIR / "segment_cache"
 VOICE_PREVIEWS_DIR = DATA_DIR / "voice_previews"
 REDDIT_CACHE_DIR = DATA_DIR / "reddit_cache"
+TMP_DIR = DATA_DIR / "tmp"
+
+# JWT configuration (for future auth service)
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRE_HOURS = 24 * 28  # 4 weeks

@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -43,9 +42,7 @@ class Migration(migrations.Migration):
                 ("title", models.CharField(max_length=500)),
                 (
                     "reddit_url",
-                    models.URLField(
-                        blank=True, max_length=2000, null=True, unique=True
-                    ),
+                    models.URLField(blank=True, max_length=2000, null=True, unique=True),
                 ),
                 ("text_content", models.TextField()),
                 ("narration_text", models.TextField(blank=True, null=True)),
@@ -164,20 +161,14 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="storyfolder",
-            constraint=models.UniqueConstraint(
-                fields=("user", "name"), name="uq_user_folder_name"
-            ),
+            constraint=models.UniqueConstraint(fields=("user", "name"), name="uq_user_folder_name"),
         ),
         migrations.AddConstraint(
             model_name="storyfoldermembership",
-            constraint=models.UniqueConstraint(
-                fields=("folder", "story"), name="uq_folder_story"
-            ),
+            constraint=models.UniqueConstraint(fields=("folder", "story"), name="uq_folder_story"),
         ),
         migrations.AddConstraint(
             model_name="storyview",
-            constraint=models.UniqueConstraint(
-                fields=("user", "story"), name="uq_user_story_view"
-            ),
+            constraint=models.UniqueConstraint(fields=("user", "story"), name="uq_user_story_view"),
         ),
     ]
