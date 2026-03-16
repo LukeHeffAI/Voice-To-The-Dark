@@ -4,8 +4,38 @@ set -euo pipefail
 # ─── Voice In The Dark — Deployment Script ────────────────────────
 # Run this once on your Linux server to set everything up.
 # After that, the app auto-starts on reboot via Docker.
+#
+# Usage:
+#   bash deploy.sh            Interactive mode (prompts for input)
+#   bash deploy.sh --auto     Unattended mode (uses env vars, no prompts)
+#   bash deploy.sh --help     Show this help message
+#
+# In --auto mode, the following environment variables are used:
+#   ELEVENLABS_API_KEY    (required if .env doesn't exist)
+#   ANTHROPIC_API_KEY     (required if .env doesn't exist)
+#   ADMIN_USER            (optional — creates admin account if set)
+#   ADMIN_PASS            (optional — required if ADMIN_USER is set)
 
 COMPOSE="docker compose"
+AUTO_MODE=false
+
+# ── Parse arguments ────────────────────────────────────────────────
+for arg in "$@"; do
+    case "$arg" in
+        --auto)
+            AUTO_MODE=true
+            ;;
+        --help|-h)
+            head -n 17 "$0" | tail -n 14 | sed 's/^# \?//'
+            exit 0
+            ;;
+        *)
+            echo "Unknown argument: $arg"
+            echo "Usage: bash deploy.sh [--auto] [--help]"
+            exit 1
+            ;;
+    esac
+done
 
 echo "========================================"
 echo "  Voice In The Dark — Deployment Setup"
@@ -32,11 +62,23 @@ fi
 if [ ! -f .env ]; then
     echo "No .env file found — creating from .env.example..."
     cp .env.example .env
-    echo
-    echo "*** IMPORTANT: Edit .env and add your API keys before continuing! ***"
-    echo "  Required keys: ELEVENLABS_API_KEY, ANTHROPIC_API_KEY"
-    echo
-    read -p "Press Enter after you've edited .env (or Ctrl+C to abort)..."
+
+    if $AUTO_MODE; then
+        # In auto mode, inject API keys from environment variables
+        if [ -n "${ELEVENLABS_API_KEY:-}" ]; then
+            sed -i "s/^ELEVENLABS_API_KEY=.*/ELEVENLABS_API_KEY=$ELEVENLABS_API_KEY/" .env
+        fi
+        if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+            sed -i "s/^ANTHROPIC_API_KEY=.*/ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY/" .env
+        fi
+        echo "API keys configured from environment variables."
+    else
+        echo
+        echo "*** IMPORTANT: Edit .env and add your API keys before continuing! ***"
+        echo "  Required keys: ELEVENLABS_API_KEY, ANTHROPIC_API_KEY"
+        echo
+        read -p "Press Enter after you've edited .env (or Ctrl+C to abort)..."
+    fi
 fi
 
 # ── 3. Generate JWT secret if still default ──────────────────────
@@ -63,22 +105,37 @@ sleep 5
 if [ -f data/db/horror_narrator.db ]; then
     echo
     echo "── Legacy database detected (horror_narrator.db) ──"
-    read -p "  Migrate data from v1? (y/N): " MIGRATE_LEGACY
-    if [[ "$MIGRATE_LEGACY" =~ ^[Yy] ]]; then
+    if $AUTO_MODE; then
+        echo "  Auto-migrating data from v1..."
         $COMPOSE exec -T voice-to-the-dark python manage.py migrate_legacy_data
         echo "  Legacy data migrated."
+    else
+        read -p "  Migrate data from v1? (y/N): " MIGRATE_LEGACY
+        if [[ "$MIGRATE_LEGACY" =~ ^[Yy] ]]; then
+            $COMPOSE exec -T voice-to-the-dark python manage.py migrate_legacy_data
+            echo "  Legacy data migrated."
+        fi
     fi
 fi
 
 # ── 7. Create admin account ──────────────────────────────────────
-echo
-echo "── Create your admin account ──"
-read -p "  Admin username: " ADMIN_USER
-read -sp "  Admin password: " ADMIN_PASS
-echo
+if $AUTO_MODE; then
+    if [ -n "${ADMIN_USER:-}" ] && [ -n "${ADMIN_PASS:-}" ]; then
+        echo
+        echo "── Creating admin account ──"
+        $COMPOSE exec -T voice-to-the-dark python manage.py createuser "$ADMIN_USER" "$ADMIN_PASS" --admin
+        echo "  Admin account '$ADMIN_USER' created."
+    fi
+else
+    echo
+    echo "── Create your admin account ──"
+    read -p "  Admin username: " ADMIN_USER
+    read -sp "  Admin password: " ADMIN_PASS
+    echo
 
-$COMPOSE exec -T voice-to-the-dark python manage.py createuser "$ADMIN_USER" "$ADMIN_PASS" --admin
-echo
+    $COMPOSE exec -T voice-to-the-dark python manage.py createuser "$ADMIN_USER" "$ADMIN_PASS" --admin
+    echo
+fi
 
 # ── 8. Detect LAN IP and print access info ───────────────────────
 LAN_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
@@ -97,8 +154,10 @@ echo
 echo "  On this machine:    http://localhost:8000"
 echo "  On your network:    http://${LAN_IP}:8000"
 echo
-echo "  Admin account:      $ADMIN_USER"
-echo
+if [ -n "${ADMIN_USER:-}" ]; then
+    echo "  Admin account:      $ADMIN_USER"
+    echo
+fi
 echo "  Data stored in:     ./data/"
 echo "  Logs:               docker compose logs -f"
 echo "  Stop:               docker compose down"
