@@ -1,6 +1,7 @@
 import logging
 import os
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from django.conf import settings
@@ -31,6 +32,7 @@ def generate_narration(
     voice_map: dict[str, str],
     output_path: str | None = None,
     bust_cache: bool = False,
+    progress_callback: Callable[[int, str], None] | None = None,
 ) -> NarrationResult:
     """Walk through a narration script, generate all audio segments, then mix
     them into a fully produced audio file.
@@ -57,10 +59,14 @@ def generate_narration(
     os.makedirs(segment_cache_dir, exist_ok=True)
 
     # --- Merge consecutive same-character voice segments ---
+    if progress_callback:
+        progress_callback(2, "Preparing segments")
     merged_segments = _group_consecutive_segments(script.segments)
     logger.info(
         f"Segment grouping: {len(script.segments)} original -> {len(merged_segments)} after merging consecutive lines"
     )
+    if progress_callback:
+        progress_callback(5, f"Processing {len(merged_segments)} segments")
 
     # --- Generate all segments (with caching) ---
     segment_files: list[tuple[str, ScriptSegment]] = []
@@ -90,8 +96,18 @@ def generate_narration(
             if path:
                 segment_files.append((path, segment))
 
+        # Report per-segment progress (5-85% range)
+        if progress_callback:
+            pct = 5 + int(80 * (i + 1) / len(merged_segments))
+            label = "cached" if (cache_result.is_hit and not bust_cache) else segment.type.value
+            progress_callback(pct, f"Segment {i + 1}/{len(merged_segments)} ({label})")
+
     # --- Mix everything via the dedicated mixer ---
+    if progress_callback:
+        progress_callback(87, "Mixing audio tracks")
     final = mix_narration(segment_files)
+    if progress_callback:
+        progress_callback(95, "Exporting final audio")
     final.export(output_path, format="mp3")
 
     logger.info(

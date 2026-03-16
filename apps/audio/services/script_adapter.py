@@ -1,5 +1,6 @@
 import json
 import logging
+from collections.abc import Callable
 
 from anthropic import Anthropic
 from django.conf import settings
@@ -87,6 +88,7 @@ def generate_script(
     title: str,
     narration_text: str,
     prior_characters: dict | None = None,
+    progress_callback: "Callable[[int, str], None] | None" = None,
 ) -> NarrationScript:
     """Use Claude to transform cleaned story text into a dramatic narration script.
 
@@ -102,18 +104,34 @@ def generate_script(
 
     sections = _split_for_adaptation(narration_text)
 
+    if progress_callback:
+        progress_callback(5, "Preparing text sections")
+
     if len(sections) == 1:
         try:
+            if progress_callback:
+                progress_callback(10, "Adapting story with Claude")
             script = _adapt_section(client, title, sections[0], prior_characters=prior_characters)
+            if progress_callback:
+                progress_callback(90, "Parsing response")
         except _TruncatedResponseError:
             logger.info(
                 "Single section truncated for '%s', re-splitting into smaller pieces",
                 title,
             )
             sections = _split_for_adaptation(narration_text, max_chars=6000)
-            script = _adapt_long_story(client, title, sections, prior_characters=prior_characters)
+            script = _adapt_long_story(
+                client, title, sections, prior_characters=prior_characters,
+                progress_callback=progress_callback,
+            )
     else:
-        script = _adapt_long_story(client, title, sections, prior_characters=prior_characters)
+        script = _adapt_long_story(
+            client, title, sections, prior_characters=prior_characters,
+            progress_callback=progress_callback,
+        )
+
+    if progress_callback:
+        progress_callback(100, "Script complete")
 
     return script
 
@@ -173,6 +191,7 @@ def _adapt_long_story(
     title: str,
     sections: list[str],
     prior_characters: dict | None = None,
+    progress_callback: Callable[[int, str], None] | None = None,
 ) -> NarrationScript:
     """Process a multi-section story by adapting each section sequentially,
     carrying character definitions forward for consistency.
@@ -222,6 +241,12 @@ def _adapt_long_story(
             pending = halves + pending
             processed -= 1  # don't count the failed attempt
             continue
+
+        # Report progress (10-90% range, proportional to sections processed)
+        if progress_callback:
+            total_expected = processed + len(pending)
+            pct = 10 + int(80 * processed / max(total_expected, 1))
+            progress_callback(pct, f"Adapting section {processed}/{total_expected}")
 
         # Merge characters (later sections may introduce new ones)
         combined_characters.update({k: v.model_dump() for k, v in script.characters.items()})
