@@ -1,6 +1,6 @@
 import logging
 
-from ninja import Router
+from ninja import Body, Router
 from ninja.errors import HttpError
 
 from apps.accounts.auth import JWTAuth
@@ -123,7 +123,7 @@ def get_script(request, story_id: int):
 
 
 @router.put("/script/{story_id}", auth=JWTAuth())
-def update_script(request, story_id: int, script_data: dict):
+def update_script(request, story_id: int, script_data: dict = Body(...)):
     """Update/edit the narration script before generating audio."""
     import os
 
