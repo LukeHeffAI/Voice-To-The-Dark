@@ -4,12 +4,11 @@ import os
 import pytest
 from unittest.mock import patch
 
-from app.schemas.narration import ScriptSegment, SegmentType
-from app.services.segment_cache import (
+from apps.audio.schemas import ScriptSegment, SegmentType
+from apps.audio.services.segment_cache import (
     compute_segment_cache_key,
     lookup,
     CacheLookupResult,
-    SEGMENT_CACHE_DIR,
 )
 
 
@@ -143,7 +142,7 @@ class TestComputeKeyPause:
 class TestLookup:
 
     def test_miss_when_no_file(self, tmp_path):
-        with patch("app.services.segment_cache.SEGMENT_CACHE_DIR", str(tmp_path)):
+        with patch("apps.audio.services.segment_cache.settings.SEGMENT_CACHE_DIR", str(tmp_path)):
             seg = ScriptSegment(type=SegmentType.PAUSE, duration_ms=1500)
             result = lookup(seg)
             assert not result.is_hit
@@ -151,7 +150,7 @@ class TestLookup:
             assert result.cached_path.endswith(".mp3")
 
     def test_hit_when_file_exists(self, tmp_path):
-        with patch("app.services.segment_cache.SEGMENT_CACHE_DIR", str(tmp_path)):
+        with patch("apps.audio.services.segment_cache.settings.SEGMENT_CACHE_DIR", str(tmp_path)):
             seg = ScriptSegment(type=SegmentType.PAUSE, duration_ms=1500)
             # Compute the expected path and create the file
             key = compute_segment_cache_key(seg)
@@ -163,14 +162,14 @@ class TestLookup:
             assert result.cached_path == str(cached_path)
 
     def test_returns_correct_cache_key(self, tmp_path):
-        with patch("app.services.segment_cache.SEGMENT_CACHE_DIR", str(tmp_path)):
+        with patch("apps.audio.services.segment_cache.settings.SEGMENT_CACHE_DIR", str(tmp_path)):
             seg = ScriptSegment(type=SegmentType.SFX, description="thunder")
             expected_key = compute_segment_cache_key(seg)
             result = lookup(seg)
             assert result.cache_key == expected_key
 
     def test_voice_lookup_passes_voice_id_and_preset(self, tmp_path):
-        with patch("app.services.segment_cache.SEGMENT_CACHE_DIR", str(tmp_path)):
+        with patch("apps.audio.services.segment_cache.settings.SEGMENT_CACHE_DIR", str(tmp_path)):
             seg = ScriptSegment(
                 type=SegmentType.NARRATION, character="narrator",
                 text="Hello.", tone="calm",

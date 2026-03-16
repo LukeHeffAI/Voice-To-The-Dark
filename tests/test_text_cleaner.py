@@ -1,6 +1,6 @@
-"""Unit tests for app.services.text_cleaner."""
+"""Unit tests for apps.stories.services.text_cleaner."""
 
-from app.services.text_cleaner import clean_for_narration
+from apps.stories.services.text_cleaner import clean_for_narration
 
 
 class TestNavigationRemoval:

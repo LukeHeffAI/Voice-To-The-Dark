@@ -1,4 +1,4 @@
-"""Unit tests for app.services.audio_utils."""
+"""Unit tests for apps.audio.services.audio_utils."""
 
 import os
 import time
@@ -6,7 +6,7 @@ from unittest.mock import patch, MagicMock, call
 
 import pytest
 
-from app.services.audio_utils import (
+from apps.audio.services.audio_utils import (
     create_tmp_folder,
     cleanup_temp_files,
     purge_temp_folder,
@@ -19,20 +19,20 @@ from app.services.audio_utils import (
 # ---------------------------------------------------------------------------
 
 class TestCreateTmpFolder:
-    def test_creates_folder_when_missing(self, tmp_path, monkeypatch):
+    def test_creates_folder_when_missing(self, tmp_path):
         """Folder is created when it does not already exist."""
-        monkeypatch.chdir(tmp_path)
-        expected = os.path.join(str(tmp_path), "tmp")
+        expected = str(tmp_path / "tmp")
 
-        result = create_tmp_folder()
+        with patch("apps.audio.services.audio_utils.settings") as mock_settings:
+            mock_settings.TMP_DIR = expected
+            result = create_tmp_folder()
 
         assert result == expected
         assert os.path.isdir(expected)
 
-    def test_returns_path_when_folder_already_exists(self, tmp_path, monkeypatch):
+    def test_returns_path_when_folder_already_exists(self, tmp_path):
         """Existing folder is left intact and its path is returned."""
-        monkeypatch.chdir(tmp_path)
-        expected = os.path.join(str(tmp_path), "tmp")
+        expected = str(tmp_path / "tmp")
         os.makedirs(expected)
 
         # Place a sentinel file to prove the folder is not recreated
@@ -40,25 +40,27 @@ class TestCreateTmpFolder:
         with open(sentinel, "w") as f:
             f.write("keep me")
 
-        result = create_tmp_folder()
+        with patch("apps.audio.services.audio_utils.settings") as mock_settings:
+            mock_settings.TMP_DIR = expected
+            result = create_tmp_folder()
 
         assert result == expected
         assert os.path.isdir(expected)
         assert os.path.isfile(sentinel), "Existing contents should be preserved"
 
-    def test_return_value_is_absolute_path(self, tmp_path, monkeypatch):
+    def test_return_value_is_absolute_path(self, tmp_path):
         """The returned path is always absolute."""
-        monkeypatch.chdir(tmp_path)
-
-        result = create_tmp_folder()
+        with patch("apps.audio.services.audio_utils.settings") as mock_settings:
+            mock_settings.TMP_DIR = str(tmp_path / "tmp")
+            result = create_tmp_folder()
 
         assert os.path.isabs(result)
 
-    def test_nested_tmp_path_inside_cwd(self, tmp_path, monkeypatch):
-        """The tmp folder is a direct child of the current working directory."""
-        monkeypatch.chdir(tmp_path)
-
-        result = create_tmp_folder()
+    def test_nested_tmp_path_inside_cwd(self, tmp_path):
+        """The tmp folder is a child of the configured data directory."""
+        with patch("apps.audio.services.audio_utils.settings") as mock_settings:
+            mock_settings.TMP_DIR = str(tmp_path / "tmp")
+            result = create_tmp_folder()
 
         assert os.path.dirname(result) == str(tmp_path)
         assert os.path.basename(result) == "tmp"
@@ -145,14 +147,15 @@ class TestCleanupTempFiles:
 
         assert os.path.isdir(subdir), "Subdirectories should not be removed"
 
-    def test_defaults_to_cwd_tmp(self, tmp_path, monkeypatch):
-        """When no folder is given, defaults to <cwd>/tmp."""
-        monkeypatch.chdir(tmp_path)
-        default_folder = os.path.join(str(tmp_path), "tmp")
+    def test_defaults_to_settings_tmp_dir(self, tmp_path):
+        """When no folder is given, defaults to settings.TMP_DIR."""
+        default_folder = str(tmp_path / "tmp")
         os.makedirs(default_folder)
         old_file = self._make_old_file(default_folder, "old.mp3", age_days=10)
 
-        cleanup_temp_files(days=7)
+        with patch("apps.audio.services.audio_utils.settings") as mock_settings:
+            mock_settings.TMP_DIR = default_folder
+            cleanup_temp_files(days=7)
 
         assert not os.path.exists(old_file)
 
@@ -164,8 +167,8 @@ class TestCleanupTempFiles:
         """A file that can't be removed is logged as a warning, not raised."""
         old_file = self._make_old_file(tmp_path, "locked.mp3", age_days=10)
 
-        with patch("app.services.audio_utils.os.remove", side_effect=PermissionError("denied")):
-            with patch("app.services.audio_utils.logging") as mock_logging:
+        with patch("apps.audio.services.audio_utils.os.remove", side_effect=PermissionError("denied")):
+            with patch("apps.audio.services.audio_utils.logging") as mock_logging:
                 cleanup_temp_files(folder=str(tmp_path), days=7)
                 mock_logging.warning.assert_called_once()
 
@@ -175,76 +178,78 @@ class TestCleanupTempFiles:
 # ---------------------------------------------------------------------------
 
 class TestPurgeTempFolder:
-    def test_folder_is_removed_and_recreated_empty(self, tmp_path, monkeypatch):
+    def test_folder_is_removed_and_recreated_empty(self, tmp_path):
         """After purge, the folder exists but is empty."""
-        monkeypatch.chdir(tmp_path)
-        target = os.path.join(str(tmp_path), "tmp")
+        target = str(tmp_path / "tmp")
         os.makedirs(target)
         # Add some files
         for name in ("a.mp3", "b.mp3", "c.txt"):
             with open(os.path.join(target, name), "w") as f:
                 f.write("data")
 
-        purge_temp_folder(folder=target)
+        with patch("apps.audio.services.audio_utils.settings") as mock_settings:
+            mock_settings.TMP_DIR = target
+            purge_temp_folder(folder=target)
 
         assert os.path.isdir(target), "Folder should be recreated"
         assert os.listdir(target) == [], "Folder should be empty after purge"
 
-    def test_nonexistent_folder_handled_gracefully(self, tmp_path, monkeypatch):
+    def test_nonexistent_folder_handled_gracefully(self, tmp_path):
         """Purging a non-existent folder does not raise."""
-        monkeypatch.chdir(tmp_path)
-        missing = os.path.join(str(tmp_path), "tmp")
+        missing = str(tmp_path / "tmp")
         assert not os.path.exists(missing)
 
-        # Should not raise — shutil.rmtree will fail but exception is caught,
-        # then create_tmp_folder will create it.
-        purge_temp_folder(folder=missing)
+        with patch("apps.audio.services.audio_utils.settings") as mock_settings:
+            mock_settings.TMP_DIR = missing
+            purge_temp_folder(folder=missing)
 
-    def test_defaults_to_cwd_tmp(self, tmp_path, monkeypatch):
-        """When no folder is given, defaults to <cwd>/tmp."""
-        monkeypatch.chdir(tmp_path)
-        default_folder = os.path.join(str(tmp_path), "tmp")
+    def test_defaults_to_settings_tmp_dir(self, tmp_path):
+        """When no folder is given, defaults to settings.TMP_DIR."""
+        default_folder = str(tmp_path / "tmp")
         os.makedirs(default_folder)
         sentinel = os.path.join(default_folder, "sentinel.txt")
         with open(sentinel, "w") as f:
             f.write("data")
 
-        purge_temp_folder()
+        with patch("apps.audio.services.audio_utils.settings") as mock_settings:
+            mock_settings.TMP_DIR = default_folder
+            purge_temp_folder()
 
         assert os.path.isdir(default_folder)
         assert not os.path.exists(sentinel), "Old contents should be gone"
 
-    def test_logs_info_on_success(self, tmp_path, monkeypatch):
+    def test_logs_info_on_success(self, tmp_path):
         """A successful purge logs an info message."""
-        monkeypatch.chdir(tmp_path)
-        target = os.path.join(str(tmp_path), "tmp")
+        target = str(tmp_path / "tmp")
         os.makedirs(target)
 
-        with patch("app.services.audio_utils.logging") as mock_logging:
-            purge_temp_folder(folder=target)
-            mock_logging.info.assert_called_once()
-
-    def test_logs_warning_on_rmtree_failure(self, tmp_path, monkeypatch):
-        """If rmtree fails, a warning is logged."""
-        monkeypatch.chdir(tmp_path)
-        target = os.path.join(str(tmp_path), "tmp")
-
-        with patch("app.services.audio_utils.shutil.rmtree", side_effect=OSError("boom")):
-            with patch("app.services.audio_utils.logging") as mock_logging:
+        with patch("apps.audio.services.audio_utils.settings") as mock_settings:
+            mock_settings.TMP_DIR = target
+            with patch("apps.audio.services.audio_utils.logging") as mock_logging:
                 purge_temp_folder(folder=target)
-                mock_logging.warning.assert_called_once()
+                mock_logging.info.assert_called_once()
 
-    def test_folder_recreated_even_after_rmtree_failure(self, tmp_path, monkeypatch):
+    def test_logs_warning_on_rmtree_failure(self, tmp_path):
+        """If rmtree fails, a warning is logged."""
+        target = str(tmp_path / "tmp")
+
+        with patch("apps.audio.services.audio_utils.settings") as mock_settings:
+            mock_settings.TMP_DIR = target
+            with patch("apps.audio.services.audio_utils.shutil.rmtree", side_effect=OSError("boom")):
+                with patch("apps.audio.services.audio_utils.logging") as mock_logging:
+                    purge_temp_folder(folder=target)
+                    mock_logging.warning.assert_called_once()
+
+    def test_folder_recreated_even_after_rmtree_failure(self, tmp_path):
         """create_tmp_folder is called in the finally block even if rmtree fails."""
-        monkeypatch.chdir(tmp_path)
-        target = os.path.join(str(tmp_path), "tmp")
+        target = str(tmp_path / "tmp")
 
-        with patch("app.services.audio_utils.shutil.rmtree", side_effect=OSError("boom")):
-            purge_temp_folder(folder=target)
+        with patch("apps.audio.services.audio_utils.settings") as mock_settings:
+            mock_settings.TMP_DIR = target
+            with patch("apps.audio.services.audio_utils.shutil.rmtree", side_effect=OSError("boom")):
+                purge_temp_folder(folder=target)
 
-        # create_tmp_folder uses os.getcwd()/tmp, so it should exist
-        expected_recreated = os.path.join(str(tmp_path), "tmp")
-        assert os.path.isdir(expected_recreated)
+        assert os.path.isdir(target)
 
 
 # ---------------------------------------------------------------------------
@@ -258,7 +263,7 @@ class TestStitchAudioFiles:
 
         assert result is None
 
-    @patch("app.services.audio_utils.AudioSegment")
+    @patch("apps.audio.services.audio_utils.AudioSegment")
     def test_single_file(self, mock_audio_cls):
         """A single file is loaded and exported without concatenation."""
         mock_segment = MagicMock(name="segment_0")
@@ -269,7 +274,7 @@ class TestStitchAudioFiles:
         mock_audio_cls.from_file.assert_called_once_with("/tmp/chunk_0.mp3", format="mp3")
         mock_segment.export.assert_called_once_with("/tmp/output.mp3", format="mp3")
 
-    @patch("app.services.audio_utils.AudioSegment")
+    @patch("apps.audio.services.audio_utils.AudioSegment")
     def test_multiple_files_concatenated(self, mock_audio_cls):
         """Multiple files are loaded in order and concatenated via +=."""
         seg_a = MagicMock(name="segment_a")
@@ -302,7 +307,7 @@ class TestStitchAudioFiles:
         # Final combined result is exported
         combined_abc.export.assert_called_once_with("/tmp/output.mp3", format="mp3")
 
-    @patch("app.services.audio_utils.AudioSegment")
+    @patch("apps.audio.services.audio_utils.AudioSegment")
     def test_two_files_concatenated(self, mock_audio_cls):
         """Verify the simplest multi-file case (two files)."""
         seg_first = MagicMock(name="first")
@@ -317,7 +322,7 @@ class TestStitchAudioFiles:
         seg_first.__iadd__.assert_called_once_with(seg_second)
         combined.export.assert_called_once_with("/tmp/out.mp3", format="mp3")
 
-    @patch("app.services.audio_utils.AudioSegment")
+    @patch("apps.audio.services.audio_utils.AudioSegment")
     def test_export_uses_mp3_format(self, mock_audio_cls):
         """The export always specifies format='mp3'."""
         mock_segment = MagicMock()
@@ -328,7 +333,7 @@ class TestStitchAudioFiles:
         _, kwargs = mock_segment.export.call_args
         assert kwargs["format"] == "mp3"
 
-    @patch("app.services.audio_utils.AudioSegment")
+    @patch("apps.audio.services.audio_utils.AudioSegment")
     def test_from_file_called_with_mp3_format(self, mock_audio_cls):
         """Each from_file call specifies format='mp3'."""
         mock_audio_cls.from_file.return_value = MagicMock()
@@ -345,7 +350,7 @@ class TestStitchAudioFiles:
 
         assert result is None
 
-    @patch("app.services.audio_utils.AudioSegment")
+    @patch("apps.audio.services.audio_utils.AudioSegment")
     def test_files_loaded_in_order(self, mock_audio_cls):
         """Files are loaded in the exact order they appear in the list."""
         mock_audio_cls.from_file.return_value = MagicMock()

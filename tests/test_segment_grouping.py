@@ -1,7 +1,7 @@
 """Tests for consecutive segment grouping in narration_generator."""
 
-from app.schemas.narration import ScriptSegment, SegmentType
-from app.services.narration_generator import _group_consecutive_segments
+from apps.audio.schemas import ScriptSegment, SegmentType
+from apps.audio.services.narration_generator import _group_consecutive_segments
 
 
 class TestGroupConsecutiveSegments:

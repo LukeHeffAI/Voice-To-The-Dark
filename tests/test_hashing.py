@@ -1,7 +1,7 @@
-"""Unit tests for app.services.hashing."""
+"""Unit tests for apps.stories.services.hashing."""
 
 import hashlib
-from app.services.hashing import hash_content
+from apps.stories.services.hashing import hash_content
 
 
 def test_returns_sha256_hex():

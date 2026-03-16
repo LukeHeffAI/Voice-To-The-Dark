@@ -1,13 +1,13 @@
 """Unit tests for app.services.voice_pool."""
 
-from app.services.voice_pool import (
+from apps.audio.services.voice_pool import (
     _parse_profile,
     _score_voice,
     auto_assign_voices,
     VoiceEntry,
     VOICE_POOL,
 )
-from app.schemas.narration import CharacterProfile
+from apps.audio.schemas import CharacterProfile
 
 
 class TestParseProfile:

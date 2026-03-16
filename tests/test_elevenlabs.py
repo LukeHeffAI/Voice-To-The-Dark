@@ -1,11 +1,11 @@
-"""Comprehensive unit tests for app.services.elevenlabs."""
+"""Comprehensive unit tests for apps.audio.services.elevenlabs."""
 
 import os
 import pytest
 from unittest.mock import patch, MagicMock, mock_open, call
 import requests
 
-from app.services.elevenlabs import (
+from apps.audio.services.elevenlabs import (
     chunk_text,
     generate_audio,
     generate_sfx,
@@ -214,8 +214,8 @@ class TestChunkText:
 class TestTtsRequest:
     FAKE_API_KEY = "test-api-key-123"
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
     def test_successful_request(self, mock_settings, mock_post, tmp_path):
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
         mock_response = MagicMock()
@@ -238,8 +238,8 @@ class TestTtsRequest:
         with open(output_file, "rb") as f:
             assert f.read() == b"audio-data-chunk"
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
     def test_uses_correct_url(self, mock_settings, mock_post, tmp_path):
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
         mock_response = MagicMock()
@@ -253,8 +253,8 @@ class TestTtsRequest:
         url = mock_post.call_args.args[0]
         assert url == "https://api.elevenlabs.io/v1/text-to-speech/my_voice_id/stream"
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
     def test_custom_preset(self, mock_settings, mock_post, tmp_path):
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
         mock_response = MagicMock()
@@ -268,8 +268,8 @@ class TestTtsRequest:
         sent_settings = mock_post.call_args.kwargs["json"]["voice_settings"]
         assert sent_settings == VOICE_PRESETS["whisper"]
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
     def test_unknown_preset_falls_back_to_horror_narrator(self, mock_settings, mock_post, tmp_path):
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
         mock_response = MagicMock()
@@ -283,8 +283,8 @@ class TestTtsRequest:
         sent_settings = mock_post.call_args.kwargs["json"]["voice_settings"]
         assert sent_settings == VOICE_PRESETS["horror_narrator"]
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
     def test_custom_model_id(self, mock_settings, mock_post, tmp_path):
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
         mock_response = MagicMock()
@@ -297,20 +297,20 @@ class TestTtsRequest:
 
         assert mock_post.call_args.kwargs["json"]["model_id"] == MODEL_ELEVEN_V2
 
-    @patch("app.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.settings")
     def test_missing_api_key_raises_error(self, mock_settings):
         mock_settings.ELEVENLABS_API_KEY = ""
         with pytest.raises(ElevenLabsError, match="ELEVENLABS_API_KEY"):
             tts_request("Hello", "voice_id", "/tmp/out.mp3")
 
-    @patch("app.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.settings")
     def test_none_api_key_raises_error(self, mock_settings):
         mock_settings.ELEVENLABS_API_KEY = None
         with pytest.raises(ElevenLabsError, match="ELEVENLABS_API_KEY"):
             tts_request("Hello", "voice_id", "/tmp/out.mp3")
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
     def test_http_error_raises_elevenlabs_error(self, mock_settings, mock_post):
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
 
@@ -325,8 +325,8 @@ class TestTtsRequest:
         assert exc_info.value.status_code == 429
         assert exc_info.value.detail == "rate limit exceeded"
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
     def test_connection_error_raises_elevenlabs_error(self, mock_settings, mock_post):
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
         mock_post.side_effect = requests.exceptions.ConnectionError("DNS failure")
@@ -334,8 +334,8 @@ class TestTtsRequest:
         with pytest.raises(ElevenLabsError, match="Could not connect"):
             tts_request("Hello", "voice_id", "/tmp/out.mp3")
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
     def test_sends_stream_flag(self, mock_settings, mock_post, tmp_path):
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
         mock_response = MagicMock()
@@ -348,8 +348,8 @@ class TestTtsRequest:
 
         assert mock_post.call_args.kwargs["stream"] is True
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
     def test_sends_correct_content_type_and_accept(self, mock_settings, mock_post, tmp_path):
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
         mock_response = MagicMock()
@@ -370,11 +370,11 @@ class TestTtsRequest:
 # ---------------------------------------------------------------------------
 
 class TestGenerateAudio:
-    @patch("app.services.elevenlabs.cleanup_temp_files")
-    @patch("app.services.elevenlabs.create_tmp_folder")
-    @patch("app.services.elevenlabs.tts_request")
-    @patch("app.services.elevenlabs.os.rename")
-    @patch("app.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.cleanup_temp_files")
+    @patch("apps.audio.services.elevenlabs.create_tmp_folder")
+    @patch("apps.audio.services.elevenlabs.tts_request")
+    @patch("apps.audio.services.elevenlabs.os.rename")
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
     def test_short_text_single_chunk_no_stitch(
         self, mock_makedirs, mock_rename, mock_tts, mock_tmp_folder, mock_cleanup, tmp_path
     ):
@@ -390,10 +390,10 @@ class TestGenerateAudio:
         # Single chunk => os.rename, not stitch
         mock_rename.assert_called_once()
 
-    @patch("app.services.elevenlabs.cleanup_temp_files")
-    @patch("app.services.elevenlabs.stitch_audio_files")
-    @patch("app.services.elevenlabs.create_tmp_folder")
-    @patch("app.services.elevenlabs.tts_request")
+    @patch("apps.audio.services.elevenlabs.cleanup_temp_files")
+    @patch("apps.audio.services.elevenlabs.stitch_audio_files")
+    @patch("apps.audio.services.elevenlabs.create_tmp_folder")
+    @patch("apps.audio.services.elevenlabs.tts_request")
     def test_long_text_multiple_chunks_stitched(
         self, mock_tts, mock_tmp_folder, mock_stitch, mock_cleanup, tmp_path
     ):
@@ -416,11 +416,11 @@ class TestGenerateAudio:
         assert mock_tts.call_count > 1
         mock_stitch.assert_called_once()
 
-    @patch("app.services.elevenlabs.cleanup_temp_files")
-    @patch("app.services.elevenlabs.create_tmp_folder")
-    @patch("app.services.elevenlabs.tts_request")
-    @patch("app.services.elevenlabs.os.rename")
-    @patch("app.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.cleanup_temp_files")
+    @patch("apps.audio.services.elevenlabs.create_tmp_folder")
+    @patch("apps.audio.services.elevenlabs.tts_request")
+    @patch("apps.audio.services.elevenlabs.os.rename")
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
     def test_passes_preset_and_model_to_tts(
         self, mock_makedirs, mock_rename, mock_tts, mock_tmp_folder, mock_cleanup, tmp_path
     ):
@@ -436,11 +436,11 @@ class TestGenerateAudio:
         assert kwargs["preset"] == "whisper"
         assert kwargs["model_id"] == MODEL_ELEVEN_V2
 
-    @patch("app.services.elevenlabs.cleanup_temp_files")
-    @patch("app.services.elevenlabs.create_tmp_folder")
-    @patch("app.services.elevenlabs.tts_request")
-    @patch("app.services.elevenlabs.os.rename")
-    @patch("app.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.cleanup_temp_files")
+    @patch("apps.audio.services.elevenlabs.create_tmp_folder")
+    @patch("apps.audio.services.elevenlabs.tts_request")
+    @patch("apps.audio.services.elevenlabs.os.rename")
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
     def test_generates_output_path_when_none(
         self, mock_makedirs, mock_rename, mock_tts, mock_tmp_folder, mock_cleanup, tmp_path
     ):
@@ -451,14 +451,14 @@ class TestGenerateAudio:
         result = generate_audio("Hello.", "voice_1")
 
         # Should auto-generate a path under ./data/stories/
-        assert result.startswith("./data/stories/")
         assert result.endswith(".mp3")
+        assert "stories" in result
 
-    @patch("app.services.elevenlabs.cleanup_temp_files")
-    @patch("app.services.elevenlabs.create_tmp_folder")
-    @patch("app.services.elevenlabs.tts_request")
-    @patch("app.services.elevenlabs.os.rename")
-    @patch("app.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.cleanup_temp_files")
+    @patch("apps.audio.services.elevenlabs.create_tmp_folder")
+    @patch("apps.audio.services.elevenlabs.tts_request")
+    @patch("apps.audio.services.elevenlabs.os.rename")
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
     def test_calls_cleanup_temp_files(
         self, mock_makedirs, mock_rename, mock_tts, mock_tmp_folder, mock_cleanup, tmp_path
     ):
@@ -471,11 +471,11 @@ class TestGenerateAudio:
 
         mock_cleanup.assert_called_once_with(tmp_folder, days=3)
 
-    @patch("app.services.elevenlabs.cleanup_temp_files")
-    @patch("app.services.elevenlabs.create_tmp_folder")
-    @patch("app.services.elevenlabs.tts_request")
-    @patch("app.services.elevenlabs.os.rename")
-    @patch("app.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.cleanup_temp_files")
+    @patch("apps.audio.services.elevenlabs.create_tmp_folder")
+    @patch("apps.audio.services.elevenlabs.tts_request")
+    @patch("apps.audio.services.elevenlabs.os.rename")
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
     def test_default_preset_is_horror_narrator(
         self, mock_makedirs, mock_rename, mock_tts, mock_tmp_folder, mock_cleanup, tmp_path
     ):
@@ -489,11 +489,11 @@ class TestGenerateAudio:
         _, kwargs = mock_tts.call_args
         assert kwargs["preset"] == "horror_narrator"
 
-    @patch("app.services.elevenlabs.cleanup_temp_files")
-    @patch("app.services.elevenlabs.create_tmp_folder")
-    @patch("app.services.elevenlabs.tts_request")
-    @patch("app.services.elevenlabs.os.rename")
-    @patch("app.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.cleanup_temp_files")
+    @patch("apps.audio.services.elevenlabs.create_tmp_folder")
+    @patch("apps.audio.services.elevenlabs.tts_request")
+    @patch("apps.audio.services.elevenlabs.os.rename")
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
     def test_default_model_is_v3(
         self, mock_makedirs, mock_rename, mock_tts, mock_tmp_folder, mock_cleanup, tmp_path
     ):
@@ -515,10 +515,10 @@ class TestGenerateAudio:
 class TestGenerateSfx:
     FAKE_API_KEY = "test-sfx-key-456"
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
-    @patch("app.services.elevenlabs.os.path.exists", return_value=False)
-    @patch("app.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.os.path.exists", return_value=False)
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
     def test_successful_sfx_generation(self, mock_makedirs, mock_exists, mock_settings, mock_post, tmp_path):
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
         mock_response = MagicMock()
@@ -536,10 +536,10 @@ class TestGenerateSfx:
         assert call_kwargs.kwargs["json"]["text"] == "thunder rumbling"
         assert call_kwargs.kwargs["json"]["duration_seconds"] == 5.0
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
-    @patch("app.services.elevenlabs.os.path.exists", return_value=False)
-    @patch("app.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.os.path.exists", return_value=False)
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
     def test_custom_duration(self, mock_makedirs, mock_exists, mock_settings, mock_post, tmp_path):
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
         mock_response = MagicMock()
@@ -552,10 +552,10 @@ class TestGenerateSfx:
 
         assert mock_post.call_args.kwargs["json"]["duration_seconds"] == 10.0
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
-    @patch("app.services.elevenlabs.os.path.exists", return_value=False)
-    @patch("app.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.os.path.exists", return_value=False)
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
     def test_sends_correct_url(self, mock_makedirs, mock_exists, mock_settings, mock_post, tmp_path):
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
         mock_response = MagicMock()
@@ -569,26 +569,26 @@ class TestGenerateSfx:
         url = mock_post.call_args.args[0]
         assert url == "https://api.elevenlabs.io/v1/sound-generation"
 
-    @patch("app.services.elevenlabs.os.path.exists", return_value=False)
-    @patch("app.services.elevenlabs.os.makedirs")
-    @patch("app.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.os.path.exists", return_value=False)
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.settings")
     def test_missing_api_key_raises_error(self, mock_settings, mock_makedirs, mock_exists):
         mock_settings.ELEVENLABS_API_KEY = ""
         with pytest.raises(ElevenLabsError, match="ELEVENLABS_API_KEY"):
             generate_sfx("thunder", use_cache=False)
 
-    @patch("app.services.elevenlabs.os.path.exists", return_value=False)
-    @patch("app.services.elevenlabs.os.makedirs")
-    @patch("app.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.os.path.exists", return_value=False)
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.settings")
     def test_none_api_key_raises_error(self, mock_settings, mock_makedirs, mock_exists):
         mock_settings.ELEVENLABS_API_KEY = None
         with pytest.raises(ElevenLabsError, match="ELEVENLABS_API_KEY"):
             generate_sfx("thunder", use_cache=False)
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
-    @patch("app.services.elevenlabs.os.path.exists", return_value=False)
-    @patch("app.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.os.path.exists", return_value=False)
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
     def test_http_error_raises_elevenlabs_error(self, mock_makedirs, mock_exists, mock_settings, mock_post):
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
         mock_response = MagicMock()
@@ -602,10 +602,10 @@ class TestGenerateSfx:
         assert exc_info.value.status_code == 422
         assert exc_info.value.detail == "invalid duration"
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
-    @patch("app.services.elevenlabs.os.path.exists", return_value=False)
-    @patch("app.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.os.path.exists", return_value=False)
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
     def test_connection_error_raises_elevenlabs_error(self, mock_makedirs, mock_exists, mock_settings, mock_post):
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
         mock_post.side_effect = requests.exceptions.ConnectionError("timeout")
@@ -614,8 +614,8 @@ class TestGenerateSfx:
             generate_sfx("thunder", use_cache=False)
 
     @patch("shutil.copy2")
-    @patch("app.services.elevenlabs.os.path.exists", return_value=True)
-    @patch("app.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.os.path.exists", return_value=True)
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
     def test_cache_hit_returns_cached_path(self, mock_makedirs, mock_exists, mock_copy, tmp_path):
         """When use_cache=True and cached file exists, return cached path without API call."""
         result = generate_sfx("thunder rumbling", use_cache=True)
@@ -625,8 +625,8 @@ class TestGenerateSfx:
         assert "sfx_cache" in result
 
     @patch("shutil.copy2")
-    @patch("app.services.elevenlabs.os.path.exists", return_value=True)
-    @patch("app.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.os.path.exists", return_value=True)
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
     def test_cache_hit_copies_to_output_path(self, mock_makedirs, mock_exists, mock_copy, tmp_path):
         """When cache hit and output_path given, copy cached file to output_path."""
         output = str(tmp_path / "my_sfx.mp3")
@@ -637,10 +637,10 @@ class TestGenerateSfx:
         # The second argument to copy2 should be the output_path
         assert mock_copy.call_args.args[1] == output
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
-    @patch("app.services.elevenlabs.os.path.exists", return_value=False)
-    @patch("app.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.os.path.exists", return_value=False)
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
     def test_cache_bypass_when_disabled(self, mock_makedirs, mock_exists, mock_settings, mock_post, tmp_path):
         """When use_cache=False, API is called even if file might exist."""
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
@@ -655,10 +655,10 @@ class TestGenerateSfx:
         mock_post.assert_called_once()
 
     @patch("shutil.copy2")
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
-    @patch("app.services.elevenlabs.os.path.exists", return_value=False)
-    @patch("app.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.os.path.exists", return_value=False)
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
     def test_saves_to_cache_after_generation(
         self, mock_makedirs, mock_exists, mock_settings, mock_post, mock_copy, tmp_path
     ):
@@ -676,8 +676,8 @@ class TestGenerateSfx:
         mock_copy.assert_called_once()
         assert mock_copy.call_args.args[0] == output
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
     def test_auto_generates_output_path_from_hash(self, mock_settings, mock_post, tmp_path):
         """When no output_path given and cache miss, uses hash-based path in cache dir."""
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
@@ -687,16 +687,16 @@ class TestGenerateSfx:
         mock_post.return_value = mock_response
 
         cache_dir = str(tmp_path / "sfx_cache")
-        with patch("app.services.elevenlabs.SFX_CACHE_DIR", cache_dir):
-            result = generate_sfx("thunder", use_cache=False)
+        mock_settings.SFX_CACHE_DIR = cache_dir
+        result = generate_sfx("thunder", use_cache=False)
 
         assert result.endswith(".mp3")
         assert "sfx_cache" in result
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
-    @patch("app.services.elevenlabs.os.path.exists", return_value=False)
-    @patch("app.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.os.path.exists", return_value=False)
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
     def test_sends_correct_headers(self, mock_makedirs, mock_exists, mock_settings, mock_post, tmp_path):
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
         mock_response = MagicMock()
@@ -712,10 +712,10 @@ class TestGenerateSfx:
         assert headers["Content-Type"] == "application/json"
         assert headers["xi-api-key"] == self.FAKE_API_KEY
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
-    @patch("app.services.elevenlabs.os.path.exists", return_value=False)
-    @patch("app.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.os.path.exists", return_value=False)
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
     def test_cache_key_is_case_insensitive(self, mock_makedirs, mock_exists, mock_settings, mock_post, tmp_path):
         """Cache key should be derived from lowered+stripped description."""
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
@@ -733,10 +733,10 @@ class TestGenerateSfx:
         key2 = hashlib.sha256("Thunder Rumbling".lower().strip().encode()).hexdigest()[:16]
         assert key1 == key2
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
-    @patch("app.services.elevenlabs.os.path.exists", return_value=False)
-    @patch("app.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.os.path.exists", return_value=False)
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
     def test_streams_response(self, mock_makedirs, mock_exists, mock_settings, mock_post, tmp_path):
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
         mock_response = MagicMock()
@@ -749,10 +749,10 @@ class TestGenerateSfx:
 
         assert mock_post.call_args.kwargs["stream"] is True
 
-    @patch("app.services.elevenlabs.requests.post")
-    @patch("app.services.elevenlabs.settings")
-    @patch("app.services.elevenlabs.os.path.exists", return_value=False)
-    @patch("app.services.elevenlabs.os.makedirs")
+    @patch("apps.audio.services.elevenlabs.requests.post")
+    @patch("apps.audio.services.elevenlabs.settings")
+    @patch("apps.audio.services.elevenlabs.os.path.exists", return_value=False)
+    @patch("apps.audio.services.elevenlabs.os.makedirs")
     def test_http_error_preserves_response_body(self, mock_makedirs, mock_exists, mock_settings, mock_post):
         mock_settings.ELEVENLABS_API_KEY = self.FAKE_API_KEY
         mock_response = MagicMock()

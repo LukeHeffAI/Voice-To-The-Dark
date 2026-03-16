@@ -1,8 +1,8 @@
-"""Unit tests for app.rate_limit."""
+"""Unit tests for apps.core.rate_limit."""
 
 import time
-from unittest.mock import MagicMock, patch
-from app.rate_limit import _cleanup, _request_log, rate_limit
+
+from apps.core.rate_limit import _cleanup, _request_log, check_rate_limit
 
 
 class TestCleanup:
@@ -32,7 +32,23 @@ class TestCleanup:
         del _request_log[user_id]
 
 
-class TestRateLimitDependency:
-    def test_creates_callable_dependency(self):
-        dep = rate_limit(5, 3600)
-        assert callable(dep)
+class TestCheckRateLimit:
+    def test_allows_within_limit(self):
+        user_id = 9996
+        _request_log.pop(user_id, None)
+        # Should not raise for first request
+        check_rate_limit(user_id, max_requests=5, window_seconds=60)
+        assert len(_request_log[user_id]) == 1
+        del _request_log[user_id]
+
+    def test_raises_when_exceeded(self):
+        from ninja.errors import HttpError
+        user_id = 9995
+        _request_log[user_id] = [time.time()] * 5
+        try:
+            check_rate_limit(user_id, max_requests=5, window_seconds=60)
+            assert False, "Should have raised HttpError"
+        except HttpError as e:
+            assert e.status_code == 429
+        finally:
+            del _request_log[user_id]

@@ -1,10 +1,10 @@
-"""Comprehensive tests for all Pydantic schemas in app.schemas."""
+"""Comprehensive tests for all Pydantic schemas."""
 
 import pytest
 from datetime import datetime
 from pydantic import ValidationError
 
-from app.schemas.story import (
+from apps.stories.schemas import (
     StorySubmitRequest,
     ManualStorySubmitRequest,
     StoryResponse,
@@ -18,7 +18,7 @@ from app.schemas.story import (
     FolderResponse,
     FolderAddStoryRequest,
 )
-from app.schemas.narration import (
+from apps.audio.schemas import (
     SegmentType,
     CharacterProfile,
     ScriptSegment,

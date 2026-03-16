@@ -1,32 +1,8 @@
-"""Unit tests for app.auth (JWT and password hashing)."""
+"""Unit tests for apps.accounts.auth (JWT authentication)."""
 
-import time
-from unittest.mock import patch
-from app.auth import hash_password, verify_password, create_access_token, decode_access_token
+import pytest
 
-
-class TestPasswordHashing:
-    def test_hash_is_not_plaintext(self):
-        hashed = hash_password("mysecret")
-        assert hashed != "mysecret"
-        assert len(hashed) > 20
-
-    def test_verify_correct_password(self):
-        hashed = hash_password("correcthorse")
-        assert verify_password("correcthorse", hashed) is True
-
-    def test_verify_wrong_password(self):
-        hashed = hash_password("correcthorse")
-        assert verify_password("wronghorse", hashed) is False
-
-    def test_different_hashes_for_same_password(self):
-        """bcrypt uses random salts, so two hashes of the same password differ."""
-        h1 = hash_password("same")
-        h2 = hash_password("same")
-        assert h1 != h2
-        # But both verify
-        assert verify_password("same", h1) is True
-        assert verify_password("same", h2) is True
+from apps.accounts.auth import create_access_token, decode_access_token
 
 
 class TestJWT:
@@ -54,14 +30,14 @@ class TestJWT:
         """Simulate an expired token by patching the expiry to the past."""
         from datetime import datetime, timedelta, timezone
         from jose import jwt
-        from app.config import settings
+        from django.conf import settings
 
         expired_payload = {
             "sub": "1",
             "username": "expired_user",
             "exp": datetime.now(timezone.utc) - timedelta(hours=1),
         }
-        token = jwt.encode(expired_payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+        token = jwt.encode(expired_payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
         result = decode_access_token(token)
         assert result is None
 
@@ -72,3 +48,24 @@ class TestJWT:
         tampered = parts[0] + "." + parts[1][:-1] + ("A" if parts[1][-1] != "A" else "B") + "." + parts[2]
         result = decode_access_token(tampered)
         assert result is None
+
+
+@pytest.mark.django_db
+class TestPasswordHashing:
+    """Test Django's password hashing via the User model."""
+
+    def test_password_is_hashed(self):
+        from apps.accounts.models import User
+        user = User.objects.create_user(username="hashtest", password="mysecret")
+        assert user.password != "mysecret"
+        assert len(user.password) > 20
+
+    def test_check_correct_password(self):
+        from apps.accounts.models import User
+        user = User.objects.create_user(username="checktest", password="correcthorse")
+        assert user.check_password("correcthorse") is True
+
+    def test_check_wrong_password(self):
+        from apps.accounts.models import User
+        user = User.objects.create_user(username="wrongtest", password="correcthorse")
+        assert user.check_password("wronghorse") is False
