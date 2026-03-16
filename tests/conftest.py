@@ -16,6 +16,7 @@ from apps.accounts.auth import create_access_token
 from apps.accounts.models import User
 from apps.core.rate_limit import _request_log
 from apps.stories.models import Story
+from apps.stories.services.hashing import hash_content
 
 
 @pytest.fixture()
@@ -58,12 +59,13 @@ def admin_headers(admin_user):
 @pytest.fixture()
 def sample_story(db):
     """Create a sample story in the test database."""
+    text = "I moved into an old house last week. Strange things started happening immediately."
     return Story.objects.create(
         title="The Haunted House",
         reddit_url="https://www.reddit.com/r/nosleep/comments/abc123/the_haunted_house/",
-        text_content="I moved into an old house last week. Strange things started happening immediately.",
-        narration_text="I moved into an old house last week. Strange things started happening immediately.",
-        content_hash="abc123def456",
+        text_content=text,
+        narration_text=text,
+        content_hash=hash_content(text),
         part_count=1,
     )
 

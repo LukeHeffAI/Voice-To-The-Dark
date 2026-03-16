@@ -2,7 +2,7 @@ import json
 import logging
 
 from django.http import FileResponse
-from ninja import File, Router
+from ninja import Body, File, Router
 from ninja.errors import HttpError
 from ninja.files import UploadedFile
 
@@ -46,7 +46,7 @@ def get_settings(request):
 
 
 @router.put("/", auth=JWTAuth())
-def update_settings(request, body: dict):
+def update_settings(request, body: dict = Body(...)):
     """Update application settings from a JSON body."""
     allowed_keys = {"reddit_cache_ttl"}
     updated = {}
@@ -104,7 +104,7 @@ def get_voice_notes(request):
 
 
 @router.put("/voice-notes", auth=JWTAuth())
-def update_voice_notes(request, body: dict):
+def update_voice_notes(request, body: dict = Body(...)):
     """Update voice notes. Body should be a dict of voice_id -> note string."""
     valid_voice_ids = {v.voice_id for v in VOICE_POOL}
 

@@ -16,6 +16,16 @@ from ninja.security import HttpBearer
 from apps.accounts.models import User
 
 
+class _AnonymousMarker:
+    """Truthy sentinel used by OptionalJWTAuth so Django Ninja doesn't reject the request."""
+
+    def __bool__(self):
+        return True
+
+
+_ANONYMOUS = _AnonymousMarker()
+
+
 def create_access_token(user_id: int, username: str) -> str:
     """Create a JWT access token matching the legacy format."""
     expire = datetime.now(timezone.utc) + timedelta(hours=settings.JWT_EXPIRE_HOURS)
@@ -66,22 +76,29 @@ class JWTAuth(HttpBearer):
 
 
 class OptionalJWTAuth(HttpBearer):
-    """Returns the User if authenticated, None otherwise. Never raises 401."""
+    """Returns the User if authenticated, a truthy sentinel otherwise.
 
-    def authenticate(self, request: HttpRequest, token: str | None = None) -> User | None:
+    Endpoints using this auth should check ``isinstance(request.auth, User)``
+    to distinguish authenticated users from anonymous requests.
+    """
+
+    def __call__(self, request: HttpRequest):
+        token = _extract_token(request)
         if not token:
-            token = request.COOKIES.get("auth_token")
-        if not token:
-            return None
+            return _ANONYMOUS  # truthy so Ninja doesn't 401
 
         payload = decode_access_token(token)
         if not payload:
-            return None
+            return _ANONYMOUS
 
         try:
             return User.objects.get(id=int(payload["sub"]))
         except (User.DoesNotExist, KeyError, ValueError):
-            return None
+            return _ANONYMOUS
+
+    def authenticate(self, request: HttpRequest, token: str | None = None):
+        # Not called — __call__ is overridden — but required by HttpBearer ABC.
+        return _ANONYMOUS
 
 
 def require_admin(request: HttpRequest) -> User:

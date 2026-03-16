@@ -7,6 +7,7 @@ from ninja import Router
 from ninja.errors import HttpError
 
 from apps.accounts.auth import JWTAuth, OptionalJWTAuth
+from apps.accounts.models import User as AuthUser
 from apps.core.rate_limit import check_rate_limit
 from apps.player.models import PlaybackState
 from apps.stories.models import (
@@ -535,25 +536,13 @@ def get_series_parts(request, story_id: int):
     }
 
 
-# ── Single story retrieval (must come after other /{...} routes) ──
-
-
-@router.get("/{story_id}", response=StoryResponse)
-def get_story(request, story_id: int):
-    """Get a single story by ID."""
-    story = Story.objects.filter(id=story_id).first()
-    if not story:
-        raise HttpError(404, "Story not found")
-    return story
-
-
 # ── Playback tracking ─────────────────────────────────────────────
 
 
 @router.post("/playback", response=PlaybackStateResponse, auth=OptionalJWTAuth())
 def save_playback_position(request, payload: PlaybackStateRequest):
     """Save the current playback position for a story."""
-    user = request.auth
+    user = request.auth if isinstance(request.auth, AuthUser) else None
     if not user:
         return PlaybackStateResponse(story_id=payload.story_id, position_seconds=0.0)
 
@@ -577,7 +566,7 @@ def save_playback_position(request, payload: PlaybackStateRequest):
 @router.get("/playback/{story_id}", response=PlaybackStateResponse, auth=OptionalJWTAuth())
 def get_playback_position(request, story_id: int):
     """Get the saved playback position for a story."""
-    user = request.auth
+    user = request.auth if isinstance(request.auth, AuthUser) else None
     if not user:
         return PlaybackStateResponse(story_id=story_id, position_seconds=0.0)
 
@@ -591,6 +580,18 @@ def get_playback_position(request, story_id: int):
         position_seconds=state.position_seconds,
         updated_at=state.updated_at,
     )
+
+
+# ── Single story retrieval (must come after all literal path routes) ──
+
+
+@router.get("/{story_id}", response=StoryResponse)
+def get_story(request, story_id: int):
+    """Get a single story by ID."""
+    story = Story.objects.filter(id=story_id).first()
+    if not story:
+        raise HttpError(404, "Story not found")
+    return story
 
 
 # ── Folder management ────────────────────────────────────────────
