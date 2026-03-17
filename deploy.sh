@@ -46,34 +46,61 @@ if grep -q "change_me_to_a_random_secret" .env 2>/dev/null; then
     echo "Generated JWT secret key."
 fi
 
-# ── 4. Create data directories ───────────────────────────────────
-mkdir -p data/db data/stories data/sfx_cache
-echo "Data directories ready (data/db, data/stories, data/sfx_cache)."
+# ── 4. Add ALLOWED_HOSTS if not in .env ──────────────────────────
+LAN_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+if [ -z "$LAN_IP" ]; then
+    LAN_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}')
+fi
+if [ -z "$LAN_IP" ]; then
+    LAN_IP=""
+fi
 
-# ── 5. Build and start the container ─────────────────────────────
+if ! grep -qE '^ALLOWED_HOSTS=' .env 2>/dev/null; then
+    if [ -n "$LAN_IP" ]; then
+        echo "ALLOWED_HOSTS=localhost,127.0.0.1,${LAN_IP}" >> .env
+    else
+        echo "ALLOWED_HOSTS=localhost,127.0.0.1" >> .env
+    fi
+    echo "Added ALLOWED_HOSTS to .env."
+fi
+
+# ── 5. Create data directories ───────────────────────────────────
+mkdir -p data/db data/stories data/sfx_cache data/voice_previews data/segment_cache data/reddit_cache
+echo "Data directories ready."
+
+# ── 6. Build and start the container ─────────────────────────────
 echo
 echo "Building and starting Voice In The Dark..."
 $COMPOSE up -d --build
 
 echo
 echo "Container is running. Waiting for startup..."
-sleep 3
+sleep 5
 
-# ── 6. Create admin account ──────────────────────────────────────
+# ── 7. Migrate v1 data (if legacy database exists) ───────────────
+if [ -f data/db/stories.db ] || [ -f data/db/horror_narrator.db ]; then
+    echo
+    echo "Legacy v1 database detected."
+    read -p "  Migrate data from v1? (y/N): " MIGRATE
+    if [[ "${MIGRATE:-}" =~ ^[Yy]$ ]]; then
+        V1_DB="data/db/stories.db"
+        [ -f data/db/horror_narrator.db ] && V1_DB="data/db/horror_narrator.db"
+        $COMPOSE exec -T voice-to-the-dark python scripts/migrate_from_v1.py "/app/$V1_DB"
+        echo "Data migration complete."
+    fi
+fi
+
+# ── 8. Create admin account ──────────────────────────────────────
 echo
 echo "── Create your admin account ──"
 read -p "  Admin username: " ADMIN_USER
 read -sp "  Admin password: " ADMIN_PASS
 echo
 
-$COMPOSE exec -T voice-to-the-dark python -m app.create_user "$ADMIN_USER" "$ADMIN_PASS" --admin
+echo "$ADMIN_PASS" | $COMPOSE exec -T voice-to-the-dark python manage.py createuser "$ADMIN_USER" --admin
 echo
 
-# ── 7. Detect LAN IP and print access info ───────────────────────
-LAN_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
-if [ -z "$LAN_IP" ]; then
-    LAN_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}')
-fi
+# ── 9. Print access info ─────────────────────────────────────────
 if [ -z "$LAN_IP" ]; then
     LAN_IP="<your-server-ip>"
 fi
