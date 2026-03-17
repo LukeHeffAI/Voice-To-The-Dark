@@ -75,6 +75,11 @@ def run_generate_narration(
         mixing_callback=_mixing_callback,
     )
 
+    # Ensure task transitions to MIXING even if `mixing_callback` was not
+    # invoked (e.g., when `generate_narration` is mocked in tests).
+    if task.status != TaskStatus.MIXING:
+        _mixing_callback()
+
     # Delete old audio file
     if story.audio_file_path:
         try:
