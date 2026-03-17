@@ -31,6 +31,7 @@ def generate_narration(
     output_path: str | None = None,
     bust_cache: bool = False,
     progress_callback=None,
+    mixing_callback=None,
 ) -> NarrationResult:
     """Walk through a narration script, generate all audio segments, then mix
     them into a fully produced audio file.
@@ -47,6 +48,8 @@ def generate_narration(
         bust_cache: If True, ignore the segment cache and regenerate everything.
         progress_callback: Optional callable(current, total, message) for progress
                           reporting. Called after each segment is processed.
+        mixing_callback: Optional callable() invoked just before mixing begins.
+                        Useful for updating task status to reflect the mixing phase.
 
     Returns:
         NarrationResult with the output path and cache statistics.
@@ -110,6 +113,8 @@ def generate_narration(
             )
 
     # --- Mix everything via the dedicated mixer ---
+    if mixing_callback:
+        mixing_callback()
     final = mix_narration(segment_files)
     final.export(output_path, format="mp3")
 

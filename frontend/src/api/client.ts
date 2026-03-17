@@ -17,6 +17,7 @@ import type {
   StoryInfo,
   TaskStatus,
   TaskStartResponse,
+  AlreadyGeneratedResponse,
 } from '@/types'
 
 // ── Low-level fetch wrapper ─────────────────────────────────
@@ -148,7 +149,7 @@ export const audioApi = {
     force_regenerate = false,
     bust_cache = false,
   ) =>
-    request<TaskStartResponse | GenerateNarrationResponse>('POST', '/audio/generate-narration', {
+    request<TaskStartResponse | GenerateNarrationResponse | AlreadyGeneratedResponse>('POST', '/audio/generate-narration', {
       story_id,
       voice_map,
       force_regenerate,

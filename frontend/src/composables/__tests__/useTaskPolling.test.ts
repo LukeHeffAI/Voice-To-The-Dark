@@ -19,6 +19,24 @@ vi.mock('@/api/client', () => ({
 
 import { tasksApi } from '@/api/client'
 import { useTaskPolling } from '../useTaskPolling'
+import type { TaskStatus } from '@/types'
+
+function makeTask(overrides: Partial<TaskStatus> = {}): TaskStatus {
+  return {
+    task_id: 1,
+    task_type: 'generate_narration',
+    status: 'processing',
+    progress_current: 0,
+    progress_total: 0,
+    progress_message: '',
+    result_data: null,
+    error_message: '',
+    created_at: '2026-01-01T00:00:00Z',
+    started_at: '2026-01-01T00:00:01Z',
+    completed_at: null,
+    ...overrides,
+  }
+}
 
 describe('useTaskPolling', () => {
   beforeEach(() => {
@@ -31,13 +49,12 @@ describe('useTaskPolling', () => {
   })
 
   it('starts polling and updates task ref', async () => {
-    vi.mocked(tasksApi.getStatus).mockResolvedValue({
-      id: 1,
+    vi.mocked(tasksApi.getStatus).mockResolvedValue(makeTask({
       status: 'processing',
       progress_current: 1,
       progress_total: 10,
       progress_message: 'Working...',
-    })
+    }))
 
     const { task, isPolling, startPolling } = useTaskPolling()
 
@@ -49,13 +66,13 @@ describe('useTaskPolling', () => {
   })
 
   it('stops polling when task completes', async () => {
-    vi.mocked(tasksApi.getStatus).mockResolvedValue({
-      id: 1,
+    vi.mocked(tasksApi.getStatus).mockResolvedValue(makeTask({
       status: 'complete',
       progress_current: 10,
       progress_total: 10,
       progress_message: 'Done',
-    })
+      completed_at: '2026-01-01T00:01:00Z',
+    }))
 
     const onComplete = vi.fn()
     const { isPolling, startPolling } = useTaskPolling()
@@ -67,14 +84,14 @@ describe('useTaskPolling', () => {
   })
 
   it('stops polling when task fails', async () => {
-    vi.mocked(tasksApi.getStatus).mockResolvedValue({
-      id: 1,
+    vi.mocked(tasksApi.getStatus).mockResolvedValue(makeTask({
       status: 'failed',
       progress_current: 0,
       progress_total: 0,
       progress_message: 'Error',
       error_message: 'Something broke',
-    })
+      completed_at: '2026-01-01T00:01:00Z',
+    }))
 
     const onComplete = vi.fn()
     const { isPolling, startPolling } = useTaskPolling()
@@ -99,13 +116,12 @@ describe('useTaskPolling', () => {
     let callCount = 0
     vi.mocked(tasksApi.getStatus).mockImplementation(async () => {
       callCount++
-      return {
-        id: 1,
+      return makeTask({
         status: 'processing',
         progress_current: callCount,
         progress_total: 10,
         progress_message: 'Working...',
-      }
+      })
     })
 
     const { stopPolling, startPolling } = useTaskPolling()

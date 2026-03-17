@@ -5,11 +5,17 @@ import type { TaskStatus } from '@/types'
 
 function makeTask(overrides: Partial<TaskStatus> = {}): TaskStatus {
   return {
-    id: 1,
+    task_id: 1,
+    task_type: 'generate_narration',
     status: 'generating_segments',
     progress_current: 5,
     progress_total: 10,
     progress_message: 'Generating segments...',
+    result_data: null,
+    error_message: '',
+    created_at: '2026-01-01T00:00:00Z',
+    started_at: '2026-01-01T00:00:01Z',
+    completed_at: null,
     ...overrides,
   }
 }
