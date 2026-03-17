@@ -9,7 +9,10 @@ from apps.accounts.models import User
 
 
 class Command(BaseCommand):
-    help = "Create a user account. Usage: python manage.py createuser <username> [--admin]"
+    help = (
+        "Create a user account. Usage: python manage.py createuser <username> [password] [--admin]. "
+        "If the password is omitted, it will be read securely from stdin or prompted interactively."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument("username", type=str)
