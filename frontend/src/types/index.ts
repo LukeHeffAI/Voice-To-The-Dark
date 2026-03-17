@@ -169,6 +169,11 @@ export interface TaskStartResponse {
   message: string
 }
 
+export interface AlreadyGeneratedResponse {
+  message: string
+  audio_file: string
+}
+
 // ── Settings types ──────────────────────────────────────────
 
 export interface VoiceEntry {

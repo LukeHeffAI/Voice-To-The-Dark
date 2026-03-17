@@ -64,15 +64,16 @@ def run_generate_narration(
         task.progress_message = message
         task.save(update_fields=["progress_current", "progress_total", "progress_message"])
 
+    def _mixing_callback():
+        task.status = TaskStatus.MIXING
+        task.progress_message = "Mixing final audio..."
+        task.save(update_fields=["status", "progress_message"])
+
     result = generate_narration(
         script, voice_map, bust_cache=bust_cache,
         progress_callback=_progress_callback,
+        mixing_callback=_mixing_callback,
     )
-
-    # Mixing phase
-    task.status = TaskStatus.MIXING
-    task.progress_message = "Mixing final audio..."
-    task.save(update_fields=["status", "progress_message"])
 
     # Delete old audio file
     if story.audio_file_path:
