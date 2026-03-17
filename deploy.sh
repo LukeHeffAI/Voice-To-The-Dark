@@ -55,7 +55,7 @@ if [ -z "$LAN_IP" ]; then
     LAN_IP=""
 fi
 
-if ! grep -q "ALLOWED_HOSTS" .env 2>/dev/null; then
+if ! grep -qE '^ALLOWED_HOSTS=' .env 2>/dev/null; then
     if [ -n "$LAN_IP" ]; then
         echo "ALLOWED_HOSTS=localhost,127.0.0.1,${LAN_IP}" >> .env
     else
@@ -97,7 +97,7 @@ read -p "  Admin username: " ADMIN_USER
 read -sp "  Admin password: " ADMIN_PASS
 echo
 
-$COMPOSE exec -T voice-to-the-dark python manage.py createuser "$ADMIN_USER" "$ADMIN_PASS" --admin
+echo "$ADMIN_PASS" | $COMPOSE exec -T voice-to-the-dark python manage.py createuser "$ADMIN_USER" --admin
 echo
 
 # ── 9. Print access info ─────────────────────────────────────────
