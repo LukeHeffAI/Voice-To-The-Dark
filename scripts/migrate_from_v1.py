@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 # Set up Django before importing models
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.development")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
 import django  # noqa: E402
 
@@ -318,6 +318,13 @@ def run_migration(v1_db_path: str) -> dict[str, int]:
 if __name__ == "__main__":
     base_dir = Path(__file__).resolve().parent.parent
     default_path = str(base_dir / "data" / "db" / "stories.db")
+
+    # Also check the alternative v1 database name
+    if not Path(default_path).exists():
+        alt_path = str(base_dir / "data" / "db" / "horror_narrator.db")
+        if Path(alt_path).exists():
+            default_path = alt_path
+
     db_path = sys.argv[1] if len(sys.argv) > 1 else default_path
 
     run_migration(db_path)
