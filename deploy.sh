@@ -102,16 +102,34 @@ echo "Container is running. Waiting for startup..."
 MAX_WAIT=60
 ELAPSED=0
 while [ $ELAPSED -lt $MAX_WAIT ]; do
-    STATUS=$(docker inspect --format='{{.State.Health.Status}}' voice-to-the-dark 2>/dev/null || echo "starting")
-    if [ "$STATUS" = "healthy" ]; then
+    STATUS_OUTPUT=$(docker inspect --format='{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{else}}no-health{{end}}' voice-to-the-dark 2>/dev/null || echo "missing missing")
+    CONTAINER_STATE=$(echo "$STATUS_OUTPUT" | awk '{print $1}')
+    HEALTH_STATUS=$(echo "$STATUS_OUTPUT" | awk '{print $2}')
+
+    if [ "$CONTAINER_STATE" = "missing" ]; then
+        echo "Error: Container 'voice-to-the-dark' is not running or does not exist."
+        echo "Check logs with: docker compose logs"
+        exit 1
+    fi
+
+    if [ "$CONTAINER_STATE" != "running" ]; then
+        echo "Error: Container is not running (state: $CONTAINER_STATE)."
+        echo "Check logs with: docker compose logs"
+        exit 1
+    fi
+
+    if [ "$HEALTH_STATUS" = "healthy" ]; then
         echo "Application is ready!"
         break
     fi
-    if [ "$STATUS" = "unhealthy" ]; then
+
+    if [ "$HEALTH_STATUS" = "unhealthy" ]; then
         echo "Error: Container is unhealthy."
         echo "Check logs with: $COMPOSE logs"
         exit 1
     fi
+
+    # If HEALTH_STATUS is 'no-health' or still initializing, wait and retry
     sleep 3
     ELAPSED=$((ELAPSED + 3))
 done
