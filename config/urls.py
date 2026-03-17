@@ -27,5 +27,5 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", api.urls),
     # SPA catch-all: serve Vue index.html for all other routes
-    re_path(r"^(?!api/|admin/).*$", spa_view),
+    re_path(r"^(?!api(?:/|$)|admin(?:/|$)).*$", spa_view),
 ]

@@ -16,7 +16,7 @@ check() {
 
     HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$url" 2>/dev/null || echo "000")
 
-    if echo "$expected" | grep -q "$HTTP_CODE"; then
+    if echo "$expected" | grep -qE "$HTTP_CODE"; then
         echo "  ✓ $name ($HTTP_CODE)"
         PASS=$((PASS + 1))
     else
