@@ -140,6 +140,40 @@ export interface GenerateNarrationResponse {
   }
 }
 
+// ── Task types ─────────────────────────────────────────────
+
+export type TaskStatusValue =
+  | 'queued'
+  | 'processing'
+  | 'generating_segments'
+  | 'mixing'
+  | 'complete'
+  | 'failed'
+
+export interface TaskStatus {
+  task_id: number
+  task_type: 'generate_script' | 'generate_narration'
+  status: TaskStatusValue
+  progress_current: number
+  progress_total: number
+  progress_message: string
+  result_data: Record<string, unknown> | null
+  error_message: string
+  created_at: string
+  started_at: string | null
+  completed_at: string | null
+}
+
+export interface TaskStartResponse {
+  task_id: number
+  message: string
+}
+
+export interface AlreadyGeneratedResponse {
+  message: string
+  audio_file: string
+}
+
 // ── Settings types ──────────────────────────────────────────
 
 export interface VoiceEntry {

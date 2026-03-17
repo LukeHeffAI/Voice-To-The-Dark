@@ -30,6 +30,8 @@ def generate_narration(
     voice_map: dict[str, str],
     output_path: str | None = None,
     bust_cache: bool = False,
+    progress_callback=None,
+    mixing_callback=None,
 ) -> NarrationResult:
     """Walk through a narration script, generate all audio segments, then mix
     them into a fully produced audio file.
@@ -44,6 +46,10 @@ def generate_narration(
                    ElevenLabs voice IDs.
         output_path: Where to write the final mixed audio. Auto-generated if None.
         bust_cache: If True, ignore the segment cache and regenerate everything.
+        progress_callback: Optional callable(current, total, message) for progress
+                          reporting. Called after each segment is processed.
+        mixing_callback: Optional callable() invoked just before mixing begins.
+                        Useful for updating task status to reflect the mixing phase.
 
     Returns:
         NarrationResult with the output path and cache statistics.
@@ -98,7 +104,17 @@ def generate_narration(
             if path:
                 segment_files.append((path, segment))
 
+        if progress_callback:
+            progress_callback(
+                i + 1,
+                len(merged_segments),
+                f"{'Cached' if (cache_result.is_hit and not bust_cache) else 'Generated'} "
+                f"segment {i + 1}/{len(merged_segments)}: {segment.type.value}",
+            )
+
     # --- Mix everything via the dedicated mixer ---
+    if mixing_callback:
+        mixing_callback()
     final = mix_narration(segment_files)
     final.export(output_path, format="mp3")
 

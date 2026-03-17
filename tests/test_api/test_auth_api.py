@@ -69,6 +69,26 @@ class TestRegister:
         )
         assert resp.status_code == 409
 
+    def test_short_username_rejected(self, client, admin_headers):
+        """A 2-character username should be rejected with 400."""
+        resp = client.post(
+            "/api/auth/register",
+            data=json.dumps({"username": "xy", "password": "validpass123"}),
+            content_type="application/json",
+            **admin_headers,
+        )
+        assert resp.status_code == 400
+
+    def test_short_password_rejected(self, client, admin_headers):
+        """A 5-character password should be rejected with 400."""
+        resp = client.post(
+            "/api/auth/register",
+            data=json.dumps({"username": "validuser", "password": "abcde"}),
+            content_type="application/json",
+            **admin_headers,
+        )
+        assert resp.status_code == 400
+
 
 class TestLogin:
     def test_login_success(self, client, test_user):
@@ -126,6 +146,14 @@ class TestMe:
 
     def test_me_unauthenticated(self, client, db):
         resp = client.get("/api/auth/me")
+        assert resp.status_code == 401
+
+    def test_invalid_token_rejected(self, client, db):
+        """A garbage token in the Authorization header should return 401."""
+        resp = client.get(
+            "/api/auth/me",
+            HTTP_AUTHORIZATION="Bearer this.is.garbage",
+        )
         assert resp.status_code == 401
 
 

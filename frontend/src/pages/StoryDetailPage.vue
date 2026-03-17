@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { storiesApi, audioApi } from '@/api/client'
+import { storiesApi, audioApi, tasksApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { usePlaylistStore } from '@/stores/playlist'
 import { useNotificationStore } from '@/stores/notifications'
 import { ApiError } from '@/api/client'
-import type { Story, SeriesPartsResponse } from '@/types'
+import { useTaskPolling } from '@/composables/useTaskPolling'
+import TaskProgressBar from '@/components/TaskProgressBar.vue'
+import type { Story, SeriesPartsResponse, TaskStatus } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -27,6 +29,10 @@ const generatingScript = ref(false)
 const scriptStatus = ref({ text: '', type: '' })
 const generatingAudio = ref(false)
 const audioStatus = ref({ text: '', type: '' })
+
+// Task polling
+const { task: scriptTask, startPolling: pollScript } = useTaskPolling()
+const { task: audioTask, startPolling: pollAudio } = useTaskPolling()
 
 const storyId = computed(() => Number(route.params.id))
 
@@ -72,6 +78,40 @@ onMounted(async () => {
       const data = await storiesApi.seriesParts(storyId.value)
       if (data.parts.length >= 2) series.value = data
     } catch { /* no series */ }
+
+    // Resume polling for any active tasks (handles page reload during generation)
+    if (auth.isLoggedIn) {
+      try {
+        const activeTasks = await tasksApi.getStoryTasks(storyId.value)
+        for (const t of activeTasks) {
+          if (t.task_type === 'generate_script') {
+            generatingScript.value = true
+            scriptStatus.value = { text: t.progress_message || 'Script generation in progress...', type: '' }
+            pollScript(t.task_id, (completed: TaskStatus) => {
+              if (completed.status === 'complete') {
+                scriptStatus.value = { text: 'Script generated! Reloading...', type: 'success' }
+                setTimeout(() => router.go(0), 800)
+              } else {
+                scriptStatus.value = { text: completed.error_message || 'Script generation failed', type: 'error' }
+                generatingScript.value = false
+              }
+            })
+          } else if (t.task_type === 'generate_narration') {
+            generatingAudio.value = true
+            audioStatus.value = { text: t.progress_message || 'Audio generation in progress...', type: '' }
+            pollAudio(t.task_id, (completed: TaskStatus) => {
+              if (completed.status === 'complete') {
+                audioStatus.value = { text: 'Audio generated! Reloading...', type: 'success' }
+                setTimeout(() => router.go(0), 800)
+              } else {
+                audioStatus.value = { text: completed.error_message || 'Audio generation failed', type: 'error' }
+                generatingAudio.value = false
+              }
+            })
+          }
+        }
+      } catch { /* no active tasks */ }
+    }
   } catch {
     notify.show('Failed to load story', 'error')
   } finally {
@@ -81,11 +121,24 @@ onMounted(async () => {
 
 async function generateScript() {
   generatingScript.value = true
-  scriptStatus.value = { text: 'Claude is analyzing the story and building a narration script...', type: '' }
+  scriptStatus.value = { text: 'Starting script generation...', type: '' }
   try {
-    await audioApi.generateScript(storyId.value)
-    scriptStatus.value = { text: 'Script generated! Reloading...', type: 'success' }
-    setTimeout(() => router.go(0), 800)
+    const result = await audioApi.generateScript(storyId.value)
+    if ('task_id' in result) {
+      pollScript(result.task_id, (completed: TaskStatus) => {
+        if (completed.status === 'complete') {
+          scriptStatus.value = { text: 'Script generated! Reloading...', type: 'success' }
+          setTimeout(() => router.go(0), 800)
+        } else {
+          scriptStatus.value = { text: completed.error_message || 'Script generation failed', type: 'error' }
+          generatingScript.value = false
+        }
+      })
+    } else {
+      // Script already existed (returned synchronously)
+      scriptStatus.value = { text: 'Script already exists. Reloading...', type: 'success' }
+      setTimeout(() => router.go(0), 800)
+    }
   } catch (e) {
     const body = (e instanceof ApiError ? e.body : null) as { detail?: string } | null
     scriptStatus.value = { text: body?.detail || 'Script generation failed', type: 'error' }
@@ -96,11 +149,24 @@ async function generateScript() {
 async function generateAudio(force = false) {
   if (force && !confirm('Regenerate audio? This will replace the current audio file.')) return
   generatingAudio.value = true
-  audioStatus.value = { text: 'Generating multi-voice audio with SFX and ambient sound...', type: '' }
+  audioStatus.value = { text: 'Starting audio generation...', type: '' }
   try {
-    await audioApi.generateNarration(storyId.value, null, force)
-    audioStatus.value = { text: 'Audio generated! Reloading...', type: 'success' }
-    setTimeout(() => router.go(0), 800)
+    const result = await audioApi.generateNarration(storyId.value, null, force)
+    if ('task_id' in result) {
+      pollAudio(result.task_id, (completed: TaskStatus) => {
+        if (completed.status === 'complete') {
+          audioStatus.value = { text: 'Audio generated! Reloading...', type: 'success' }
+          setTimeout(() => router.go(0), 800)
+        } else {
+          audioStatus.value = { text: completed.error_message || 'Audio generation failed', type: 'error' }
+          generatingAudio.value = false
+        }
+      })
+    } else {
+      // Audio already existed (returned synchronously)
+      audioStatus.value = { text: 'Audio already exists. Reloading...', type: 'success' }
+      setTimeout(() => router.go(0), 800)
+    }
   } catch (e) {
     const body = (e instanceof ApiError ? e.body : null) as { detail?: string } | null
     audioStatus.value = { text: body?.detail || 'Audio generation failed', type: 'error' }
@@ -191,6 +257,7 @@ function playNextFn() {
                 {{ generatingScript ? 'Generating...' : 'Generate Script' }}
               </button>
               <div v-if="scriptStatus.text" class="step-status" :class="scriptStatus.type">{{ scriptStatus.text }}</div>
+              <TaskProgressBar v-if="generatingScript" :task="scriptTask" />
             </template>
             <div v-else class="login-prompt"><router-link to="/login">Sign in</router-link> to generate scripts</div>
           </div>
@@ -214,6 +281,7 @@ function playNextFn() {
                 </button>
               </div>
               <div v-if="audioStatus.text" class="step-status" :class="audioStatus.type">{{ audioStatus.text }}</div>
+              <TaskProgressBar v-if="generatingAudio" :task="audioTask" />
             </template>
             <template v-else-if="auth.isLoggedIn">
               <button class="btn-primary" :disabled="!hasScript || generatingAudio" @click="generateAudio(false)">
@@ -221,10 +289,8 @@ function playNextFn() {
                 {{ generatingAudio ? 'Generating...' : 'Generate Audio' }}
               </button>
               <div v-if="!hasScript" class="step-info">Generate a script first</div>
-              <div v-if="audioStatus.text" class="step-status" :class="audioStatus.type">
-                {{ audioStatus.text }}
-                <div v-if="!audioStatus.type" class="progress-bar-track"><div class="progress-bar-fill"></div></div>
-              </div>
+              <div v-if="audioStatus.text" class="step-status" :class="audioStatus.type">{{ audioStatus.text }}</div>
+              <TaskProgressBar v-if="generatingAudio" :task="audioTask" />
             </template>
             <div v-else class="login-prompt"><router-link to="/login">Sign in</router-link> to generate audio</div>
           </div>
@@ -326,9 +392,6 @@ function playNextFn() {
 }
 .listen-btn:hover { background: var(--color-accent-hover); box-shadow: 0 8px 40px rgba(160,32,32,0.4); transform: translateY(-1px); }
 .queue-actions { display: flex; gap: 0.75rem; justify-content: center; margin-top: 0.75rem; }
-.progress-bar-track { width: 100%; height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-top: 0.6rem; overflow: hidden; }
-.progress-bar-fill { height: 100%; background: var(--color-accent); border-radius: 2px; width: 0%; animation: indeterminate 1.8s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
-@keyframes indeterminate { 0% { width: 0%; margin-left: 0; } 50% { width: 35%; margin-left: 35%; } 100% { width: 0%; margin-left: 100%; } }
 .series-section { margin-top: 2rem; }
 .series-title { font-family: var(--font-family-serif); font-size: 1rem; font-weight: 500; color: var(--color-text-2); margin-bottom: 0.6rem; display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
 .series-stats { font-family: var(--font-family-sans); font-size: 0.78rem; font-weight: 400; color: var(--color-text-3); }

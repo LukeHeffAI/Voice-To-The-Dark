@@ -4,6 +4,7 @@ import json
 from unittest.mock import patch
 
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.stories.models import AppSetting
 
@@ -88,3 +89,98 @@ class TestVoicePreview:
     def test_voice_preview_not_in_pool(self, client, auth_headers):
         resp = client.get("/api/settings/voice-preview/nonexistent", **auth_headers)
         assert resp.status_code == 404
+
+
+class TestUploadRedditCache:
+    def _reddit_json(self, children=None):
+        """Build a minimal Reddit listing JSON structure."""
+        if children is None:
+            children = [
+                {
+                    "data": {
+                        "title": "Test Story",
+                        "permalink": "/r/nosleep/comments/abc/test/",
+                        "ups": 100,
+                        "author": "test_author",
+                        "id": "abc",
+                    }
+                }
+            ]
+        return {"data": {"children": children}}
+
+    @patch("apps.stories.settings_api.get_cache_path_for_timeframe")
+    def test_upload_valid_json(self, mock_cache_path, client, auth_headers, tmp_path):
+        """POST valid Reddit JSON succeeds with 200 and correct posts_count."""
+        mock_cache_path.return_value = tmp_path / "top.json"
+
+        reddit_data = self._reddit_json()
+        file = SimpleUploadedFile(
+            "top.json",
+            json.dumps(reddit_data).encode(),
+            content_type="application/json",
+        )
+        resp = client.post(
+            "/api/settings/upload-reddit-cache",
+            {"timeframe": "alltime", "file": file},
+            **auth_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "ok"
+        assert data["timeframe"] == "alltime"
+        assert data["posts_count"] == 1
+
+    def test_upload_invalid_timeframe(self, client, auth_headers):
+        """An unrecognised timeframe returns 400."""
+        file = SimpleUploadedFile(
+            "top.json",
+            json.dumps(self._reddit_json(children=[])).encode(),
+            content_type="application/json",
+        )
+        resp = client.post(
+            "/api/settings/upload-reddit-cache",
+            {"timeframe": "invalid", "file": file},
+            **auth_headers,
+        )
+        assert resp.status_code == 400
+
+    def test_upload_invalid_json(self, client, auth_headers):
+        """Non-JSON content returns 400."""
+        file = SimpleUploadedFile(
+            "top.json",
+            b"not json at all",
+            content_type="application/json",
+        )
+        resp = client.post(
+            "/api/settings/upload-reddit-cache",
+            {"timeframe": "alltime", "file": file},
+            **auth_headers,
+        )
+        assert resp.status_code == 400
+
+    def test_upload_wrong_structure(self, client, auth_headers):
+        """JSON without a 'data' key returns 400."""
+        file = SimpleUploadedFile(
+            "top.json",
+            json.dumps({"wrong": "structure"}).encode(),
+            content_type="application/json",
+        )
+        resp = client.post(
+            "/api/settings/upload-reddit-cache",
+            {"timeframe": "alltime", "file": file},
+            **auth_headers,
+        )
+        assert resp.status_code == 400
+
+    def test_upload_requires_auth(self, client, db):
+        """Unauthenticated upload returns 401."""
+        file = SimpleUploadedFile(
+            "top.json",
+            json.dumps({"data": {"children": []}}).encode(),
+            content_type="application/json",
+        )
+        resp = client.post(
+            "/api/settings/upload-reddit-cache",
+            {"timeframe": "alltime", "file": file},
+        )
+        assert resp.status_code == 401

@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "apps.stories",
     "apps.audio",
     "apps.player",
+    "apps.tasks",
 ]
 
 MIDDLEWARE = [
