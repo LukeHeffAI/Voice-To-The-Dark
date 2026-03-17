@@ -109,7 +109,7 @@ while [ $ELAPSED -lt $MAX_WAIT ]; do
     fi
     if [ "$STATUS" = "unhealthy" ]; then
         echo "Error: Container is unhealthy."
-        echo "Check logs with: docker compose logs"
+        echo "Check logs with: $COMPOSE logs"
         exit 1
     fi
     sleep 3
@@ -118,7 +118,7 @@ done
 
 if [ $ELAPSED -ge $MAX_WAIT ]; then
     echo "Error: Container did not become healthy within ${MAX_WAIT}s."
-    echo "Check logs with: docker compose logs"
+    echo "Check logs with: $COMPOSE logs"
     exit 1
 fi
 
