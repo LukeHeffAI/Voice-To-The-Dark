@@ -23,7 +23,7 @@ class Command(BaseCommand):
 
         if password is None:
             if not sys.stdin.isatty():
-                password = sys.stdin.readline().rstrip("\n")
+                password = sys.stdin.readline().rstrip("\r\n")
             else:
                 password = getpass.getpass("Password: ")
                 password_confirm = getpass.getpass("Password (again): ")
