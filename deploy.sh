@@ -97,7 +97,7 @@ read -p "  Admin username: " ADMIN_USER
 read -sp "  Admin password: " ADMIN_PASS
 echo
 
-echo "$ADMIN_PASS" | $COMPOSE exec -T voice-to-the-dark python manage.py createuser "$ADMIN_USER" --admin
+printf '%s\n' "$ADMIN_PASS" | $COMPOSE exec -T voice-to-the-dark python manage.py createuser "$ADMIN_USER" --admin
 echo
 
 # ── 9. Print access info ─────────────────────────────────────────
