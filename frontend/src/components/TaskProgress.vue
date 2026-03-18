@@ -15,8 +15,18 @@ let pollTimer: ReturnType<typeof setTimeout> | null = null
 let polling = false
 
 async function poll() {
+  const currentTaskId = props.taskId
+
   try {
-    task.value = await audioApi.getTaskStatus(props.taskId)
+    const status = await audioApi.getTaskStatus(currentTaskId)
+
+    // If polling has been stopped or taskId has changed while the request
+    // was in flight, ignore this stale response.
+    if (!polling || currentTaskId !== props.taskId) {
+      return
+    }
+
+    task.value = status
     error.value = ''
 
     if (task.value.status === 'completed') {
@@ -29,6 +39,11 @@ async function poll() {
       return
     }
   } catch {
+    // If polling has been stopped or taskId has changed, don't surface
+    // errors from stale requests.
+    if (!polling || currentTaskId !== props.taskId) {
+      return
+    }
     error.value = 'Failed to check task status'
   }
 
