@@ -71,7 +71,7 @@ if [ ! -f .env ]; then
 import re, sys
 key = sys.argv[1]
 with open('.env') as f: content = f.read()
-content = re.sub(r'^ELEVENLABS_API_KEY=.*$', 'ELEVENLABS_API_KEY=' + key, content, flags=re.MULTILINE)
+content = re.sub(r'^ELEVENLABS_API_KEY=.*$', lambda m: 'ELEVENLABS_API_KEY=' + key, content, flags=re.MULTILINE)
 with open('.env', 'w') as f: f.write(content)
 " "$ELEVENLABS_API_KEY"
         fi
@@ -80,7 +80,7 @@ with open('.env', 'w') as f: f.write(content)
 import re, sys
 key = sys.argv[1]
 with open('.env') as f: content = f.read()
-content = re.sub(r'^ANTHROPIC_API_KEY=.*$', 'ANTHROPIC_API_KEY=' + key, content, flags=re.MULTILINE)
+content = re.sub(r'^ANTHROPIC_API_KEY=.*$', lambda m: 'ANTHROPIC_API_KEY=' + key, content, flags=re.MULTILINE)
 with open('.env', 'w') as f: f.write(content)
 " "$ANTHROPIC_API_KEY"
         fi
