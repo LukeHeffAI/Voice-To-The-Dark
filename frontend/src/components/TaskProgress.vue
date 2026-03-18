@@ -37,6 +37,7 @@ async function poll() {
       scheduleNext()
     }
   } catch {
+    if (!polling || currentTaskId !== props.taskId) return
     error.value = 'Failed to check task status'
     if (polling) scheduleNext()
   }
