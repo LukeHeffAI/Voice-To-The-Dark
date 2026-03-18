@@ -1,12 +1,20 @@
 import os
 
-from django.http import FileResponse, StreamingHttpResponse
+from django.http import FileResponse, HttpResponse, StreamingHttpResponse
 from ninja import Router
 from ninja.errors import HttpError
 
 from apps.stories.models import Story
 
 router = Router(tags=["player"])
+
+
+def _range_not_satisfiable(file_size: int) -> HttpResponse:
+    """Return a 416 Range Not Satisfiable response per RFC 7233 §4.4."""
+    response = HttpResponse(status=416)
+    response["Content-Range"] = f"bytes */{file_size}"
+    response["Accept-Ranges"] = "bytes"
+    return response
 
 
 @router.get("/story-info/{story_id}")
@@ -47,24 +55,24 @@ def stream_audio(request, story_id: int):
     if range_header:
         # Validate Range header format
         if not range_header.startswith("bytes="):
-            raise HttpError(416, "Invalid Range header")
+            return _range_not_satisfiable(file_size)
 
         range_spec = range_header[6:].strip()
 
         # Reject multi-range requests
         if "," in range_spec:
-            raise HttpError(416, "Multi-range requests are not supported")
+            return _range_not_satisfiable(file_size)
 
         parts = range_spec.split("-", 1)
         if len(parts) != 2:
-            raise HttpError(416, "Invalid Range format")
+            return _range_not_satisfiable(file_size)
 
         try:
             if parts[0] == "":
                 # Suffix range: bytes=-500 (last 500 bytes)
                 suffix_length = int(parts[1])
                 if suffix_length <= 0:
-                    raise HttpError(416, "Invalid suffix range")
+                    return _range_not_satisfiable(file_size)
                 start = max(0, file_size - suffix_length)
                 end = file_size - 1
             elif parts[1] == "":
@@ -76,11 +84,11 @@ def stream_audio(request, story_id: int):
                 start = int(parts[0])
                 end = int(parts[1])
         except ValueError:
-            raise HttpError(416, "Invalid Range values")
+            return _range_not_satisfiable(file_size)
 
         # Validate bounds
         if start < 0 or start >= file_size or end < start:
-            raise HttpError(416, "Range not satisfiable")
+            return _range_not_satisfiable(file_size)
 
         # Clamp end to file bounds
         end = min(end, file_size - 1)

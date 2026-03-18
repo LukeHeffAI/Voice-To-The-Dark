@@ -112,6 +112,8 @@ class TestStreamAudio:
                 headers={"Range": "bytes=5000-6000"},
             )
             assert resp.status_code == 416
+            assert resp["Content-Range"] == "bytes */1024"
+            assert resp["Accept-Ranges"] == "bytes"
         finally:
             os.unlink(audio_path)
 
@@ -131,6 +133,7 @@ class TestStreamAudio:
                 headers={"Range": "bytes=0-100,200-300"},
             )
             assert resp.status_code == 416
+            assert resp["Content-Range"] == "bytes */1024"
         finally:
             os.unlink(audio_path)
 
