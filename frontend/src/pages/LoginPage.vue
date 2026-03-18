@@ -26,7 +26,8 @@ async function handleLogin() {
     await auth.login(username.value, password.value)
     notify.show('Welcome back', 'success')
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
-    router.push(redirect)
+    const safeRedirect = redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/'
+    router.push(safeRedirect)
   } catch (e) {
     if (e instanceof ApiError) {
       const body = e.body as { detail?: string }
