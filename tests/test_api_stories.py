@@ -804,3 +804,51 @@ class TestRemoveStoryFromFolder:
             f"/api/stories/folders/1/stories/{sample_story.id}"
         )
         assert resp.status_code == 401
+
+
+# ── 14. TestListFolderStories ──────────────────────────────────────
+
+
+@pytest.mark.django_db
+class TestListFolderStories:
+    def test_list_stories_in_folder(self, api_client, auth_headers, test_user, sample_story):
+        folder = StoryFolder.objects.create(user=test_user, name="My Folder")
+        StoryFolderMembership.objects.create(folder=folder, story=sample_story)
+        resp = api_client.get(
+            f"/api/stories/folders/{folder.id}/stories",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["id"] == sample_story.id
+
+    def test_empty_folder(self, api_client, auth_headers, test_user):
+        folder = StoryFolder.objects.create(user=test_user, name="Empty")
+        resp = api_client.get(
+            f"/api/stories/folders/{folder.id}/stories",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_nonexistent_folder(self, api_client, auth_headers):
+        resp = api_client.get(
+            "/api/stories/folders/99999/stories",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 404
+
+    def test_another_users_folder(self, api_client, auth_headers, sample_story):
+        other = User.objects.create_user(username="other6", password="pass123")
+        folder = StoryFolder.objects.create(user=other, name="Their Folder")
+        StoryFolderMembership.objects.create(folder=folder, story=sample_story)
+        resp = api_client.get(
+            f"/api/stories/folders/{folder.id}/stories",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 404
+
+    def test_requires_auth(self, api_client):
+        resp = api_client.get("/api/stories/folders/1/stories")
+        assert resp.status_code == 401

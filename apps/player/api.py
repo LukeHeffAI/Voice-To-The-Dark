@@ -45,15 +45,45 @@ def stream_audio(request, story_id: int):
     range_header = request.headers.get("Range")
 
     if range_header:
-        # Parse Range: bytes=start-end
-        range_spec = range_header.replace("bytes=", "").strip()
-        parts = range_spec.split("-")
-        start = int(parts[0]) if parts[0] else 0
-        end = int(parts[1]) if len(parts) > 1 and parts[1] else file_size - 1
+        # Validate Range header format
+        if not range_header.startswith("bytes="):
+            raise HttpError(416, "Invalid Range header")
 
-        # Clamp to file bounds
-        start = max(0, min(start, file_size - 1))
-        end = max(start, min(end, file_size - 1))
+        range_spec = range_header[6:].strip()
+
+        # Reject multi-range requests
+        if "," in range_spec:
+            raise HttpError(416, "Multi-range requests are not supported")
+
+        parts = range_spec.split("-", 1)
+        if len(parts) != 2:
+            raise HttpError(416, "Invalid Range format")
+
+        try:
+            if parts[0] == "":
+                # Suffix range: bytes=-500 (last 500 bytes)
+                suffix_length = int(parts[1])
+                if suffix_length <= 0:
+                    raise HttpError(416, "Invalid suffix range")
+                start = max(0, file_size - suffix_length)
+                end = file_size - 1
+            elif parts[1] == "":
+                # Open-ended range: bytes=500-
+                start = int(parts[0])
+                end = file_size - 1
+            else:
+                # Standard range: bytes=0-499
+                start = int(parts[0])
+                end = int(parts[1])
+        except ValueError:
+            raise HttpError(416, "Invalid Range values")
+
+        # Validate bounds
+        if start < 0 or start >= file_size or end < start:
+            raise HttpError(416, "Range not satisfiable")
+
+        # Clamp end to file bounds
+        end = min(end, file_size - 1)
         content_length = end - start + 1
 
         def iter_range():

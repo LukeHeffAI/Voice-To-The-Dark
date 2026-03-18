@@ -94,6 +94,10 @@ export function deleteFolder(folderId: number) {
   return request<{ ok: boolean }>('DELETE', `/stories/folders/${folderId}`)
 }
 
+export function listFolderStories(folderId: number) {
+  return request<StoryListItem[]>('GET', `/stories/folders/${folderId}/stories`)
+}
+
 export function addStoryToFolder(folderId: number, storyId: number) {
   return request<{ ok: boolean; message: string }>('POST', `/stories/folders/${folderId}/add`, {
     body: { story_id: storyId },

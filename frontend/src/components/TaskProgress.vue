@@ -11,12 +11,19 @@ const emit = defineEmits<{
 
 const task = ref<TaskStatus | null>(null)
 const error = ref('')
-let pollTimer: ReturnType<typeof setInterval> | null = null
+let polling = false
+let pollTimeout: ReturnType<typeof setTimeout> | null = null
 
 async function poll() {
+  if (!polling) return
+
+  const currentTaskId = props.taskId
   try {
     task.value = await audioApi.getTaskStatus(props.taskId)
     error.value = ''
+
+    // Guard against stale responses after task ID changed
+    if (!polling || currentTaskId !== props.taskId) return
 
     if (task.value.status === 'completed') {
       stopPolling()
@@ -24,22 +31,32 @@ async function poll() {
     } else if (task.value.status === 'failed') {
       stopPolling()
       emit('failed', task.value.error_message)
+    } else {
+      scheduleNext()
     }
   } catch {
     error.value = 'Failed to check task status'
+    if (polling) scheduleNext()
+  }
+}
+
+function scheduleNext() {
+  if (polling) {
+    pollTimeout = setTimeout(poll, 2000)
   }
 }
 
 function startPolling() {
   stopPolling()
+  polling = true
   poll()
-  pollTimer = setInterval(poll, 2000)
 }
 
 function stopPolling() {
-  if (pollTimer) {
-    clearInterval(pollTimer)
-    pollTimer = null
+  polling = false
+  if (pollTimeout) {
+    clearTimeout(pollTimeout)
+    pollTimeout = null
   }
 }
 

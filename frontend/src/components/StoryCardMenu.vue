@@ -91,10 +91,19 @@ function onClickOutside(e: Event) {
   }
 }
 
+let mountTimer: ReturnType<typeof setTimeout> | null = null
+
 onMounted(() => {
-  setTimeout(() => document.addEventListener('click', onClickOutside), 0)
+  mountTimer = setTimeout(() => {
+    mountTimer = null
+    document.addEventListener('click', onClickOutside)
+  }, 0)
 })
 onUnmounted(() => {
+  if (mountTimer !== null) {
+    clearTimeout(mountTimer)
+    mountTimer = null
+  }
   document.removeEventListener('click', onClickOutside)
 })
 </script>

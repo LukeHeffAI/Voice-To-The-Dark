@@ -57,6 +57,7 @@ export async function request<T>(method: string, path: string, opts?: RequestOpt
     if (res.status === 401) {
       localStorage.removeItem('vttd_auth_token')
       localStorage.removeItem('vttd_auth_user')
+      localStorage.removeItem('auth')
     }
 
     throw new ApiError(res.status, body)
@@ -92,6 +93,13 @@ export async function uploadFile<T>(
     } catch {
       body = { detail: res.statusText }
     }
+
+    if (res.status === 401) {
+      localStorage.removeItem('vttd_auth_token')
+      localStorage.removeItem('vttd_auth_user')
+      localStorage.removeItem('auth')
+    }
+
     throw new ApiError(res.status, body)
   }
 
