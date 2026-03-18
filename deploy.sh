@@ -183,19 +183,38 @@ fi
 # ── 7. Create admin account ──────────────────────────────────────
 if $AUTO_MODE; then
     if [ -n "${ADMIN_USER:-}" ] && [ -n "${ADMIN_PASS:-}" ]; then
-        echo
-        echo "── Creating admin account ──"
-        $COMPOSE exec -T voice-to-the-dark python manage.py createuser "$ADMIN_USER" "$ADMIN_PASS" --admin
-        echo "  Admin account '$ADMIN_USER' created."
+        # Check if admin account already exists
+        if $COMPOSE exec -T voice-to-the-dark python manage.py checkuser "$ADMIN_USER" 2>/dev/null; then
+            echo
+            echo "── Admin account '$ADMIN_USER' already exists, skipping creation ──"
+        else
+            echo
+            echo "── Creating admin account ──"
+            $COMPOSE exec -T voice-to-the-dark python manage.py createuser "$ADMIN_USER" "$ADMIN_PASS" --admin
+            echo "  Admin account '$ADMIN_USER' created."
+        fi
     fi
 else
     echo
-    echo "── Create your admin account ──"
-    read -p "  Admin username: " ADMIN_USER
-    read -sp "  Admin password: " ADMIN_PASS
-    echo
+    # Check if any admin account exists
+    if $COMPOSE exec -T voice-to-the-dark python manage.py checkuser --any-admin 2>/dev/null; then
+        echo "── Admin account already exists ──"
+        read -p "  Create another admin account? (y/N): " CREATE_ADMIN
+    else
+        CREATE_ADMIN="y"
+    fi
 
-    $COMPOSE exec -T voice-to-the-dark python manage.py createuser "$ADMIN_USER" "$ADMIN_PASS" --admin
+    if [[ "$CREATE_ADMIN" =~ ^[Yy] ]]; then
+        echo "── Create your admin account ──"
+        read -p "  Admin username: " ADMIN_USER
+        read -sp "  Admin password: " ADMIN_PASS
+        echo
+
+        $COMPOSE exec -T voice-to-the-dark python manage.py createuser "$ADMIN_USER" "$ADMIN_PASS" --admin
+        echo "  Admin account created."
+    else
+        echo "  Skipping admin account creation."
+    fi
     echo
 fi
 
