@@ -1,4 +1,4 @@
-"""Unit tests for app.services.audio_mixer.
+"""Unit tests for apps.audio.services.audio_mixer.
 
 Tests cover all public functions, internal helpers, data classes, and constants
 in the audio mixer module. Audio data is created via pydub's AudioSegment.silent()
@@ -15,8 +15,8 @@ from unittest.mock import patch, MagicMock
 import pytest
 from pydub import AudioSegment
 
-from app.schemas.narration import ScriptSegment, SegmentType
-from app.services.audio_mixer import (
+from apps.audio.schemas import ScriptSegment, SegmentType
+from apps.audio.services.audio_mixer import (
     AMBIENT_VOLUME_DB,
     SFX_VOLUME_DB,
     CROSSFADE_MS,
@@ -182,7 +182,7 @@ class TestMixNarration:
         result = mix_narration([])
         assert result.dBFS == float("-inf")
 
-    @patch("app.services.audio_mixer.AudioSegment.from_file")
+    @patch("apps.audio.services.audio_mixer.AudioSegment.from_file")
     def test_single_narration_returns_audiosegment(self, mock_from_file):
         audio = _silence(2000)
         mock_from_file.return_value = audio
@@ -192,7 +192,7 @@ class TestMixNarration:
         # Duration should be at least 2000ms (the voice segment length)
         assert len(result) >= 2000
 
-    @patch("app.services.audio_mixer.AudioSegment.from_file")
+    @patch("apps.audio.services.audio_mixer.AudioSegment.from_file")
     def test_multiple_segments_mixed(self, mock_from_file):
         mock_from_file.return_value = _silence(1000)
         segments = [
@@ -212,7 +212,7 @@ class TestMixNarration:
 class TestBuildTimeline:
     """Tests for _build_timeline — constructing the timeline from segment files."""
 
-    @patch("app.services.audio_mixer.AudioSegment.from_file")
+    @patch("apps.audio.services.audio_mixer.AudioSegment.from_file")
     def test_voice_segments_advance_playhead(self, mock_from_file):
         """Narration and dialogue segments should be placed sequentially."""
         mock_from_file.return_value = _silence(1000)
@@ -226,7 +226,7 @@ class TestBuildTimeline:
         assert tl.voice_track[1].position_ms == 1000
         assert tl.total_duration_ms == 2000
 
-    @patch("app.services.audio_mixer.AudioSegment.from_file")
+    @patch("apps.audio.services.audio_mixer.AudioSegment.from_file")
     def test_dialogue_advances_playhead(self, mock_from_file):
         mock_from_file.return_value = _silence(500)
         segments = [
@@ -238,7 +238,7 @@ class TestBuildTimeline:
         assert tl.voice_track[1].position_ms == 500
         assert tl.total_duration_ms == 1000
 
-    @patch("app.services.audio_mixer.AudioSegment.from_file")
+    @patch("apps.audio.services.audio_mixer.AudioSegment.from_file")
     def test_sfx_placed_at_playhead_and_advances(self, mock_from_file):
         """SFX should be placed at the current playhead and advance it."""
         mock_from_file.return_value = _silence(800)
@@ -252,7 +252,7 @@ class TestBuildTimeline:
         # SFX advances playhead in this implementation
         assert tl.total_duration_ms == 1600
 
-    @patch("app.services.audio_mixer.AudioSegment.from_file")
+    @patch("apps.audio.services.audio_mixer.AudioSegment.from_file")
     def test_ambient_placed_at_playhead_no_advance(self, mock_from_file):
         """Ambient segments should be placed at the playhead but NOT advance it."""
         mock_from_file.return_value = _silence(1000)
@@ -269,7 +269,7 @@ class TestBuildTimeline:
         assert tl.voice_track[1].position_ms == 1000
         assert tl.total_duration_ms == 2000
 
-    @patch("app.services.audio_mixer.AudioSegment.from_file")
+    @patch("apps.audio.services.audio_mixer.AudioSegment.from_file")
     def test_pause_segments_advance_playhead(self, mock_from_file):
         """Pause segments should advance the playhead like voice segments."""
         mock_from_file.return_value = _silence(1500)
@@ -286,7 +286,7 @@ class TestBuildTimeline:
         assert tl.voice_track[2].position_ms == 3000
         assert tl.total_duration_ms == 4500
 
-    @patch("app.services.audio_mixer.AudioSegment.from_file")
+    @patch("apps.audio.services.audio_mixer.AudioSegment.from_file")
     def test_empty_timeline_has_zero_duration(self, mock_from_file):
         """Empty segment list yields an empty timeline."""
         tl = _build_timeline([])
@@ -295,7 +295,7 @@ class TestBuildTimeline:
         assert tl.sfx_entries == []
         assert tl.ambient_entries == []
 
-    @patch("app.services.audio_mixer.AudioSegment.from_file")
+    @patch("apps.audio.services.audio_mixer.AudioSegment.from_file")
     def test_mixed_segment_types_ordering(self, mock_from_file):
         """Complex scenario: narration, sfx, ambient, narration, pause, narration."""
         # Different durations per call
@@ -336,7 +336,7 @@ class TestBuildTimeline:
 
         assert tl.total_duration_ms == 4100
 
-    @patch("app.services.audio_mixer.AudioSegment.from_file")
+    @patch("apps.audio.services.audio_mixer.AudioSegment.from_file")
     def test_from_file_called_with_mp3_format(self, mock_from_file):
         mock_from_file.return_value = _silence(500)
         segments = [("/some/file.mp3", _seg(SegmentType.NARRATION, text="Hi"))]
@@ -781,7 +781,7 @@ class TestNormalize:
 class TestMixerIntegration:
     """Higher-level tests that exercise multiple mixer functions together."""
 
-    @patch("app.services.audio_mixer.AudioSegment.from_file")
+    @patch("apps.audio.services.audio_mixer.AudioSegment.from_file")
     def test_full_pipeline_narration_only(self, mock_from_file):
         """Single narration through the full mix pipeline."""
         mock_from_file.return_value = _tone(3000, -15.0)
@@ -792,7 +792,7 @@ class TestMixerIntegration:
         # Should be normalized near target loudness
         assert result.dBFS != float("-inf")
 
-    @patch("app.services.audio_mixer.AudioSegment.from_file")
+    @patch("apps.audio.services.audio_mixer.AudioSegment.from_file")
     def test_full_pipeline_with_all_segment_types(self, mock_from_file):
         """All segment types through the full pipeline."""
         durations = [2000, 500, 1500, 1000, 800, 1200]
@@ -817,7 +817,7 @@ class TestMixerIntegration:
         assert isinstance(result, AudioSegment)
         assert len(result) > 0
 
-    @patch("app.services.audio_mixer.AudioSegment.from_file")
+    @patch("apps.audio.services.audio_mixer.AudioSegment.from_file")
     def test_build_then_render_then_normalize(self, mock_from_file):
         """Manually step through build -> render -> fades -> normalize."""
         mock_from_file.return_value = _tone(2000, -15.0)
@@ -837,7 +837,7 @@ class TestMixerIntegration:
         normalized = _normalize(faded)
         assert len(normalized) == len(faded)
 
-    @patch("app.services.audio_mixer.AudioSegment.from_file")
+    @patch("apps.audio.services.audio_mixer.AudioSegment.from_file")
     def test_ambient_does_not_affect_total_duration(self, mock_from_file):
         """Adding ambient segments should not change total_duration_ms."""
         mock_from_file.return_value = _silence(1000)
@@ -857,7 +857,7 @@ class TestMixerIntegration:
 
         assert tl_no_amb.total_duration_ms == tl_with_amb.total_duration_ms
 
-    @patch("app.services.audio_mixer.AudioSegment.from_file")
+    @patch("apps.audio.services.audio_mixer.AudioSegment.from_file")
     def test_sfx_does_advance_playhead(self, mock_from_file):
         """SFX should advance the playhead so following segments start later."""
         mock_from_file.return_value = _silence(500)

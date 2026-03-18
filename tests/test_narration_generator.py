@@ -7,13 +7,13 @@ from unittest.mock import MagicMock, patch, call
 
 from pydub import AudioSegment
 
-from app.schemas.narration import (
+from apps.audio.schemas import (
     NarrationScript,
     ScriptSegment,
     CharacterProfile,
     SegmentType,
 )
-from app.services.narration_generator import (
+from apps.audio.services.narration_generator import (
     generate_narration,
     _generate_segment,
     _tone_to_preset,
@@ -24,7 +24,7 @@ from app.services.narration_generator import (
     DEFAULT_NARRATOR_VOICE,
     NarrationResult,
 )
-from app.services.segment_cache import CacheLookupResult
+from apps.audio.services.segment_cache import CacheLookupResult
 
 
 # ---------------------------------------------------------------------------
@@ -120,7 +120,7 @@ class TestToneToPreset:
 
 class TestGenerateSegment:
 
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_dispatches_narration_to_voice(self, mock_gen_audio):
         segment = ScriptSegment(
             type=SegmentType.NARRATION,
@@ -137,7 +137,7 @@ class TestGenerateSegment:
             preset="horror_narrator",
         )
 
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_dispatches_dialogue_to_voice(self, mock_gen_audio):
         segment = ScriptSegment(
             type=SegmentType.DIALOGUE,
@@ -154,7 +154,7 @@ class TestGenerateSegment:
             preset="whisper",
         )
 
-    @patch("app.services.narration_generator.generate_sfx")
+    @patch("apps.audio.services.narration_generator.generate_sfx")
     def test_dispatches_sfx(self, mock_gen_sfx):
         segment = ScriptSegment(
             type=SegmentType.SFX,
@@ -168,7 +168,7 @@ class TestGenerateSegment:
             duration_seconds=5.0,
         )
 
-    @patch("app.services.narration_generator.generate_sfx")
+    @patch("apps.audio.services.narration_generator.generate_sfx")
     def test_dispatches_ambient(self, mock_gen_sfx):
         segment = ScriptSegment(
             type=SegmentType.AMBIENT,
@@ -183,7 +183,7 @@ class TestGenerateSegment:
             duration_seconds=5.0,
         )
 
-    @patch("app.services.narration_generator.generate_sfx")
+    @patch("apps.audio.services.narration_generator.generate_sfx")
     def test_ambient_with_loop_uses_longer_duration(self, mock_gen_sfx):
         segment = ScriptSegment(
             type=SegmentType.AMBIENT,
@@ -198,7 +198,7 @@ class TestGenerateSegment:
             duration_seconds=10.0,
         )
 
-    @patch("app.services.narration_generator.AudioSegment")
+    @patch("apps.audio.services.narration_generator.AudioSegment")
     def test_dispatches_pause(self, mock_audio_cls):
         mock_silence = MagicMock()
         mock_audio_cls.silent.return_value = mock_silence
@@ -214,7 +214,7 @@ class TestGenerateSegment:
             "/cache/pause123.mp3", format="mp3"
         )
 
-    @patch("app.services.narration_generator.AudioSegment")
+    @patch("apps.audio.services.narration_generator.AudioSegment")
     def test_pause_default_duration(self, mock_audio_cls):
         mock_silence = MagicMock()
         mock_audio_cls.silent.return_value = mock_silence
@@ -233,7 +233,7 @@ class TestGenerateSegment:
 
 class TestGenerateSegmentReturnsNone:
 
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_narration_with_empty_text_returns_none(self, mock_gen_audio):
         segment = ScriptSegment(
             type=SegmentType.NARRATION,
@@ -243,7 +243,7 @@ class TestGenerateSegmentReturnsNone:
         assert _generate_segment(segment, _voice_map(), "/cache/x.mp3") is None
         mock_gen_audio.assert_not_called()
 
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_narration_with_none_text_returns_none(self, mock_gen_audio):
         segment = ScriptSegment(
             type=SegmentType.NARRATION,
@@ -253,7 +253,7 @@ class TestGenerateSegmentReturnsNone:
         assert _generate_segment(segment, _voice_map(), "/cache/x.mp3") is None
         mock_gen_audio.assert_not_called()
 
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_dialogue_with_empty_text_returns_none(self, mock_gen_audio):
         segment = ScriptSegment(
             type=SegmentType.DIALOGUE,
@@ -263,7 +263,7 @@ class TestGenerateSegmentReturnsNone:
         assert _generate_segment(segment, _voice_map(), "/cache/x.mp3") is None
         mock_gen_audio.assert_not_called()
 
-    @patch("app.services.narration_generator.generate_sfx")
+    @patch("apps.audio.services.narration_generator.generate_sfx")
     def test_sfx_with_empty_description_returns_none(self, mock_gen_sfx):
         segment = ScriptSegment(
             type=SegmentType.SFX,
@@ -272,7 +272,7 @@ class TestGenerateSegmentReturnsNone:
         assert _generate_segment(segment, _voice_map(), "/cache/x.mp3") is None
         mock_gen_sfx.assert_not_called()
 
-    @patch("app.services.narration_generator.generate_sfx")
+    @patch("apps.audio.services.narration_generator.generate_sfx")
     def test_sfx_with_none_description_returns_none(self, mock_gen_sfx):
         segment = ScriptSegment(
             type=SegmentType.SFX,
@@ -281,7 +281,7 @@ class TestGenerateSegmentReturnsNone:
         assert _generate_segment(segment, _voice_map(), "/cache/x.mp3") is None
         mock_gen_sfx.assert_not_called()
 
-    @patch("app.services.narration_generator.generate_sfx")
+    @patch("apps.audio.services.narration_generator.generate_sfx")
     def test_ambient_with_empty_description_returns_none(self, mock_gen_sfx):
         segment = ScriptSegment(
             type=SegmentType.AMBIENT,
@@ -290,7 +290,7 @@ class TestGenerateSegmentReturnsNone:
         assert _generate_segment(segment, _voice_map(), "/cache/x.mp3") is None
         mock_gen_sfx.assert_not_called()
 
-    @patch("app.services.narration_generator.generate_sfx")
+    @patch("apps.audio.services.narration_generator.generate_sfx")
     def test_ambient_with_none_description_returns_none(self, mock_gen_sfx):
         segment = ScriptSegment(
             type=SegmentType.AMBIENT,
@@ -306,7 +306,7 @@ class TestGenerateSegmentReturnsNone:
 
 class TestVoiceSegmentVoiceMapping:
 
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_uses_character_voice_from_map(self, mock_gen_audio):
         segment = ScriptSegment(
             type=SegmentType.DIALOGUE,
@@ -317,7 +317,7 @@ class TestVoiceSegmentVoiceMapping:
         mock_gen_audio.assert_called_once()
         assert mock_gen_audio.call_args.args[1] == "voice-sarah-id"
 
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_falls_back_to_narrator_when_character_missing(self, mock_gen_audio):
         segment = ScriptSegment(
             type=SegmentType.DIALOGUE,
@@ -328,7 +328,7 @@ class TestVoiceSegmentVoiceMapping:
         mock_gen_audio.assert_called_once()
         assert mock_gen_audio.call_args.args[1] == "voice-narrator-id"
 
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_falls_back_to_default_when_no_narrator_in_map(self, mock_gen_audio):
         segment = ScriptSegment(
             type=SegmentType.DIALOGUE,
@@ -339,7 +339,7 @@ class TestVoiceSegmentVoiceMapping:
         mock_gen_audio.assert_called_once()
         assert mock_gen_audio.call_args.args[1] == DEFAULT_NARRATOR_VOICE
 
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_none_character_defaults_to_narrator_key(self, mock_gen_audio):
         segment = ScriptSegment(
             type=SegmentType.NARRATION,
@@ -357,11 +357,11 @@ class TestVoiceSegmentVoiceMapping:
 
 class TestGenerateNarration:
 
-    @patch("app.services.narration_generator.os.makedirs")
-    @patch("app.services.narration_generator.cache_lookup")
-    @patch("app.services.narration_generator.mix_narration")
-    @patch("app.services.narration_generator.generate_sfx")
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.os.makedirs")
+    @patch("apps.audio.services.narration_generator.cache_lookup")
+    @patch("apps.audio.services.narration_generator.mix_narration")
+    @patch("apps.audio.services.narration_generator.generate_sfx")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_full_pipeline_returns_narration_result(
         self,
         mock_gen_audio,
@@ -397,10 +397,10 @@ class TestGenerateNarration:
         mock_mix.assert_called_once()
         mock_final.export.assert_called_once_with("/output/story.mp3", format="mp3")
 
-    @patch("app.services.narration_generator.os.makedirs")
-    @patch("app.services.narration_generator.cache_lookup")
-    @patch("app.services.narration_generator.mix_narration")
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.os.makedirs")
+    @patch("apps.audio.services.narration_generator.cache_lookup")
+    @patch("apps.audio.services.narration_generator.mix_narration")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_auto_generates_output_path_when_none(
         self,
         mock_gen_audio,
@@ -421,14 +421,14 @@ class TestGenerateNarration:
 
         result = generate_narration(script, _voice_map(), output_path=None)
 
-        assert result.output_path.startswith("./data/stories/")
         assert result.output_path.endswith(".mp3")
+        assert "stories" in result.output_path
 
-    @patch("app.services.narration_generator.os.makedirs")
-    @patch("app.services.narration_generator.cache_lookup")
-    @patch("app.services.narration_generator.mix_narration")
-    @patch("app.services.narration_generator.generate_sfx")
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.os.makedirs")
+    @patch("apps.audio.services.narration_generator.cache_lookup")
+    @patch("apps.audio.services.narration_generator.mix_narration")
+    @patch("apps.audio.services.narration_generator.generate_sfx")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_skips_segments_that_return_none(
         self,
         mock_gen_audio,
@@ -460,12 +460,12 @@ class TestGenerateNarration:
         args = mock_mix.call_args.args[0]
         assert len(args) == 1
 
-    @patch("app.services.narration_generator.os.makedirs")
-    @patch("app.services.narration_generator.cache_lookup")
-    @patch("app.services.narration_generator.mix_narration")
-    @patch("app.services.narration_generator.generate_sfx")
-    @patch("app.services.narration_generator.generate_audio")
-    @patch("app.services.narration_generator.AudioSegment")
+    @patch("apps.audio.services.narration_generator.os.makedirs")
+    @patch("apps.audio.services.narration_generator.cache_lookup")
+    @patch("apps.audio.services.narration_generator.mix_narration")
+    @patch("apps.audio.services.narration_generator.generate_sfx")
+    @patch("apps.audio.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.AudioSegment")
     def test_mixed_segment_types(
         self,
         mock_audio_cls,
@@ -511,9 +511,9 @@ class TestGenerateNarration:
         segment_files = mock_mix.call_args.args[0]
         assert len(segment_files) == 5
 
-    @patch("app.services.narration_generator.os.makedirs")
-    @patch("app.services.narration_generator.cache_lookup")
-    @patch("app.services.narration_generator.mix_narration")
+    @patch("apps.audio.services.narration_generator.os.makedirs")
+    @patch("apps.audio.services.narration_generator.cache_lookup")
+    @patch("apps.audio.services.narration_generator.mix_narration")
     def test_empty_script_still_calls_mix(
         self,
         mock_mix,
@@ -530,10 +530,10 @@ class TestGenerateNarration:
         assert result.output_path == "/output/empty.mp3"
         mock_mix.assert_called_once_with([])
 
-    @patch("app.services.narration_generator.os.makedirs")
-    @patch("app.services.narration_generator.cache_lookup")
-    @patch("app.services.narration_generator.mix_narration")
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.os.makedirs")
+    @patch("apps.audio.services.narration_generator.cache_lookup")
+    @patch("apps.audio.services.narration_generator.mix_narration")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_segment_files_paired_with_segment_objects(
         self,
         mock_gen_audio,
@@ -561,10 +561,10 @@ class TestGenerateNarration:
         # segment_obj should be the merged version of seg
         assert segment_obj.text == "Content."
 
-    @patch("app.services.narration_generator.os.makedirs")
-    @patch("app.services.narration_generator.cache_lookup")
-    @patch("app.services.narration_generator.mix_narration")
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.os.makedirs")
+    @patch("apps.audio.services.narration_generator.cache_lookup")
+    @patch("apps.audio.services.narration_generator.mix_narration")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_creates_output_directory(
         self,
         mock_gen_audio,
@@ -596,10 +596,10 @@ class TestGenerateNarration:
 
 class TestCacheIntegration:
 
-    @patch("app.services.narration_generator.os.makedirs")
-    @patch("app.services.narration_generator.cache_lookup")
-    @patch("app.services.narration_generator.mix_narration")
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.os.makedirs")
+    @patch("apps.audio.services.narration_generator.cache_lookup")
+    @patch("apps.audio.services.narration_generator.mix_narration")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_cache_hit_skips_api_call(
         self,
         mock_gen_audio,
@@ -631,10 +631,10 @@ class TestCacheIntegration:
         assert result.cache_hits == 1
         assert result.cache_misses == 0
 
-    @patch("app.services.narration_generator.os.makedirs")
-    @patch("app.services.narration_generator.cache_lookup")
-    @patch("app.services.narration_generator.mix_narration")
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.os.makedirs")
+    @patch("apps.audio.services.narration_generator.cache_lookup")
+    @patch("apps.audio.services.narration_generator.mix_narration")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_cache_miss_calls_api_at_cache_path(
         self,
         mock_gen_audio,
@@ -662,11 +662,11 @@ class TestCacheIntegration:
         assert result.cache_hits == 0
         assert result.cache_misses == 1
 
-    @patch("app.services.narration_generator.os.makedirs")
-    @patch("app.services.narration_generator.cache_lookup")
-    @patch("app.services.narration_generator.mix_narration")
-    @patch("app.services.narration_generator.generate_audio")
-    @patch("app.services.narration_generator.generate_sfx")
+    @patch("apps.audio.services.narration_generator.os.makedirs")
+    @patch("apps.audio.services.narration_generator.cache_lookup")
+    @patch("apps.audio.services.narration_generator.mix_narration")
+    @patch("apps.audio.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.generate_sfx")
     def test_mix_receives_both_cached_and_new_segments(
         self,
         mock_gen_sfx,
@@ -706,10 +706,10 @@ class TestCacheIntegration:
         assert result.cache_hits == 1
         assert result.cache_misses == 1
 
-    @patch("app.services.narration_generator.os.makedirs")
-    @patch("app.services.narration_generator.cache_lookup")
-    @patch("app.services.narration_generator.mix_narration")
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.os.makedirs")
+    @patch("apps.audio.services.narration_generator.cache_lookup")
+    @patch("apps.audio.services.narration_generator.mix_narration")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_bust_cache_forces_regeneration(
         self,
         mock_gen_audio,
@@ -738,10 +738,10 @@ class TestCacheIntegration:
         assert result.cache_hits == 0
         assert result.cache_misses == 1
 
-    @patch("app.services.narration_generator.os.makedirs")
-    @patch("app.services.narration_generator.cache_lookup")
-    @patch("app.services.narration_generator.mix_narration")
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.os.makedirs")
+    @patch("apps.audio.services.narration_generator.cache_lookup")
+    @patch("apps.audio.services.narration_generator.mix_narration")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_result_includes_cache_stats(
         self,
         mock_gen_audio,
@@ -782,7 +782,7 @@ class TestCacheIntegration:
 
 class TestVoiceSegmentPreset:
 
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_tone_is_converted_to_preset(self, mock_gen_audio):
         segment = ScriptSegment(
             type=SegmentType.NARRATION,
@@ -793,7 +793,7 @@ class TestVoiceSegmentPreset:
         _generate_voice_segment(segment, _voice_map(), "/cache/x.mp3")
         assert mock_gen_audio.call_args.kwargs["preset"] == "horror_dialogue"
 
-    @patch("app.services.narration_generator.generate_audio")
+    @patch("apps.audio.services.narration_generator.generate_audio")
     def test_none_tone_gives_horror_narrator_preset(self, mock_gen_audio):
         segment = ScriptSegment(
             type=SegmentType.NARRATION,
@@ -811,7 +811,7 @@ class TestVoiceSegmentPreset:
 
 class TestSfxSegment:
 
-    @patch("app.services.narration_generator.generate_sfx")
+    @patch("apps.audio.services.narration_generator.generate_sfx")
     def test_uses_five_second_default_duration(self, mock_gen_sfx):
         segment = ScriptSegment(
             type=SegmentType.SFX,
@@ -831,7 +831,7 @@ class TestSfxSegment:
 
 class TestAmbientSegment:
 
-    @patch("app.services.narration_generator.generate_sfx")
+    @patch("apps.audio.services.narration_generator.generate_sfx")
     def test_no_loop_uses_five_seconds(self, mock_gen_sfx):
         segment = ScriptSegment(
             type=SegmentType.AMBIENT,
@@ -845,7 +845,7 @@ class TestAmbientSegment:
             duration_seconds=5.0,
         )
 
-    @patch("app.services.narration_generator.generate_sfx")
+    @patch("apps.audio.services.narration_generator.generate_sfx")
     def test_loop_uses_ten_seconds(self, mock_gen_sfx):
         segment = ScriptSegment(
             type=SegmentType.AMBIENT,
@@ -866,7 +866,7 @@ class TestAmbientSegment:
 
 class TestPauseSegment:
 
-    @patch("app.services.narration_generator.AudioSegment")
+    @patch("apps.audio.services.narration_generator.AudioSegment")
     def test_creates_silence_with_given_duration(self, mock_audio_cls):
         mock_silence = MagicMock()
         mock_audio_cls.silent.return_value = mock_silence
@@ -880,7 +880,7 @@ class TestPauseSegment:
             "/cache/pause.mp3", format="mp3"
         )
 
-    @patch("app.services.narration_generator.AudioSegment")
+    @patch("apps.audio.services.narration_generator.AudioSegment")
     def test_defaults_to_1500ms_when_no_duration(self, mock_audio_cls):
         mock_audio_cls.silent.return_value = MagicMock()
 

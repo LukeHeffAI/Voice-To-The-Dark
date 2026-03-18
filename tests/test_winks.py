@@ -1,4 +1,4 @@
-"""Unit tests for app.services.winks."""
+"""Unit tests for apps.audio.services.winks."""
 
 import json
 import math
@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import app.services.winks as winks_module
-from app.services.winks import (
+import apps.audio.services.winks as winks_module
+from apps.audio.services.winks import (
     TOTAL_WINKS,
     _estimate_tts_chars,
     estimate_stories_winks,
@@ -65,13 +65,13 @@ class TestGetSubscriptionInfo:
     def setup_method(self):
         _reset_cache()
 
-    @patch("app.services.winks.settings")
+    @patch("apps.audio.services.winks.settings")
     def test_returns_none_when_no_api_key(self, mock_settings):
         mock_settings.ELEVENLABS_API_KEY = None
         assert get_subscription_info() is None
 
-    @patch("app.services.winks.settings")
-    @patch("app.services.winks.requests.get")
+    @patch("apps.audio.services.winks.settings")
+    @patch("apps.audio.services.winks.requests.get")
     def test_returns_data_on_success(self, mock_get, mock_settings):
         mock_settings.ELEVENLABS_API_KEY = "test-key"
         mock_resp = MagicMock()
@@ -82,8 +82,8 @@ class TestGetSubscriptionInfo:
 
         assert result == {"character_limit": 10000, "character_count": 2000}
 
-    @patch("app.services.winks.settings")
-    @patch("app.services.winks.requests.get")
+    @patch("apps.audio.services.winks.settings")
+    @patch("apps.audio.services.winks.requests.get")
     def test_caches_successful_response(self, mock_get, mock_settings):
         mock_settings.ELEVENLABS_API_KEY = "test-key"
         mock_resp = MagicMock()
@@ -95,8 +95,8 @@ class TestGetSubscriptionInfo:
 
         assert mock_get.call_count == 1
 
-    @patch("app.services.winks.settings")
-    @patch("app.services.winks.requests.get")
+    @patch("apps.audio.services.winks.settings")
+    @patch("apps.audio.services.winks.requests.get")
     def test_caches_failure_to_prevent_retry(self, mock_get, mock_settings):
         """A failed request should be cached so the next call within the
         failure TTL does not re-issue the HTTP request."""
@@ -110,8 +110,8 @@ class TestGetSubscriptionInfo:
         assert result2 is None
         assert mock_get.call_count == 1
 
-    @patch("app.services.winks.settings")
-    @patch("app.services.winks.requests.get")
+    @patch("apps.audio.services.winks.settings")
+    @patch("apps.audio.services.winks.requests.get")
     def test_retries_after_failure_ttl_expires(self, mock_get, mock_settings):
         """After the failure TTL has passed, the function should retry."""
         mock_settings.ELEVENLABS_API_KEY = "test-key"
@@ -136,16 +136,16 @@ class TestGetWinksRemaining:
     def setup_method(self):
         _reset_cache()
 
-    @patch("app.services.winks.get_subscription_info", return_value=None)
+    @patch("apps.audio.services.winks.get_subscription_info", return_value=None)
     def test_returns_none_when_no_subscription_info(self, _):
         assert get_winks_remaining() is None
 
-    @patch("app.services.winks.get_subscription_info", return_value={"character_limit": 0, "character_count": 0})
+    @patch("apps.audio.services.winks.get_subscription_info", return_value={"character_limit": 0, "character_count": 0})
     def test_returns_none_when_character_limit_is_zero(self, _):
         assert get_winks_remaining() is None
 
     @patch(
-        "app.services.winks.get_subscription_info",
+        "apps.audio.services.winks.get_subscription_info",
         return_value={"character_limit": 10000, "character_count": 0},
     )
     def test_full_quota_returns_total_winks(self, _):
@@ -154,7 +154,7 @@ class TestGetWinksRemaining:
         assert remaining == TOTAL_WINKS
 
     @patch(
-        "app.services.winks.get_subscription_info",
+        "apps.audio.services.winks.get_subscription_info",
         return_value={"character_limit": 10000, "character_count": 10000},
     )
     def test_exhausted_quota_returns_zero_remaining(self, _):
@@ -162,7 +162,7 @@ class TestGetWinksRemaining:
         assert remaining == 0
 
     @patch(
-        "app.services.winks.get_subscription_info",
+        "apps.audio.services.winks.get_subscription_info",
         return_value={"character_limit": 10000, "character_count": 5000},
     )
     def test_half_quota_returns_half_winks(self, _):
@@ -172,7 +172,7 @@ class TestGetWinksRemaining:
         assert total == TOTAL_WINKS
 
     @patch(
-        "app.services.winks.get_subscription_info",
+        "apps.audio.services.winks.get_subscription_info",
         return_value={"character_limit": 10000, "character_count": 15000},
     )
     def test_over_limit_clamped_to_zero(self, _):
@@ -242,13 +242,13 @@ class TestEstimateStoryWinks:
     def setup_method(self):
         _reset_cache()
 
-    @patch("app.services.winks.get_subscription_info", return_value=None)
+    @patch("apps.audio.services.winks.get_subscription_info", return_value=None)
     def test_returns_none_when_no_subscription_info(self, _):
         story = _make_story(text_content="Some text.")
         assert estimate_story_winks(story) is None
 
     @patch(
-        "app.services.winks.get_subscription_info",
+        "apps.audio.services.winks.get_subscription_info",
         return_value={"character_limit": 10000, "character_count": 0},
     )
     def test_minimum_one_wink(self, _):
@@ -260,7 +260,7 @@ class TestEstimateStoryWinks:
         assert result == 1
 
     @patch(
-        "app.services.winks.get_subscription_info",
+        "apps.audio.services.winks.get_subscription_info",
         return_value={"character_limit": 10000, "character_count": 0},
     )
     def test_cost_rounds_up(self, _):
@@ -273,7 +273,7 @@ class TestEstimateStoryWinks:
         assert result == 1
 
     @patch(
-        "app.services.winks.get_subscription_info",
+        "apps.audio.services.winks.get_subscription_info",
         return_value={"character_limit": 10000, "character_count": 0},
     )
     def test_cost_proportional_to_text_length(self, _):
@@ -285,7 +285,7 @@ class TestEstimateStoryWinks:
         assert result == 10
 
     @patch(
-        "app.services.winks.get_subscription_info",
+        "apps.audio.services.winks.get_subscription_info",
         return_value={"character_limit": 10000, "character_count": 0},
     )
     def test_returns_none_when_no_text(self, _):
@@ -304,13 +304,13 @@ class TestEstimateStoriesWinks:
     def setup_method(self):
         _reset_cache()
 
-    @patch("app.services.winks.get_subscription_info", return_value=None)
+    @patch("apps.audio.services.winks.get_subscription_info", return_value=None)
     def test_returns_empty_dict_when_no_subscription_info(self, _):
         stories = [_make_story(text_content="text", story_id=1)]
         assert estimate_stories_winks(stories) == {}
 
     @patch(
-        "app.services.winks.get_subscription_info",
+        "apps.audio.services.winks.get_subscription_info",
         return_value={"character_limit": 10000, "character_count": 0},
     )
     def test_skips_stories_with_audio_file(self, _):
@@ -327,7 +327,7 @@ class TestEstimateStoriesWinks:
         assert 2 in result
 
     @patch(
-        "app.services.winks.get_subscription_info",
+        "apps.audio.services.winks.get_subscription_info",
         return_value={"character_limit": 10000, "character_count": 0},
     )
     def test_returns_dict_mapping_ids_to_costs(self, _):
@@ -344,7 +344,7 @@ class TestEstimateStoriesWinks:
         assert result[20] == 20  # ceil(5000*40/10000)
 
     @patch(
-        "app.services.winks.get_subscription_info",
+        "apps.audio.services.winks.get_subscription_info",
         return_value={"character_limit": 10000, "character_count": 0},
     )
     def test_skips_stories_with_no_text(self, _):

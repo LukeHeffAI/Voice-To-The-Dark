@@ -6,7 +6,7 @@ import types
 import pytest
 from unittest.mock import MagicMock, patch, call
 
-from app.services.script_adapter import (
+from apps.audio.services.script_adapter import (
     generate_script,
     _adapt_section,
     _adapt_long_story,
@@ -14,7 +14,7 @@ from app.services.script_adapter import (
     _TruncatedResponseError,
     MAX_OUTPUT_TOKENS,
 )
-from app.schemas.narration import NarrationScript
+from apps.audio.schemas import NarrationScript
 
 
 # ---------------------------------------------------------------------------
@@ -64,7 +64,7 @@ class TestTokenLimit:
 
 class TestAdaptSectionTruncation:
 
-    @patch("app.services.script_adapter.Anthropic")
+    @patch("apps.audio.services.script_adapter.Anthropic")
     def test_raises_on_max_tokens_stop_reason(self, _mock_cls):
         client = MagicMock()
         client.messages.create.return_value = _mock_response(
@@ -73,7 +73,7 @@ class TestAdaptSectionTruncation:
         with pytest.raises(_TruncatedResponseError):
             _adapt_section(client, "My Story", "Some text")
 
-    @patch("app.services.script_adapter.Anthropic")
+    @patch("apps.audio.services.script_adapter.Anthropic")
     def test_parses_valid_json_on_end_turn(self, _mock_cls):
         client = MagicMock()
         client.messages.create.return_value = _mock_response(
@@ -83,7 +83,7 @@ class TestAdaptSectionTruncation:
         assert isinstance(result, NarrationScript)
         assert result.title == "Good Story"
 
-    @patch("app.services.script_adapter.Anthropic")
+    @patch("apps.audio.services.script_adapter.Anthropic")
     def test_strips_markdown_fences(self, _mock_cls):
         client = MagicMock()
         fenced = "```json\n" + _make_script_json("Fenced") + "\n```"
@@ -93,7 +93,7 @@ class TestAdaptSectionTruncation:
         result = _adapt_section(client, "Fenced", "Some text")
         assert result.title == "Fenced"
 
-    @patch("app.services.script_adapter.Anthropic")
+    @patch("apps.audio.services.script_adapter.Anthropic")
     def test_raises_value_error_on_bad_json(self, _mock_cls):
         client = MagicMock()
         client.messages.create.return_value = _mock_response(
@@ -109,7 +109,7 @@ class TestAdaptSectionTruncation:
 
 class TestGenerateScriptTruncationRecovery:
 
-    @patch("app.services.script_adapter.Anthropic")
+    @patch("apps.audio.services.script_adapter.Anthropic")
     def test_single_section_truncation_triggers_resplit(self, mock_cls):
         """When a single-section story truncates, generate_script should
         re-split into smaller pieces and process via _adapt_long_story."""
@@ -138,7 +138,7 @@ class TestGenerateScriptTruncationRecovery:
         # followed by calls for the re-split sections.
         assert client.messages.create.call_count >= 2
 
-    @patch("app.services.script_adapter.Anthropic")
+    @patch("apps.audio.services.script_adapter.Anthropic")
     def test_short_text_succeeds_without_split(self, mock_cls):
         """Short stories that fit in one section should work normally."""
         client = MagicMock()
@@ -158,7 +158,7 @@ class TestGenerateScriptTruncationRecovery:
 
 class TestAdaptLongStoryTruncation:
 
-    @patch("app.services.script_adapter.Anthropic")
+    @patch("apps.audio.services.script_adapter.Anthropic")
     def test_splits_truncated_section_and_retries(self, _mock_cls):
         """If a section in a multi-section story truncates, it should be
         split and the halves retried."""
@@ -184,7 +184,7 @@ class TestAdaptLongStoryTruncation:
         # 1 (success) + 1 (truncated) + 2 (retried halves) = 4 calls
         assert client.messages.create.call_count == 4
 
-    @patch("app.services.script_adapter.Anthropic")
+    @patch("apps.audio.services.script_adapter.Anthropic")
     def test_safety_limit_prevents_infinite_splitting(self, _mock_cls):
         """If every attempt truncates, it should eventually hit the safety limit."""
         client = MagicMock()
@@ -238,7 +238,7 @@ class TestSplitForAdaptation:
 
 class TestGenerateScriptPriorCharacters:
 
-    @patch("app.services.script_adapter.Anthropic")
+    @patch("apps.audio.services.script_adapter.Anthropic")
     def test_prior_characters_forwarded_to_single_section(self, mock_cls):
         """When prior_characters is provided, it should be included in the
         prompt for a single-section story."""
@@ -260,7 +260,7 @@ class TestGenerateScriptPriorCharacters:
         assert "continuation" in user_msg.lower()
         assert "narrator" in user_msg
 
-    @patch("app.services.script_adapter.Anthropic")
+    @patch("apps.audio.services.script_adapter.Anthropic")
     def test_no_prior_characters_by_default(self, mock_cls):
         """Without prior_characters, the prompt should not mention continuity."""
         client = MagicMock()

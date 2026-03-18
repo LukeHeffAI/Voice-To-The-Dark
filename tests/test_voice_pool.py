@@ -1,13 +1,13 @@
 """Unit tests for app.services.voice_pool."""
 
-from app.services.voice_pool import (
+from apps.audio.services.voice_pool import (
     _parse_profile,
     _score_voice,
     auto_assign_voices,
     VoiceEntry,
     VOICE_POOL,
 )
-from app.schemas.narration import CharacterProfile
+from apps.audio.schemas import CharacterProfile
 
 
 class TestParseProfile:
@@ -63,6 +63,13 @@ class TestScoreVoice:
         score = _score_voice(entry, profile)
         # Gender match (+10) + 2 keyword matches (deep, sinister = +4) + jitter
         assert score > 13.0
+
+    def test_archetype_overlap_case_insensitive(self):
+        entry = VoiceEntry("id1", "Test", "male", "adult", ["British", "deep", "English"])
+        profile = _parse_profile("A british deep english man")
+        score = _score_voice(entry, profile)
+        # Gender match (+10) + 3 keyword matches (british, deep, english = +6) + jitter
+        assert score > 15.0
 
     def test_age_match_adds_points(self):
         entry = VoiceEntry("id1", "Test", "male", "elder", ["wise"])

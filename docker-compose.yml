@@ -7,11 +7,20 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
     volumes:
       - ./data/db:/app/data/db
       - ./data/stories:/app/data/stories
       - ./data/sfx_cache:/app/data/sfx_cache
       - ./data/voice_previews:/app/data/voice_previews
+      - ./data/segment_cache:/app/data/segment_cache
+      - ./data/reddit_cache:/app/data/reddit_cache
+      - ./data/tmp:/app/data/tmp
 
   # Optional: Cloudflare Tunnel for remote access (free, no port forwarding)
   # Start with: docker compose --profile tunnel up -d

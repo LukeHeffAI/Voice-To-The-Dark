@@ -1,4 +1,4 @@
-"""Unit tests for app.services.reddit."""
+"""Unit tests for apps.stories.services.reddit."""
 
 import hashlib
 import json
@@ -8,7 +8,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from app.services.reddit import (
+from apps.stories.services.reddit import (
     _cache_key,
     _extract_reddit_links,
     _likely_continuation,
@@ -353,7 +353,7 @@ class TestTitlesMatch:
 
 
 class TestFetchTopPosts:
-    @patch("app.services.reddit._reddit_get")
+    @patch("apps.stories.services.reddit._reddit_get")
     def test_returns_enriched_posts(self, mock_get):
         mock_get.return_value = {
             "data": {
@@ -389,19 +389,19 @@ class TestFetchTopPosts:
         assert post["flair"] == "Flair"
         assert post["series_flair"] == "Series"
 
-    @patch("app.services.reddit._reddit_get")
+    @patch("apps.stories.services.reddit._reddit_get")
     def test_empty_response(self, mock_get):
         mock_get.return_value = {"data": {"children": []}}
         results = fetch_top_posts("week")
         assert results == []
 
-    @patch("app.services.reddit._reddit_get")
+    @patch("apps.stories.services.reddit._reddit_get")
     def test_missing_data_key(self, mock_get):
         mock_get.return_value = {}
         results = fetch_top_posts("month")
         assert results == []
 
-    @patch("app.services.reddit._reddit_get")
+    @patch("apps.stories.services.reddit._reddit_get")
     def test_timeframe_mapping(self, mock_get):
         mock_get.return_value = {"data": {"children": []}}
 
@@ -417,7 +417,7 @@ class TestFetchTopPosts:
             params = call_kwargs[1].get("params") or call_kwargs[0][1]
             assert params["t"] == expected_t, f"timeframe '{tf}' should map to '{expected_t}'"
 
-    @patch("app.services.reddit._reddit_get")
+    @patch("apps.stories.services.reddit._reddit_get")
     def test_unknown_timeframe_defaults_to_day(self, mock_get):
         mock_get.return_value = {"data": {"children": []}}
         fetch_top_posts("unknown_value")
@@ -425,14 +425,14 @@ class TestFetchTopPosts:
         params = call_kwargs[1].get("params") or call_kwargs[0][1]
         assert params["t"] == "day"
 
-    @patch("app.services.reddit._reddit_get")
+    @patch("apps.stories.services.reddit._reddit_get")
     def test_custom_cache_ttl(self, mock_get):
         mock_get.return_value = {"data": {"children": []}}
         fetch_top_posts("today", cache_ttl=60)
         _, kwargs = mock_get.call_args
         assert kwargs["cache_ttl"] == 60
 
-    @patch("app.services.reddit._reddit_get")
+    @patch("apps.stories.services.reddit._reddit_get")
     def test_default_cache_ttl_is_listing_ttl(self, mock_get):
         mock_get.return_value = {"data": {"children": []}}
         fetch_top_posts("today")
@@ -440,7 +440,7 @@ class TestFetchTopPosts:
         # Default TTL should be CACHE_TTL_LISTING (604800)
         assert kwargs["cache_ttl"] == 604800
 
-    @patch("app.services.reddit._reddit_get")
+    @patch("apps.stories.services.reddit._reddit_get")
     def test_multiple_posts(self, mock_get):
         mock_get.return_value = {
             "data": {
@@ -455,7 +455,7 @@ class TestFetchTopPosts:
         assert results[0]["title"] == "Story 0"
         assert results[4]["title"] == "Story 4"
 
-    @patch("app.services.reddit._reddit_get")
+    @patch("apps.stories.services.reddit._reddit_get")
     def test_score_fallback_to_score_field(self, mock_get):
         """When 'ups' is missing, should fall back to 'score'."""
         mock_get.return_value = {
@@ -473,7 +473,7 @@ class TestFetchTopPosts:
 
 
 class TestFetchStoryText:
-    @patch("app.services.reddit._fetch_post_data")
+    @patch("apps.stories.services.reddit._fetch_post_data")
     def test_returns_selftext(self, mock_fetch):
         mock_fetch.return_value = {
             "selftext": "It was a dark and stormy night...",
@@ -484,7 +484,7 @@ class TestFetchStoryText:
         result = fetch_story_text("https://reddit.com/r/nosleep/comments/abc/scary_story/")
         assert result == "It was a dark and stormy night..."
 
-    @patch("app.services.reddit._fetch_post_data")
+    @patch("apps.stories.services.reddit._fetch_post_data")
     def test_empty_selftext(self, mock_fetch):
         mock_fetch.return_value = {
             "selftext": "",
@@ -495,7 +495,7 @@ class TestFetchStoryText:
         result = fetch_story_text("https://reddit.com/r/nosleep/comments/abc/title/")
         assert result == ""
 
-    @patch("app.services.reddit._fetch_post_data")
+    @patch("apps.stories.services.reddit._fetch_post_data")
     def test_missing_selftext_key(self, mock_fetch):
         mock_fetch.return_value = {
             "title": "Title",
@@ -510,7 +510,7 @@ class TestFetchStoryText:
 
 
 class TestFetchPostMetadata:
-    @patch("app.services.reddit._fetch_post_data")
+    @patch("apps.stories.services.reddit._fetch_post_data")
     def test_returns_full_metadata(self, mock_fetch):
         expected = {
             "title": "Scary Story",
@@ -525,7 +525,7 @@ class TestFetchPostMetadata:
         result = fetch_post_metadata("https://reddit.com/r/nosleep/comments/abc/scary_story/")
         assert result == expected
 
-    @patch("app.services.reddit._fetch_post_data")
+    @patch("apps.stories.services.reddit._fetch_post_data")
     def test_passes_url_through(self, mock_fetch):
         mock_fetch.return_value = {"title": "", "selftext": "", "author": "", "id": ""}
         url = "https://reddit.com/r/nosleep/comments/xyz/story/"
@@ -552,7 +552,7 @@ class TestFindSeriesParts:
             })
         return {"data": {"children": children}}
 
-    @patch("app.services.reddit._reddit_get")
+    @patch("apps.stories.services.reddit._reddit_get")
     def test_finds_matching_series_parts(self, mock_get):
         mock_get.return_value = self._make_author_response([
             {"title": "The Haunted House Part 1", "permalink": "/r/nosleep/comments/a/t1/", "id": "a", "created_utc": 100},
@@ -566,7 +566,7 @@ class TestFindSeriesParts:
         assert results[1]["part_number"] == 2
         assert results[2]["part_number"] == 3
 
-    @patch("app.services.reddit._reddit_get")
+    @patch("apps.stories.services.reddit._reddit_get")
     def test_sorted_by_created_utc(self, mock_get):
         mock_get.return_value = self._make_author_response([
             {"title": "The Haunted House Part 3", "permalink": "/r/nosleep/comments/c/t3/", "id": "c", "created_utc": 300},
@@ -579,7 +579,7 @@ class TestFindSeriesParts:
         assert results[1]["created_utc"] == 200
         assert results[2]["created_utc"] == 300
 
-    @patch("app.services.reddit._reddit_get")
+    @patch("apps.stories.services.reddit._reddit_get")
     def test_excludes_non_nosleep_posts(self, mock_get):
         mock_get.return_value = self._make_author_response([
             {"title": "The Haunted House Part 1", "permalink": "/r/nosleep/comments/a/t/", "id": "a", "subreddit": "nosleep", "created_utc": 100},
@@ -589,7 +589,7 @@ class TestFindSeriesParts:
         results = find_series_parts("writer", "The Haunted House Part 1")
         assert len(results) == 1
 
-    @patch("app.services.reddit._reddit_get")
+    @patch("apps.stories.services.reddit._reddit_get")
     def test_excludes_unrelated_titles(self, mock_get):
         mock_get.return_value = self._make_author_response([
             {"title": "The Haunted House Part 1", "permalink": "/r/nosleep/comments/a/t/", "id": "a", "created_utc": 100},
@@ -605,7 +605,7 @@ class TestFindSeriesParts:
         results = find_series_parts("", "Some Title")
         assert results == []
 
-    @patch("app.services.reddit._reddit_get")
+    @patch("apps.stories.services.reddit._reddit_get")
     def test_empty_base_title_after_stripping(self, mock_get):
         """If the title is only a part suffix (e.g. 'Part 1'), base becomes
         empty and should return []."""
@@ -613,13 +613,13 @@ class TestFindSeriesParts:
         results = find_series_parts("writer", "Part 1")
         assert results == []
 
-    @patch("app.services.reddit._reddit_get")
+    @patch("apps.stories.services.reddit._reddit_get")
     def test_network_failure_returns_empty(self, mock_get):
         mock_get.side_effect = RuntimeError("Network error")
         results = find_series_parts("writer", "The Haunted House Part 1")
         assert results == []
 
-    @patch("app.services.reddit._reddit_get")
+    @patch("apps.stories.services.reddit._reddit_get")
     def test_result_structure(self, mock_get):
         mock_get.return_value = self._make_author_response([
             {"title": "The Haunted House Part 1", "permalink": "/r/nosleep/comments/a/t/", "id": "a", "created_utc": 100},
@@ -638,7 +638,7 @@ class TestFindSeriesParts:
         assert r["part_number"] == 1
         assert r["created_utc"] == 100
 
-    @patch("app.services.reddit._reddit_get")
+    @patch("apps.stories.services.reddit._reddit_get")
     def test_no_part_number_in_title(self, mock_get):
         """A post that matches the base title but has no part number."""
         mock_get.return_value = self._make_author_response([
@@ -651,7 +651,7 @@ class TestFindSeriesParts:
         assert results[0]["part_number"] is None
         assert results[1]["part_number"] == 2
 
-    @patch("app.services.reddit._reddit_get")
+    @patch("apps.stories.services.reddit._reddit_get")
     def test_title_matching_is_case_insensitive(self, mock_get):
         mock_get.return_value = self._make_author_response([
             {"title": "THE HAUNTED HOUSE Part 1", "permalink": "/r/nosleep/comments/a/t/", "id": "a", "created_utc": 100},
@@ -660,7 +660,7 @@ class TestFindSeriesParts:
         results = find_series_parts("writer", "the haunted house Part 2")
         assert len(results) == 1
 
-    @patch("app.services.reddit._reddit_get")
+    @patch("apps.stories.services.reddit._reddit_get")
     def test_prefix_matching_for_title_variations(self, mock_get):
         mock_get.return_value = self._make_author_response([
             {"title": "The Haunted House on Elm Street Part 1", "permalink": "/r/nosleep/comments/a/t/", "id": "a", "created_utc": 100},
@@ -722,14 +722,14 @@ class TestGetCacheInfo:
 
     def test_nonexistent_cache_returns_none(self, tmp_path):
         """When cache files don't exist, values should be None."""
-        with patch("app.services.reddit.CACHE_DIR", tmp_path / "nonexistent"):
+        with patch("apps.stories.services.reddit.CACHE_DIR", tmp_path / "nonexistent"):
             info = get_cache_info()
             for tf, mtime in info.items():
                 assert mtime is None
 
     def test_existing_cache_returns_mtime(self, tmp_path):
         """When a cache file exists, its mtime should be returned."""
-        with patch("app.services.reddit.CACHE_DIR", tmp_path):
+        with patch("apps.stories.services.reddit.CACHE_DIR", tmp_path):
             # Write a cache file for "today"
             path = get_cache_path_for_timeframe("today")
             path.parent.mkdir(parents=True, exist_ok=True)
