@@ -727,6 +727,34 @@ class TestFolders:
         resp = client.delete("/api/stories/folders/1/stories/1")
         assert resp.status_code == 401
 
+    def test_list_folder_stories(self, client, auth_headers, test_user, test_story):
+        folder = StoryFolder.objects.create(user=test_user, name="WithStory")
+        StoryFolderMembership.objects.create(folder=folder, story=test_story)
+        resp = client.get(f"/api/stories/folders/{folder.id}/stories", **auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["id"] == test_story.id
+        assert data[0]["title"] == test_story.title
+
+    def test_list_folder_stories_empty(self, client, auth_headers, test_user):
+        folder = StoryFolder.objects.create(user=test_user, name="EmptyFolder")
+        resp = client.get(f"/api/stories/folders/{folder.id}/stories", **auth_headers)
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_list_folder_stories_another_users_folder_404(
+        self, client, auth_headers, test_user, second_user, test_story
+    ):
+        folder = StoryFolder.objects.create(user=second_user, name="OtherUserFolder")
+        StoryFolderMembership.objects.create(folder=folder, story=test_story)
+        resp = client.get(f"/api/stories/folders/{folder.id}/stories", **auth_headers)
+        assert resp.status_code == 404
+
+    def test_list_folder_stories_nonexistent_folder_404(self, client, auth_headers):
+        resp = client.get("/api/stories/folders/9999/stories", **auth_headers)
+        assert resp.status_code == 404
+
 
 # ── Playback ─────────────────────────────────────────────────────
 

@@ -15,6 +15,7 @@ from ninja.errors import HttpError
 
 from apps.accounts.auth import get_current_user, get_optional_user
 from apps.common.rate_limit import check_rate_limit
+from apps.audio.models import NarrationScript
 from apps.player.models import PlaybackState
 from apps.stories.models import (
     AppSetting,
@@ -22,7 +23,6 @@ from apps.stories.models import (
     StoryFolder,
     StoryFolderMembership,
     StoryView,
-    NarrationScript,
 )
 from schemas.story import (
     DuplicateCheckResponse,
