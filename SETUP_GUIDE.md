@@ -95,10 +95,10 @@ a cheap one through Cloudflare Registrar, or use a free domain service.
    - **Subdomain**: e.g., `stories` (or whatever you like)
    - **Domain**: select your domain
    - **Service type**: `HTTP`
-   - **URL**: `voice-to-the-dark:8010`
+   - **URL**: `localhost:8010`
 
-   This last URL uses the Docker container name, which resolves automatically
-   on Docker's internal network.
+   The tunnel connector runs on the host network, so `localhost:8010` reaches
+   the Django app directly.
 
 #### 4. Enable the Tunnel
 
