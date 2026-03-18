@@ -112,7 +112,7 @@ $COMPOSE up -d --build
 
 echo
 echo "Container is running. Waiting for startup..."
-MAX_WAIT=60
+MAX_WAIT=90
 ELAPSED=0
 while [ $ELAPSED -lt $MAX_WAIT ]; do
     STATUS=$($COMPOSE ps --format json 2>/dev/null | python3 -c "
@@ -129,8 +129,22 @@ except json.JSONDecodeError:
 if isinstance(data, dict):
     data = [data]
 for obj in data:
-    if obj.get('Name') == 'voice-to-the-dark' or obj.get('Service') == 'voice-to-the-dark':
-        print(obj.get('Health', obj.get('State', '')))
+    name = obj.get('Name', '')
+    service = obj.get('Service', '')
+    if name == 'voice-to-the-dark' or service == 'voice-to-the-dark':
+        # Check dedicated Health field first (some Compose versions)
+        health = obj.get('Health', '')
+        if health:
+            print(health)
+        else:
+            # Health is embedded in Status string, e.g. 'Up 30s (healthy)'
+            status = obj.get('Status', '')
+            if '(healthy)' in status:
+                print('healthy')
+            elif '(health: starting)' in status:
+                print('starting')
+            else:
+                print(obj.get('State', 'unknown'))
         break
 else:
     print('unknown')
