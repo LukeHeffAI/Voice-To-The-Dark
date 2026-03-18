@@ -846,7 +846,7 @@ RUN apt-get update && apt-get install -y ffmpeg
 COPY --from=frontend /app/frontend/dist /app/static/dist
 COPY . /app
 RUN pip install -r requirements.txt
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8010"]
 ```
 
 ### GitHub Actions CI/CD

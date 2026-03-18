@@ -26,7 +26,7 @@ RUN mkdir -p /app/data/db /app/data/stories /app/data/sfx_cache \
 
 RUN chmod +x /app/docker-entrypoint.sh
 
-EXPOSE 8000
+EXPOSE 8010
 
 ENV DJANGO_ENV=production
 ENV DJANGO_SETTINGS_MODULE=config.settings

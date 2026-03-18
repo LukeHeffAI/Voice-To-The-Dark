@@ -9,7 +9,7 @@ DEBUG = False
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 CORS_ALLOWED_ORIGINS = [
-    origin.strip() for origin in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:8000").split(",")
+    origin.strip() for origin in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:8010").split(",")
 ]
 
 SECURE_BROWSER_XSS_FILTER = True
