@@ -9,7 +9,7 @@ import re
 from urllib.parse import urlparse, urlunparse
 
 from django.db import IntegrityError
-from django.db.models import Count
+from django.db.models import Count, Exists, OuterRef
 from ninja import Router
 from ninja.errors import HttpError
 
@@ -22,6 +22,7 @@ from apps.stories.models import (
     StoryFolder,
     StoryFolderMembership,
     StoryView,
+    NarrationScript,
 )
 from schemas.story import (
     DuplicateCheckResponse,
@@ -504,7 +505,15 @@ def list_folder_stories(request, folder_id: int):
     story_ids = StoryFolderMembership.objects.filter(folder=folder).values_list(
         "story_id", flat=True
     )
-    stories = Story.objects.filter(id__in=story_ids).order_by("-created_at")
+    stories = (
+        Story.objects.filter(id__in=story_ids)
+        .annotate(
+            has_script=Exists(
+                NarrationScript.objects.filter(story_id=OuterRef("pk"))
+            )
+        )
+        .order_by("-created_at")
+    )
     return [
         {
             "id": s.id,
@@ -512,7 +521,7 @@ def list_folder_stories(request, folder_id: int):
             "author": s.author or None,
             "reddit_url": s.reddit_url or None,
             "has_audio": bool(s.audio_file_path),
-            "has_script": hasattr(s, "script") and s.script is not None,
+            "has_script": s.has_script,
             "part_count": s.part_count,
             "created_at": s.created_at,
         }
