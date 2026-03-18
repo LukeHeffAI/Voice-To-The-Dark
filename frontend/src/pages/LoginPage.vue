@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notifications'
 import { ApiError } from '@/api/client'
 
 const auth = useAuthStore()
+const route = useRoute()
 const router = useRouter()
 const notify = useNotificationStore()
 
@@ -24,7 +25,9 @@ async function handleLogin() {
   try {
     await auth.login(username.value, password.value)
     notify.show('Welcome back', 'success')
-    router.push('/')
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
+    const safeRedirect = redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/'
+    router.push(safeRedirect)
   } catch (e) {
     if (e instanceof ApiError) {
       const body = e.body as { detail?: string }

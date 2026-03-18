@@ -8,6 +8,7 @@ import os
 from urllib.parse import urlparse
 
 from ninja import Router
+from django.db import IntegrityError, transaction
 from ninja.errors import HttpError
 
 from apps.accounts.auth import get_current_user
@@ -206,16 +207,39 @@ def generate_script_route(request, payload: GenerateScriptRequest):
 
     # Submit as background task
     from apps.tasks.executor import submit_task
-    from apps.tasks.models import BackgroundTask, TaskType
+    from apps.tasks.models import ACTIVE_STATUSES, BackgroundTask, TaskType
     from apps.tasks.task_functions import run_generate_script
 
-    task = BackgroundTask.objects.create(
-        user=user,
-        story=story,
-        task_type=TaskType.GENERATE_SCRIPT,
-        progress_message="Queued for processing...",
-    )
-    submit_task(task.id, run_generate_script, story.id, payload.force_regenerate, prior_characters)
+    try:
+        with transaction.atomic():
+            task = BackgroundTask.objects.create(
+                user=user,
+                story=story,
+                task_type=TaskType.GENERATE_SCRIPT,
+                progress_message="Queued for processing...",
+            )
+    except IntegrityError:
+        existing = BackgroundTask.objects.filter(
+            user=user,
+            story=story,
+            task_type=TaskType.GENERATE_SCRIPT,
+            status__in=[s.value for s in ACTIVE_STATUSES],
+        ).first()
+        if existing:
+            return {"task_id": existing.id, "message": "Script generation already in progress"}
+        # No active task exists anymore; retry creation once to avoid spurious conflict
+        try:
+            with transaction.atomic():
+                task = BackgroundTask.objects.create(
+                    user=user,
+                    story=story,
+                    task_type=TaskType.GENERATE_SCRIPT,
+                    progress_message="Queued for processing...",
+                )
+        except IntegrityError:
+            # If it still fails, treat as a genuine conflict
+            raise HttpError(409, "A script generation task is already active for this story")
+    submit_task(task.id, run_generate_script, story.id, prior_characters)
 
     return {"task_id": task.id, "message": "Script generation started"}
 
@@ -324,15 +348,26 @@ def generate_narration_route(request, payload: GenerateNarrationRequest):
 
     # Submit as background task
     from apps.tasks.executor import submit_task
-    from apps.tasks.models import BackgroundTask, TaskType
+    from apps.tasks.models import ACTIVE_STATUSES, BackgroundTask, TaskType
     from apps.tasks.task_functions import run_generate_narration
 
-    task = BackgroundTask.objects.create(
-        user=user,
-        story=story,
-        task_type=TaskType.GENERATE_NARRATION,
-        progress_message="Queued for processing...",
-    )
+    try:
+        task = BackgroundTask.objects.create(
+            user=user,
+            story=story,
+            task_type=TaskType.GENERATE_NARRATION,
+            progress_message="Queued for processing...",
+        )
+    except IntegrityError:
+        existing = BackgroundTask.objects.filter(
+            user=user,
+            story=story,
+            task_type=TaskType.GENERATE_NARRATION,
+            status__in=[s.value for s in ACTIVE_STATUSES],
+        ).first()
+        if existing:
+            return {"task_id": existing.id, "message": "Narration generation already in progress"}
+        raise HttpError(409, "A narration generation task is already active for this story")
     submit_task(
         task.id,
         run_generate_narration,

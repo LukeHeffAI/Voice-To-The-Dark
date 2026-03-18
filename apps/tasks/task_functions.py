@@ -12,7 +12,7 @@ from apps.tasks.models import BackgroundTask, TaskStatus
 logger = logging.getLogger(__name__)
 
 
-def run_generate_script(task: BackgroundTask, story_id: int, force_regenerate: bool = False, prior_characters=None):
+def run_generate_script(task: BackgroundTask, story_id: int, prior_characters=None):
     """Background task for script generation via Claude AI."""
     from apps.audio.helpers import pydantic_to_script
     from apps.stories.models import Story

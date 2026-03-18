@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { storiesApi, foldersApi } from '@/api/client'
+import { foldersApi } from '@/api/client'
 import { usePlaylistStore } from '@/stores/playlist'
 import { useNotificationStore } from '@/stores/notifications'
 import type { StoryListItem, Folder } from '@/types'
@@ -28,10 +28,7 @@ async function loadFolder() {
     const folder = allFolders.find((f) => f.id === folderId.value)
     folderName.value = folder?.name || 'Folder'
 
-    // Load all stories then filter — API doesn't have folder-specific story listing
-    // For now, load all stories (folder filtering happens server-side via views)
-    const allStories = await storiesApi.list(0, 200)
-    stories.value = allStories
+    stories.value = await foldersApi.listStories(folderId.value)
   } catch {
     notify.show('Failed to load folder', 'error')
   } finally {

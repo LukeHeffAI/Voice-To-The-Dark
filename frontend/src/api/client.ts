@@ -128,6 +128,8 @@ export const foldersApi = {
     request<{ ok: boolean; message: string }>('POST', `/stories/folders/${folderId}/add`, { story_id: storyId }),
   removeStory: (folderId: number, storyId: number) =>
     request<{ ok: boolean }>('DELETE', `/stories/folders/${folderId}/stories/${storyId}`),
+  listStories: (folderId: number) =>
+    request<StoryListItem[]>('GET', `/stories/folders/${folderId}/stories`),
 }
 
 export const audioApi = {
