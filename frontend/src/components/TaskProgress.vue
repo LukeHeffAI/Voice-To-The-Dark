@@ -11,45 +11,41 @@ const emit = defineEmits<{
 
 const task = ref<TaskStatus | null>(null)
 const error = ref('')
-let pollTimer: ReturnType<typeof setTimeout> | null = null
 let polling = false
+let pollTimeout: ReturnType<typeof setTimeout> | null = null
 
 async function poll() {
+  if (!polling) return
+
   const currentTaskId = props.taskId
-
   try {
-    const status = await audioApi.getTaskStatus(currentTaskId)
+    const nextTask = await audioApi.getTaskStatus(currentTaskId)
 
-    // If polling has been stopped or taskId has changed while the request
-    // was in flight, ignore this stale response.
-    if (!polling || currentTaskId !== props.taskId) {
-      return
-    }
+    // Guard against stale responses after task ID changed
+    if (!polling || currentTaskId !== props.taskId) return
 
-    task.value = status
+    task.value = nextTask
     error.value = ''
 
     if (task.value.status === 'completed') {
       stopPolling()
       emit('completed', task.value.result)
-      return
     } else if (task.value.status === 'failed') {
       stopPolling()
       emit('failed', task.value.error_message)
-      return
+    } else {
+      scheduleNext()
     }
   } catch {
-    // If polling has been stopped or taskId has changed, don't surface
-    // errors from stale requests.
-    if (!polling || currentTaskId !== props.taskId) {
-      return
-    }
+    if (!polling || currentTaskId !== props.taskId) return
     error.value = 'Failed to check task status'
+    if (polling) scheduleNext()
   }
+}
 
-  // Schedule next poll only after current one finishes
+function scheduleNext() {
   if (polling) {
-    pollTimer = setTimeout(poll, 2000)
+    pollTimeout = setTimeout(poll, 2000)
   }
 }
 
@@ -61,9 +57,9 @@ function startPolling() {
 
 function stopPolling() {
   polling = false
-  if (pollTimer) {
-    clearTimeout(pollTimer)
-    pollTimer = null
+  if (pollTimeout) {
+    clearTimeout(pollTimeout)
+    pollTimeout = null
   }
 }
 

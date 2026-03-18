@@ -64,7 +64,8 @@ if [ ! -f .env ]; then
     cp .env.example .env
 
     if $AUTO_MODE; then
-        # In auto mode, inject API keys from environment variables
+        # In auto mode, inject API keys from environment variables using Python
+        # to avoid sed issues with special characters in API keys
         if [ -n "${ELEVENLABS_API_KEY:-}" ]; then
             python3 -c "
 import re, sys
@@ -120,7 +121,6 @@ raw = sys.stdin.read().strip()
 if not raw:
     print('unknown')
     sys.exit(0)
-# Handle both JSON array and newline-delimited JSON objects
 try:
     data = json.loads(raw)
 except json.JSONDecodeError:
@@ -131,8 +131,9 @@ if isinstance(data, dict):
 for obj in data:
     if obj.get('Name') == 'voice-to-the-dark' or obj.get('Service') == 'voice-to-the-dark':
         print(obj.get('Health', obj.get('State', '')))
-        sys.exit(0)
-print('unknown')
+        break
+else:
+    print('unknown')
 " 2>/dev/null || echo "unknown")
     if [ "$STATUS" = "healthy" ]; then
         echo "Application is ready!"

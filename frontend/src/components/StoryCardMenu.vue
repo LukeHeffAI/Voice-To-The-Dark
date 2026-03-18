@@ -85,13 +85,13 @@ async function removeFromFolder() {
   emit('close')
 }
 
-let mountTimer: ReturnType<typeof setTimeout> | null = null
-
 function onClickOutside(e: Event) {
   if (menuEl.value && !menuEl.value.contains(e.target as Node)) {
     emit('close')
   }
 }
+
+let mountTimer: ReturnType<typeof setTimeout> | null = null
 
 onMounted(() => {
   mountTimer = setTimeout(() => {
