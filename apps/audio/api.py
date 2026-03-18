@@ -347,6 +347,7 @@ def generate_narration_route(request, payload: GenerateNarrationRequest):
         )
     except IntegrityError:
         existing = BackgroundTask.objects.filter(
+            user=user,
             story=story,
             task_type=TaskType.GENERATE_NARRATION,
             status__in=[s.value for s in ACTIVE_STATUSES],
