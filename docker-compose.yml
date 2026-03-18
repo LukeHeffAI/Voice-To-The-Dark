@@ -30,8 +30,12 @@ services:
     restart: unless-stopped
     profiles:
       - tunnel
+    network_mode: host
+    extra_hosts:
+      - "voice-to-the-dark:127.0.0.1"
     command: tunnel run
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
     depends_on:
-      - voice-to-the-dark
+      voice-to-the-dark:
+        condition: service_healthy
