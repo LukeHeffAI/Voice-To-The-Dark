@@ -8,6 +8,7 @@ import os
 from urllib.parse import urlparse
 
 from ninja import Router
+from django.db import IntegrityError, transaction
 from ninja.errors import HttpError
 
 from apps.accounts.auth import get_current_user
@@ -18,8 +19,6 @@ from apps.stories.models import Story
 from schemas.narration import NarrationScript, SegmentType
 from schemas.story import GenerateAudioRequest, GenerateNarrationRequest, GenerateScriptRequest
 from services.elevenlabs import ElevenLabsError, generate_audio
-from services.narration_generator import generate_narration
-from services.script_adapter import generate_script
 from services.voice_pool import auto_assign_voices
 
 logger = logging.getLogger(__name__)
@@ -206,20 +205,43 @@ def generate_script_route(request, payload: GenerateScriptRequest):
 
     prior_characters = _collect_series_characters(story)
 
+    # Submit as background task
+    from apps.tasks.executor import submit_task
+    from apps.tasks.models import ACTIVE_STATUSES, BackgroundTask, TaskType
+    from apps.tasks.task_functions import run_generate_script
+
     try:
-        script = generate_script(story.title, text, prior_characters=prior_characters)
-    except Exception as exc:
-        logger.exception("Script generation failed for story %s", payload.story_id)
-        raise HttpError(502, f"Script generation failed: {exc}")
+        with transaction.atomic():
+            task = BackgroundTask.objects.create(
+                user=user,
+                story=story,
+                task_type=TaskType.GENERATE_SCRIPT,
+                progress_message="Queued for processing...",
+            )
+    except IntegrityError:
+        existing = BackgroundTask.objects.filter(
+            user=user,
+            story=story,
+            task_type=TaskType.GENERATE_SCRIPT,
+            status__in=[s.value for s in ACTIVE_STATUSES],
+        ).first()
+        if existing:
+            return {"task_id": existing.id, "message": "Script generation already in progress"}
+        # No active task exists anymore; retry creation once to avoid spurious conflict
+        try:
+            with transaction.atomic():
+                task = BackgroundTask.objects.create(
+                    user=user,
+                    story=story,
+                    task_type=TaskType.GENERATE_SCRIPT,
+                    progress_message="Queued for processing...",
+                )
+        except IntegrityError:
+            # If it still fails, treat as a genuine conflict
+            raise HttpError(409, "A script generation task is already active for this story")
+    submit_task(task.id, run_generate_script, story.id, prior_characters)
 
-    # Save to relational models
-    pydantic_to_script(story, script)
-
-    return {
-        "message": "Script generated successfully!",
-        "script": script.model_dump(),
-        "characters": script.character_names(),
-    }
+    return {"task_id": task.id, "message": "Script generation started"}
 
 
 @router.get("/script/{story_id}")
@@ -324,30 +346,35 @@ def generate_narration_route(request, payload: GenerateNarrationRequest):
             script.characters[char_name].voice_id = voice_id
     pydantic_to_script(story, script)
 
-    # Clean up old audio file
-    _delete_audio_file(story.audio_file_path)
+    # Submit as background task
+    from apps.tasks.executor import submit_task
+    from apps.tasks.models import ACTIVE_STATUSES, BackgroundTask, TaskType
+    from apps.tasks.task_functions import run_generate_narration
 
     try:
-        result = generate_narration(script, voice_map, bust_cache=payload.bust_cache)
-    except ElevenLabsError as exc:
-        logger.exception("ElevenLabs narration generation failed for story %s", payload.story_id)
-        raise HttpError(502, f"Narration generation failed: {exc}")
-    except Exception as exc:
-        logger.exception("Unexpected error generating narration for story %s", payload.story_id)
-        raise HttpError(500, f"Narration generation failed unexpectedly: {exc}")
+        task = BackgroundTask.objects.create(
+            user=user,
+            story=story,
+            task_type=TaskType.GENERATE_NARRATION,
+            progress_message="Queued for processing...",
+        )
+    except IntegrityError:
+        existing = BackgroundTask.objects.filter(
+            user=user,
+            story=story,
+            task_type=TaskType.GENERATE_NARRATION,
+            status__in=[s.value for s in ACTIVE_STATUSES],
+        ).first()
+        if existing:
+            return {"task_id": existing.id, "message": "Narration generation already in progress"}
+        raise HttpError(409, "A narration generation task is already active for this story")
+    submit_task(
+        task.id,
+        run_generate_narration,
+        story.id,
+        voice_map,
+        script.model_dump(),
+        payload.bust_cache,
+    )
 
-    story.audio_file_path = result.output_path
-    story.save(update_fields=["audio_file_path"])
-
-    return {
-        "message": "Narration generated successfully!",
-        "audio_file": result.output_path,
-        "segments_processed": result.total_segments,
-        "voice_assignments": voice_map,
-        "cache_stats": {
-            "total_segments": result.total_segments,
-            "cache_hits": result.cache_hits,
-            "cache_misses": result.cache_misses,
-            "api_calls_saved": result.cache_hits,
-        },
-    }
+    return {"task_id": task.id, "message": "Narration generation started"}

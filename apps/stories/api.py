@@ -9,12 +9,13 @@ import re
 from urllib.parse import urlparse, urlunparse
 
 from django.db import IntegrityError
-from django.db.models import Count
+from django.db.models import Count, Exists, OuterRef
 from ninja import Router
 from ninja.errors import HttpError
 
 from apps.accounts.auth import get_current_user, get_optional_user
 from apps.common.rate_limit import check_rate_limit
+from apps.audio.models import NarrationScript
 from apps.player.models import PlaybackState
 from apps.stories.models import (
     AppSetting,
@@ -492,6 +493,40 @@ def delete_folder(request, folder_id: int):
     StoryFolderMembership.objects.filter(folder=folder).delete()
     folder.delete()
     return {"ok": True}
+
+
+@router.get("/folders/{folder_id}/stories", response=list[StoryListResponse])
+def list_folder_stories(request, folder_id: int):
+    """List all stories in a specific folder."""
+    user = get_current_user(request)
+    folder = StoryFolder.objects.filter(id=folder_id, user=user).first()
+    if not folder:
+        raise HttpError(404, "Folder not found")
+    story_ids = StoryFolderMembership.objects.filter(folder=folder).values_list(
+        "story_id", flat=True
+    )
+    stories = (
+        Story.objects.filter(id__in=story_ids)
+        .annotate(
+            has_script=Exists(
+                NarrationScript.objects.filter(story_id=OuterRef("pk"))
+            )
+        )
+        .order_by("-created_at")
+    )
+    return [
+        {
+            "id": s.id,
+            "title": s.title,
+            "author": s.author or None,
+            "reddit_url": s.reddit_url or None,
+            "has_audio": bool(s.audio_file_path),
+            "has_script": s.has_script,
+            "part_count": s.part_count,
+            "created_at": s.created_at,
+        }
+        for s in stories
+    ]
 
 
 @router.post("/folders/{folder_id}/add")
