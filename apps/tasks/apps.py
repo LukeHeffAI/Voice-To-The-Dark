@@ -23,6 +23,7 @@ def _cleanup_orphaned_tasks(sender, **kwargs):
     try:
         count = BackgroundTask.objects.filter(
             status__in=[s.value for s in ACTIVE_STATUSES],
+            started_at__isnull=False,
         ).update(
             status="failed",
             error_message="Server restarted during processing",

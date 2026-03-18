@@ -16,9 +16,15 @@ export const usePlayerStore = defineStore(
 
     let audioEl: HTMLAudioElement | null = null
     let saveTimer: ReturnType<typeof setInterval> | null = null
+    let visibilityHandler: (() => void) | null = null
+    let beforeUnloadHandler: (() => void) | null = null
 
     // ── Audio element binding ────────────────────────
     function setAudioElement(el: HTMLAudioElement) {
+      // Clean up previous global listeners to prevent leaks on re-mount / HMR
+      if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler)
+      if (beforeUnloadHandler) window.removeEventListener('beforeunload', beforeUnloadHandler)
+
       audioEl = el
 
       audioEl.addEventListener('play', () => {
@@ -64,10 +70,12 @@ export const usePlayerStore = defineStore(
       })
 
       // Save position on visibility change and before unload
-      document.addEventListener('visibilitychange', () => {
+      visibilityHandler = () => {
         if (document.visibilityState === 'hidden') savePosition()
-      })
-      window.addEventListener('beforeunload', () => savePosition())
+      }
+      beforeUnloadHandler = () => savePosition()
+      document.addEventListener('visibilitychange', visibilityHandler)
+      window.addEventListener('beforeunload', beforeUnloadHandler)
 
       // Restore track info from localStorage (don't auto-load audio)
       try {
@@ -175,7 +183,20 @@ export const usePlayerStore = defineStore(
         position_seconds: Math.floor(audioEl.currentTime),
       })
       try {
-        navigator.sendBeacon('/api/stories/playback', new Blob([body], { type: 'application/json' }))
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+        try {
+          const raw = localStorage.getItem('auth')
+          if (raw) {
+            const parsed = JSON.parse(raw)
+            if (parsed?.token) headers['Authorization'] = `Bearer ${parsed.token}`
+          }
+        } catch { /* ignore */ }
+        fetch('/api/stories/playback', {
+          method: 'POST',
+          headers,
+          body,
+          keepalive: true,
+        }).catch(() => { /* ignore */ })
       } catch {
         /* ignore */
       }
