@@ -219,6 +219,7 @@ def generate_script_route(request, payload: GenerateScriptRequest):
         )
     except IntegrityError:
         existing = BackgroundTask.objects.filter(
+            user=user,
             story=story,
             task_type=TaskType.GENERATE_SCRIPT,
             status__in=[s.value for s in ACTIVE_STATUSES],
