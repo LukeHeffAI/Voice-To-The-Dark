@@ -8,7 +8,7 @@ import os
 from urllib.parse import urlparse
 
 from ninja import Router
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from ninja.errors import HttpError
 
 from apps.accounts.auth import get_current_user
@@ -211,12 +211,13 @@ def generate_script_route(request, payload: GenerateScriptRequest):
     from apps.tasks.task_functions import run_generate_script
 
     try:
-        task = BackgroundTask.objects.create(
-            user=user,
-            story=story,
-            task_type=TaskType.GENERATE_SCRIPT,
-            progress_message="Queued for processing...",
-        )
+        with transaction.atomic():
+            task = BackgroundTask.objects.create(
+                user=user,
+                story=story,
+                task_type=TaskType.GENERATE_SCRIPT,
+                progress_message="Queued for processing...",
+            )
     except IntegrityError:
         existing = BackgroundTask.objects.filter(
             user=user,
@@ -226,7 +227,18 @@ def generate_script_route(request, payload: GenerateScriptRequest):
         ).first()
         if existing:
             return {"task_id": existing.id, "message": "Script generation already in progress"}
-        raise HttpError(409, "A script generation task is already active for this story")
+        # No active task exists anymore; retry creation once to avoid spurious conflict
+        try:
+            with transaction.atomic():
+                task = BackgroundTask.objects.create(
+                    user=user,
+                    story=story,
+                    task_type=TaskType.GENERATE_SCRIPT,
+                    progress_message="Queued for processing...",
+                )
+        except IntegrityError:
+            # If it still fails, treat as a genuine conflict
+            raise HttpError(409, "A script generation task is already active for this story")
     submit_task(task.id, run_generate_script, story.id, prior_characters)
 
     return {"task_id": task.id, "message": "Script generation started"}
