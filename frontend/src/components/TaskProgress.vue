@@ -19,11 +19,13 @@ async function poll() {
 
   const currentTaskId = props.taskId
   try {
-    task.value = await audioApi.getTaskStatus(props.taskId)
-    error.value = ''
+    const nextTask = await audioApi.getTaskStatus(currentTaskId)
 
     // Guard against stale responses after task ID changed
     if (!polling || currentTaskId !== props.taskId) return
+
+    task.value = nextTask
+    error.value = ''
 
     if (task.value.status === 'completed') {
       stopPolling()
