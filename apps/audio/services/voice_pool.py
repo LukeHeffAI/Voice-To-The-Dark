@@ -435,8 +435,12 @@ def _score_voice(entry: VoiceEntry, profile: dict) -> float:
         elif profile["age"] == entry.age:
             score += 3.0
 
-    # Archetype keyword overlap
-    keyword_overlap = profile["words"] & set(entry.archetypes)
+    # Archetype keyword overlap (normalize to lowercase for matching)
+    normalized_archetypes = set()
+    for tag in entry.archetypes:
+        for word in tag.lower().split():
+            normalized_archetypes.add(word)
+    keyword_overlap = profile["words"] & normalized_archetypes
     score += len(keyword_overlap) * 2.0
 
     # Small random jitter so ties are broken differently each time

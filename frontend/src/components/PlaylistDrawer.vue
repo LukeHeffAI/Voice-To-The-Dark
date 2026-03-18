@@ -57,6 +57,7 @@ function onDragEnd(evt: { oldIndex?: number; newIndex?: number }) {
             class="drawer-item-remove"
             @click.stop="playlist.removeAt(index)"
             title="Remove"
+            aria-label="Remove from queue"
           >
             ✕
           </button>
