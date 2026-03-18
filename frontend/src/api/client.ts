@@ -92,6 +92,12 @@ export async function uploadFile<T>(
     } catch {
       body = { detail: res.statusText }
     }
+
+    if (res.status === 401) {
+      localStorage.removeItem('vttd_auth_token')
+      localStorage.removeItem('vttd_auth_user')
+    }
+
     throw new ApiError(res.status, body)
   }
 

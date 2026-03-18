@@ -20,8 +20,12 @@ const currentFolder = computed(() => folders.value.find((f) => f.id === folderId
 async function loadData() {
   loading.value = true
   try {
-    folders.value = await storiesApi.listFolders()
-    stories.value = await storiesApi.listStories(0, 100)
+    const [folderList, folderStories] = await Promise.all([
+      storiesApi.listFolders(),
+      storiesApi.listFolderStories(folderId.value),
+    ])
+    folders.value = folderList
+    stories.value = folderStories
   } catch {
     notifications.show('Failed to load folder', 'error')
   } finally {

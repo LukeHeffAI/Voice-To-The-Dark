@@ -11,7 +11,8 @@ const emit = defineEmits<{
 
 const task = ref<TaskStatus | null>(null)
 const error = ref('')
-let pollTimer: ReturnType<typeof setInterval> | null = null
+let pollTimer: ReturnType<typeof setTimeout> | null = null
+let polling = false
 
 async function poll() {
   try {
@@ -21,24 +22,32 @@ async function poll() {
     if (task.value.status === 'completed') {
       stopPolling()
       emit('completed', task.value.result)
+      return
     } else if (task.value.status === 'failed') {
       stopPolling()
       emit('failed', task.value.error_message)
+      return
     }
   } catch {
     error.value = 'Failed to check task status'
+  }
+
+  // Schedule next poll only after current one finishes
+  if (polling) {
+    pollTimer = setTimeout(poll, 2000)
   }
 }
 
 function startPolling() {
   stopPolling()
+  polling = true
   poll()
-  pollTimer = setInterval(poll, 2000)
 }
 
 function stopPolling() {
+  polling = false
   if (pollTimer) {
-    clearInterval(pollTimer)
+    clearTimeout(pollTimer)
     pollTimer = null
   }
 }
