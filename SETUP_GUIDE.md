@@ -95,7 +95,7 @@ a cheap one through Cloudflare Registrar, or use a free domain service.
    - **Subdomain**: e.g., `stories` (or whatever you like)
    - **Domain**: select your domain
    - **Service type**: `HTTP`
-   - **URL**: `voice-to-the-dark:8000`
+   - **URL**: `voice-to-the-dark:8010`
 
    This last URL uses the Docker container name, which resolves automatically
    on Docker's internal network.
@@ -166,11 +166,11 @@ Make sure her phone is on the same WiFi network as the server.
 Open **Samsung Internet** and go to:
 
 ```
-http://<server-ip>:8000
+http://<server-ip>:8010
 ```
 
 Replace `<server-ip>` with the IP shown at the end of `deploy.sh`
-(e.g. `http://192.168.1.50:8000`).
+(e.g. `http://192.168.1.50:8010`).
 
 ### Step 3: Add to Home Screen
 

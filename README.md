@@ -53,7 +53,7 @@ python -m pytest tests/ -v --tb=short
 cd frontend && npm run test
 ```
 
-The Vite dev server proxies `/api` and `/admin` requests to Django on port 8000.
+The Vite dev server proxies `/api` and `/admin` requests to Django on port 8010.
 
 ## Project Structure
 

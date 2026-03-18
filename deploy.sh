@@ -199,8 +199,8 @@ echo "========================================"
 echo "  Deployment complete!"
 echo "========================================"
 echo
-echo "  On this machine:    http://localhost:8000"
-echo "  On your network:    http://${LAN_IP}:8000"
+echo "  On this machine:    http://localhost:8010"
+echo "  On your network:    http://${LAN_IP}:8010"
 echo
 if [ -n "${ADMIN_USER:-}" ]; then
     echo "  Admin account:      $ADMIN_USER"
