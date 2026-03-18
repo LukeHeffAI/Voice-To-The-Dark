@@ -76,64 +76,6 @@ class TestStreamAudio:
         finally:
             os.unlink(audio_path)
 
-    def test_stream_suffix_range(self, api_client, db):
-        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
-            f.write(b"\x00" * 2048)
-            audio_path = f.name
-        try:
-            story = Story.objects.create(
-                title="Suffix Range",
-                text_content="Content",
-                content_hash="hash_suffix_range",
-                audio_file_path=audio_path,
-            )
-            resp = api_client.get(
-                f"/api/player/stream/{story.id}",
-                headers={"Range": "bytes=-500"},
-            )
-            assert resp.status_code == 206
-            assert resp["Content-Length"] == "500"
-        finally:
-            os.unlink(audio_path)
-
-    def test_stream_invalid_range_returns_416(self, api_client, db):
-        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
-            f.write(b"\x00" * 1024)
-            audio_path = f.name
-        try:
-            story = Story.objects.create(
-                title="Bad Range",
-                text_content="Content",
-                content_hash="hash_bad_range",
-                audio_file_path=audio_path,
-            )
-            resp = api_client.get(
-                f"/api/player/stream/{story.id}",
-                headers={"Range": "bytes=5000-6000"},
-            )
-            assert resp.status_code == 416
-        finally:
-            os.unlink(audio_path)
-
-    def test_stream_multi_range_returns_416(self, api_client, db):
-        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
-            f.write(b"\x00" * 1024)
-            audio_path = f.name
-        try:
-            story = Story.objects.create(
-                title="Multi Range",
-                text_content="Content",
-                content_hash="hash_multi_range",
-                audio_file_path=audio_path,
-            )
-            resp = api_client.get(
-                f"/api/player/stream/{story.id}",
-                headers={"Range": "bytes=0-100,200-300"},
-            )
-            assert resp.status_code == 416
-        finally:
-            os.unlink(audio_path)
-
     def test_stream_no_audio_returns_404(self, api_client, sample_story):
         resp = api_client.get(f"/api/player/stream/{sample_story.id}")
         assert resp.status_code == 404

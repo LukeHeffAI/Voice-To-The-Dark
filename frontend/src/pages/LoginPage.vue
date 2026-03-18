@@ -26,9 +26,7 @@ async function handleLogin() {
     await auth.login(username.value, password.value)
     notifications.show('Signed in', 'success')
     const next = (route.query.next as string) || '/'
-    // Only allow safe internal paths (must start with / and not contain //)
-    const safePath = next.startsWith('/') && !next.startsWith('//') && !next.includes('://') ? next : '/'
-    router.push(safePath)
+    router.push(next)
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Login failed'
   } finally {

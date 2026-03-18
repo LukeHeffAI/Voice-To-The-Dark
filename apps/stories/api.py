@@ -623,18 +623,19 @@ def create_folder(request, payload: FolderCreateRequest):
 @router.delete("/folders/{folder_id}", auth=JWTAuth())
 def delete_folder(request, folder_id: int):
     """Delete a folder and all its memberships."""
-    folder_qs = StoryFolder.objects.filter(id=folder_id, user=request.auth)
-    if not folder_qs.exists():
+    folder = StoryFolder.objects.filter(id=folder_id, user=request.auth).first()
+    if not folder:
         raise HttpError(404, "Folder not found")
     StoryFolderMembership.objects.filter(folder_id=folder_id).delete()
-    folder_qs.delete()
+    folder.delete()
     return {"ok": True}
 
 
 @router.post("/folders/{folder_id}/add", auth=JWTAuth())
 def add_story_to_folder(request, folder_id: int, payload: FolderAddStoryRequest):
     """Add a story to a folder."""
-    if not StoryFolder.objects.filter(id=folder_id, user=request.auth).exists():
+    folder = StoryFolder.objects.filter(id=folder_id, user=request.auth).first()
+    if not folder:
         raise HttpError(404, "Folder not found")
     if not Story.objects.filter(id=payload.story_id).exists():
         raise HttpError(404, "Story not found")
@@ -646,32 +647,11 @@ def add_story_to_folder(request, folder_id: int, payload: FolderAddStoryRequest)
     return {"ok": True}
 
 
-@router.get("/folders/{folder_id}/stories", response=list[StoryListResponse], auth=JWTAuth())
-def list_folder_stories(request, folder_id: int):
-    """List all stories in a specific folder."""
-    if not StoryFolder.objects.filter(id=folder_id, user=request.auth).exists():
-        raise HttpError(404, "Folder not found")
-    story_ids = StoryFolderMembership.objects.filter(folder_id=folder_id).values_list("story_id", flat=True)
-    stories = Story.objects.filter(id__in=story_ids).order_by("-created_at")
-    return [
-        StoryListResponse(
-            id=s.id,
-            title=s.title,
-            author=s.author,
-            reddit_url=s.reddit_url,
-            has_audio=s.audio_file_path is not None,
-            has_script=s.script_json is not None,
-            part_count=s.part_count,
-            created_at=s.created_at,
-        )
-        for s in stories
-    ]
-
-
 @router.delete("/folders/{folder_id}/stories/{story_id}", auth=JWTAuth())
 def remove_story_from_folder(request, folder_id: int, story_id: int):
     """Remove a story from a folder."""
-    if not StoryFolder.objects.filter(id=folder_id, user=request.auth).exists():
+    folder = StoryFolder.objects.filter(id=folder_id, user=request.auth).first()
+    if not folder:
         raise HttpError(404, "Folder not found")
     StoryFolderMembership.objects.filter(folder_id=folder_id, story_id=story_id).delete()
     return {"ok": True}

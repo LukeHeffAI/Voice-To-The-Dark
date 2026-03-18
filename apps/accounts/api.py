@@ -1,6 +1,5 @@
 import logging
 
-from django.conf import settings
 from django.db import IntegrityError
 from django.http import HttpResponse
 from ninja import Router
@@ -58,7 +57,6 @@ def login(request, response: HttpResponse, payload: LoginRequest):
         "auth_token",
         token,
         httponly=True,
-        secure=not settings.DEBUG,
         samesite="Lax",
         max_age=60 * 60 * 24 * 28,  # 4 weeks
     )

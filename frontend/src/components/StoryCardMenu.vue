@@ -85,8 +85,6 @@ async function removeFromFolder() {
   emit('close')
 }
 
-let mountTimer: ReturnType<typeof setTimeout> | null = null
-
 function onClickOutside(e: Event) {
   if (menuEl.value && !menuEl.value.contains(e.target as Node)) {
     emit('close')
@@ -94,16 +92,9 @@ function onClickOutside(e: Event) {
 }
 
 onMounted(() => {
-  mountTimer = setTimeout(() => {
-    mountTimer = null
-    document.addEventListener('click', onClickOutside)
-  }, 0)
+  setTimeout(() => document.addEventListener('click', onClickOutside), 0)
 })
 onUnmounted(() => {
-  if (mountTimer !== null) {
-    clearTimeout(mountTimer)
-    mountTimer = null
-  }
   document.removeEventListener('click', onClickOutside)
 })
 </script>

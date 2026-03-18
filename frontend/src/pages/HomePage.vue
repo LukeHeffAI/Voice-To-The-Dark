@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import type { Folder, StoryListItem } from '../api/types'
 import * as storiesApi from '../api/stories'
 import { useAuthStore } from '../stores/auth'
 import StoryCard from '../components/StoryCard.vue'
 import FolderNav from '../components/FolderNav.vue'
 
-const router = useRouter()
 const auth = useAuthStore()
 
 const stories = ref<StoryListItem[]>([])
@@ -61,14 +59,10 @@ function onStoryRemoved() {
 
 watch(activeFolder, (id) => {
   if (id !== null) {
-    router.push({ name: 'folder', params: { id } })
-  }
-})
-
-// Load folders once auth is ready (auth.init() may complete after mount)
-watch(() => auth.isAuthenticated, (isAuth) => {
-  if (isAuth) {
-    loadFolders()
+    // Navigate to folder page
+    import('vue-router').then(({ useRouter }) => {
+      useRouter().push({ name: 'folder', params: { id } })
+    })
   }
 })
 

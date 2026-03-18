@@ -66,22 +66,10 @@ if [ ! -f .env ]; then
     if $AUTO_MODE; then
         # In auto mode, inject API keys from environment variables
         if [ -n "${ELEVENLABS_API_KEY:-}" ]; then
-            python3 -c "
-import re, sys
-key = sys.argv[1]
-with open('.env') as f: content = f.read()
-content = re.sub(r'^ELEVENLABS_API_KEY=.*$', lambda m: 'ELEVENLABS_API_KEY=' + key, content, flags=re.MULTILINE)
-with open('.env', 'w') as f: f.write(content)
-" "$ELEVENLABS_API_KEY"
+            sed -i "s/^ELEVENLABS_API_KEY=.*/ELEVENLABS_API_KEY=$ELEVENLABS_API_KEY/" .env
         fi
         if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
-            python3 -c "
-import re, sys
-key = sys.argv[1]
-with open('.env') as f: content = f.read()
-content = re.sub(r'^ANTHROPIC_API_KEY=.*$', lambda m: 'ANTHROPIC_API_KEY=' + key, content, flags=re.MULTILINE)
-with open('.env', 'w') as f: f.write(content)
-" "$ANTHROPIC_API_KEY"
+            sed -i "s/^ANTHROPIC_API_KEY=.*/ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY/" .env
         fi
         echo "API keys configured from environment variables."
     else
@@ -116,23 +104,11 @@ ELAPSED=0
 while [ $ELAPSED -lt $MAX_WAIT ]; do
     STATUS=$($COMPOSE ps --format json 2>/dev/null | python3 -c "
 import sys, json
-raw = sys.stdin.read().strip()
-if not raw:
-    print('unknown')
-    sys.exit(0)
-# Handle both JSON array and newline-delimited JSON objects
-try:
-    data = json.loads(raw)
-except json.JSONDecodeError:
-    # Try newline-delimited JSON
-    data = [json.loads(line) for line in raw.splitlines() if line.strip()]
-if isinstance(data, dict):
-    data = [data]
-for obj in data:
+for line in sys.stdin:
+    obj = json.loads(line)
     if obj.get('Name') == 'voice-to-the-dark' or obj.get('Service') == 'voice-to-the-dark':
         print(obj.get('Health', obj.get('State', '')))
-        sys.exit(0)
-print('unknown')
+        break
 " 2>/dev/null || echo "unknown")
     if [ "$STATUS" = "healthy" ]; then
         echo "Application is ready!"

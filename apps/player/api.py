@@ -1,6 +1,6 @@
 import os
 
-from django.http import FileResponse, HttpResponse, StreamingHttpResponse
+from django.http import FileResponse, StreamingHttpResponse
 from ninja import Router
 from ninja.errors import HttpError
 
@@ -45,35 +45,15 @@ def stream_audio(request, story_id: int):
     range_header = request.headers.get("Range")
 
     if range_header:
-        # Parse Range: bytes=start-end or bytes=-suffix
-        try:
-            if not range_header.startswith("bytes="):
-                raise ValueError("Unsupported range unit")
-            range_spec = range_header[6:].strip()
-            # Reject multi-range requests
-            if "," in range_spec:
-                raise ValueError("Multi-range not supported")
-            parts = range_spec.split("-", 1)
-            if parts[0] == "" and parts[1]:
-                # Suffix range: bytes=-500 means last 500 bytes
-                suffix_len = int(parts[1])
-                start = max(0, file_size - suffix_len)
-                end = file_size - 1
-            elif parts[1] == "":
-                # Open-ended: bytes=500-
-                start = int(parts[0])
-                end = file_size - 1
-            else:
-                start = int(parts[0])
-                end = int(parts[1])
+        # Parse Range: bytes=start-end
+        range_spec = range_header.replace("bytes=", "").strip()
+        parts = range_spec.split("-")
+        start = int(parts[0]) if parts[0] else 0
+        end = int(parts[1]) if len(parts) > 1 and parts[1] else file_size - 1
 
-            if start < 0 or start >= file_size or end < start or end >= file_size:
-                raise ValueError("Range out of bounds")
-        except (ValueError, IndexError):
-            response = HttpResponse(status=416, content_type="text/plain")
-            response["Content-Range"] = f"bytes */{file_size}"
-            return response
-
+        # Clamp to file bounds
+        start = max(0, min(start, file_size - 1))
+        end = max(start, min(end, file_size - 1))
         content_length = end - start + 1
 
         def iter_range():
