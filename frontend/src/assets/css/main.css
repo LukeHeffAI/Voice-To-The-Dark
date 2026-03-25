@@ -1,16 +1,308 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Inter:wght@300;400;500;600&display=swap');
 
+/* ── Tailwind v4 theme tokens ────────────────────────────── */
 @theme {
   --color-bg: #050505;
-  --color-surface: rgba(255, 255, 255, 0.03);
-  --color-surface-hover: rgba(255, 255, 255, 0.045);
+  --color-surface: rgba(255, 255, 255, 0.025);
+  --color-surface-hover: rgba(255, 255, 255, 0.04);
   --color-surface-active: rgba(255, 255, 255, 0.055);
+  --color-elevated: rgba(255, 255, 255, 0.05);
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-border-hover: rgba(255, 255, 255, 0.12);
+  --color-border-focus: rgba(160, 32, 32, 0.5);
+  --color-text-1: #e8e6e3;
+  --color-text-2: #8a8a8a;
+  --color-text-3: #555;
   --color-accent: #a02020;
   --color-accent-hover: #bf2626;
+  --color-accent-dim: rgba(160, 32, 32, 0.12);
   --color-success: #3a7d5c;
+  --color-success-dim: rgba(58, 125, 92, 0.12);
   --color-info: #6868b8;
+  --color-info-dim: rgba(104, 104, 184, 0.12);
   --color-warn: #b8a040;
+  --color-warn-dim: rgba(184, 160, 64, 0.12);
   --color-ambient: #48b8b8;
-  --font-family-serif: "Cormorant Garamond", Georgia, serif;
-  --font-family-sans: Inter, system-ui, sans-serif;
+  --color-ambient-dim: rgba(72, 184, 184, 0.1);
+  --color-error: #c44;
+  --color-error-dim: rgba(204, 68, 68, 0.1);
+  --font-family-serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --font-family-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
 }
+
+/* ── Base styles ─────────────────────────────────────────── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-family-sans);
+  background: var(--color-bg);
+  background-image: radial-gradient(ellipse at 50% 0%, #0a0808 0%, var(--color-bg) 70%);
+  color: var(--color-text-1);
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+body.has-miniplayer { padding-bottom: 60px; }
+
+/* ── Film grain overlay ──────────────────────────────────── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 10000;
+}
+
+/* ── Vignette ────────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,0.35) 100%);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── Drifting fog ────────────────────────────────────────── */
+.fog {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+  clip-path: inset(0);
+  opacity: 0;
+}
+.fog.visible { opacity: 1; }
+.fog.settle { animation: fog-settle 3.5s ease-out forwards; }
+.fog.evaporate { opacity: 1; animation: fog-evaporate 3s ease-in forwards; }
+
+.fog::before, .fog::after, .fog-l3 {
+  position: absolute;
+  bottom: -12%;
+  left: -150%;
+  width: 1000%;
+  height: 200%;
+  filter: blur(35px);
+  will-change: transform;
+}
+.fog::before, .fog::after { content: ''; }
+
+.fog::before {
+  background:
+    radial-gradient(ellipse 18% 55% at  5% 100%, rgba(195,192,215,0.17) 0%, transparent 70%),
+    radial-gradient(ellipse 22% 52% at 22% 100%, rgba(178,174,200,0.14) 0%, transparent 65%),
+    radial-gradient(ellipse 18% 48% at 40% 100%, rgba(188,184,210,0.13) 0%, transparent 62%),
+    radial-gradient(ellipse 22% 55% at 58% 100%, rgba(175,172,196,0.16) 0%, transparent 68%),
+    radial-gradient(ellipse 18% 50% at 75% 100%, rgba(165,162,186,0.12) 0%, transparent 63%),
+    radial-gradient(ellipse 22% 52% at 92% 100%, rgba(182,178,205,0.15) 0%, transparent 66%);
+  animation: fog-drift-1 18s ease-in-out infinite alternate;
+}
+
+.fog::after {
+  background:
+    radial-gradient(ellipse 20% 50% at 12%  95%, rgba(196,192,216,0.09) 0%, transparent 62%),
+    radial-gradient(ellipse 22% 54% at 30% 100%, rgba(182,178,205,0.11) 0%, transparent 67%),
+    radial-gradient(ellipse 20% 48% at 49%  95%, rgba(195,190,214,0.08) 0%, transparent 62%),
+    radial-gradient(ellipse 22% 52% at 67% 100%, rgba(178,174,200,0.10) 0%, transparent 65%),
+    radial-gradient(ellipse 20% 50% at 85%  95%, rgba(190,186,210,0.09) 0%, transparent 63%);
+  animation: fog-drift-2 12s ease-in-out infinite alternate;
+}
+
+.fog-l3 {
+  height: 350%;
+  filter: blur(42px);
+  background:
+    radial-gradient(ellipse 20% 46% at  8%  92%, rgba(200,196,218,0.14) 0%, transparent 63%),
+    radial-gradient(ellipse 18% 50% at 28% 100%, rgba(185,182,206,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 20% 44% at 48%  92%, rgba(192,188,212,0.13) 0%, transparent 61%),
+    radial-gradient(ellipse 18% 48% at 68% 100%, rgba(180,176,202,0.12) 0%, transparent 62%),
+    radial-gradient(ellipse 20% 46% at 88%  92%, rgba(196,192,215,0.14) 0%, transparent 63%);
+  animation: fog-drift-3 7s ease-in-out infinite alternate;
+}
+
+@keyframes fog-drift-1 {
+  0%   { opacity: 1.0;  transform: translate(0, 0); }
+  25%  { opacity: 0.6;  transform: translate(-50vw, -1.3vh); }
+  50%  { opacity: 0.4;  transform: translate(-100vw, -2vh); }
+  75%  { opacity: 0.6;  transform: translate(-50vw, -0.9vh); }
+  100% { opacity: 1.0;  transform: translate(0, 0); }
+}
+@keyframes fog-drift-2 {
+  0%   { opacity: 0.3;  transform: translate(0, 0); }
+  25%  { opacity: 0.75; transform: translate(32vw, 1.4vh); }
+  50%  { opacity: 0.8;  transform: translate(64vw, 2vh); }
+  75%  { opacity: 0.75; transform: translate(32vw, 0.9vh); }
+  100% { opacity: 0.3;  transform: translate(0, 0); }
+}
+@keyframes fog-drift-3 {
+  0%   { opacity: 0.75; transform: translate(0, 0); }
+  25%  { opacity: 0.2;  transform: translate(-30vw, -1.1vh); }
+  50%  { opacity: 0.75; transform: translate(-20vw, -0.7vh); }
+  75%  { opacity: 0.2;  transform: translate(10vw, 0.3vh); }
+  100% { opacity: 0.75; transform: translate(0, 0); }
+}
+@keyframes fog-settle {
+  0%   { opacity: 0; transform: translateY(8vh); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes fog-evaporate {
+  0%   { opacity: 1; transform: translate(0, 0) scale(1); }
+  40%  { opacity: 0.55; transform: translate(0, 4vh) scale(1.5); }
+  100% { opacity: 0; transform: translate(0, 10vh) scale(2); }
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: #fff;
+  font-family: var(--font-family-serif);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  letter-spacing: 0.02em;
+}
+.btn-primary:hover {
+  background: var(--color-accent-hover);
+  box-shadow: 0 0 30px rgba(160,32,32,0.2);
+}
+.btn-primary:active { transform: scale(0.97); }
+.btn-primary:disabled {
+  background: rgba(255,255,255,0.06);
+  color: var(--color-text-3);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.2rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-2);
+  font-family: var(--font-family-serif);
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  letter-spacing: 0.02em;
+}
+.btn-secondary:hover {
+  border-color: var(--color-border-hover);
+  color: var(--color-text-1);
+  background: var(--color-surface);
+}
+
+/* ── Form inputs ─────────────────────────────────────────── */
+.form-input {
+  width: 100%;
+  padding: 0.6rem 0.9rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-1);
+  font-family: var(--font-family-sans);
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.form-input:focus {
+  border-color: var(--color-border-focus);
+  background: var(--color-surface-hover);
+}
+.form-input::placeholder { color: var(--color-text-3); }
+
+textarea.form-input {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* ── Badges ──────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 20px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.badge-success { background: var(--color-success-dim); color: var(--color-success); border: 1px solid rgba(58,125,92,0.15); }
+.badge-info { background: var(--color-info-dim); color: var(--color-info); border: 1px solid rgba(104,104,184,0.15); }
+.badge-warn { background: var(--color-warn-dim); color: var(--color-warn); border: 1px solid rgba(184,160,64,0.15); }
+.badge-ambient { background: var(--color-ambient-dim); color: var(--color-ambient); border: 1px solid rgba(72,184,184,0.15); }
+.badge-error { background: var(--color-error-dim); color: var(--color-error); border: 1px solid rgba(204,68,68,0.15); }
+.badge-accent { background: var(--color-accent-dim); color: var(--color-accent); border: 1px solid rgba(160,32,32,0.15); }
+
+/* ── Spinner ─────────────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.1);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+}
+.spinner-lg { width: 32px; height: 32px; border-width: 3px; }
+
+/* ── Scrollbar ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+
+/* ── SortableJS ghost ────────────────────────────────────── */
+.sortable-ghost {
+  opacity: 0.4;
+  background: var(--color-surface-active);
+}
+
+/* ── Page container ──────────────────────────────────────── */
+.page-container {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 1.25rem 2rem;
+  position: relative;
+  z-index: 3;
+}
+.page-container-wide {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1.25rem 2rem;
+  position: relative;
+  z-index: 3;
+}
+
+/* ── Segment type badge colors ───────────────────────────── */
+.seg-narration { background: var(--color-success-dim); color: var(--color-success); }
+.seg-dialogue { background: var(--color-info-dim); color: var(--color-info); }
+.seg-sfx { background: var(--color-warn-dim); color: var(--color-warn); }
+.seg-ambient { background: var(--color-ambient-dim); color: var(--color-ambient); }
+.seg-pause { background: rgba(255,255,255,0.05); color: var(--color-text-3); }

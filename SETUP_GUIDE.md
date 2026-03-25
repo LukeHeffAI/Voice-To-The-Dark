@@ -43,7 +43,7 @@ docker compose down
 docker compose up -d --build
 
 # Create another user account
-docker compose exec voice-to-the-dark python -m app.create_user <username> <password>
+docker compose exec voice-to-the-dark python manage.py createuser <username> <password>
 ```
 
 ### Remote Access (Optional — Cloudflare Tunnel)
@@ -122,11 +122,24 @@ add it to their phone's home screen the same way described in the Phone Setup se
 ### Data
 
 Everything persists in `./data/`:
-- `data/db/horror_narrator.db` — database (stories, users, playback state)
+- `data/db/voice_in_the_dark.db` — database (stories, users, playback state)
 - `data/stories/` — generated audio files
 - `data/sfx_cache/` — cached sound effects
+- `data/voice_previews/` — voice preview samples
+- `data/segment_cache/` — cached audio segments
+- `data/reddit_cache/` — cached Reddit top posts
 
 To back up, just copy the `data/` folder.
+
+### Migrating from v1
+
+If you're upgrading from a previous FastAPI-based installation, the deploy script
+will detect your legacy database and offer to migrate your data automatically.
+You can also run the migration manually:
+
+```bash
+docker compose exec voice-to-the-dark python scripts/migrate_from_v1.py
+```
 
 ---
 
