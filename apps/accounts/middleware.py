@@ -6,6 +6,9 @@ middleware reads and applies to the response.
 """
 
 
+from django.conf import settings
+
+
 class AuthCookieMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
@@ -22,6 +25,7 @@ class AuthCookieMiddleware:
                 httponly=cookie.get("httponly", True),
                 samesite=cookie.get("samesite", "Lax"),
                 max_age=cookie.get("max_age", 28 * 24 * 3600),
+                secure=getattr(settings, "SESSION_COOKIE_SECURE", False),
             )
 
         # Delete auth cookie (from logout endpoint)

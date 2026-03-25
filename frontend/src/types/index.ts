@@ -188,7 +188,7 @@ export interface VoiceEntry {
 export interface StoryInfo {
   id: number
   title: string
-  author: string
+  author: string | null
   part_count: number
   has_audio: boolean
 }
@@ -198,7 +198,7 @@ export interface StoryInfo {
 export interface PlaylistItem {
   storyId: number
   title: string
-  author: string
+  author: string | null
 }
 
 export type RepeatMode = 'off' | 'all' | 'one'
