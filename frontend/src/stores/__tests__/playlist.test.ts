@@ -14,7 +14,7 @@ vi.mock('../player', () => ({
 }))
 
 function makeItem(id: number, title = `Story ${id}`): PlaylistItem {
-  return { storyId: id, title }
+  return { storyId: id, title, author: '' }
 }
 
 describe('Playlist Store', () => {

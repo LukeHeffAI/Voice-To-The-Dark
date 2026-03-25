@@ -23,7 +23,9 @@ def submit_task(task_id: int, func, *args, **kwargs):
 def _run_task(task_id: int, func, *args, **kwargs):
     """Wrapper that manages task lifecycle: processing → complete/failed."""
     from apps.tasks.models import BackgroundTask, TaskStatus
+    from django.db import close_old_connections
 
+    close_old_connections()
     try:
         task = BackgroundTask.objects.get(id=task_id)
         task.status = TaskStatus.PROCESSING
@@ -48,3 +50,5 @@ def _run_task(task_id: int, func, *args, **kwargs):
             task.save(update_fields=["status", "error_message", "completed_at"])
         except Exception:
             logger.exception("Failed to update task %d status", task_id)
+    finally:
+        close_old_connections()

@@ -115,10 +115,17 @@ def upload_reddit_cache(
             "JSON does not look like a Reddit listing response (expected 'data' key)",
         )
 
+    inner = data["data"]
+    if not isinstance(inner, dict) or not isinstance(inner.get("children"), list):
+        raise HttpError(
+            400,
+            "JSON does not look like a Reddit listing response (expected 'data.children' array)",
+        )
+
     cache_path = get_cache_path_for_timeframe(timeframe)
     cache_path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
 
-    children_count = len(data.get("data", {}).get("children", []))
+    children_count = len(inner["children"])
     logger.info("Uploaded Reddit cache for timeframe '%s': %d posts", timeframe, children_count)
 
     return {
